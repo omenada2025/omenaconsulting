@@ -1,62 +1,1570 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Product & UI/UX Pulse Dashboard</title>
   <style>
-    :root{--ink:#17212b;--muted:#66727c;--line:#d9e1e6;--bg:#f6f8f7;--green:#4f9b76;--amber:#d59d2f;--red:#a3163d;--blue:#4e7896;--card:#ffffffee}
-    *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;color:var(--ink);background:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px),var(--bg);background-size:24px 24px}.app{display:grid;grid-template-columns:260px 1fr;min-height:100vh}.side{background:#ffffffd9;border-right:1px solid var(--line);padding:22px;position:sticky;top:0;height:100vh}.brand{display:flex;gap:12px;align-items:center;margin-bottom:28px}.mark{background:var(--ink);color:white;border-radius:8px;width:38px;height:38px;display:grid;place-items:center;font-weight:800}h1,h2,h3,p{margin:0}h1{font-size:19px;line-height:1.1}h2{font-size:29px}.muted{color:var(--muted)}.small{font-size:12px;line-height:1.4}.tab,.btn{border:1px solid var(--line);border-radius:8px;background:white;color:var(--ink);padding:10px 12px;cursor:pointer}.tab{width:100%;text-align:left;margin:5px 0}.tab.active,.btn.primary{background:var(--ink);color:white;border-color:var(--ink)}.btn.danger{color:var(--red);border-color:#efc2cf}.side-actions{position:absolute;left:22px;right:22px;bottom:20px;display:grid;gap:8px}main{padding:28px}.header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px}.view{display:none}.view.active{display:block}.grid{display:grid;gap:16px}.metrics{grid-template-columns:repeat(4,minmax(150px,1fr));margin:18px 0}.two{grid-template-columns:1.2fr .8fr}.three{grid-template-columns:repeat(3,1fr);margin-top:16px}.panel{background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 14px 32px #1f2a3314;padding:18px}.metric strong{display:block;font-size:34px;margin-top:8px}.chip{display:inline-flex;gap:7px;align-items:center;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:700}.chip:before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}.green{color:var(--green);background:#e3f1e9}.amber{color:var(--amber);background:#fff0cf}.red{color:var(--red);background:#f8e5eb}.blue{color:var(--blue);background:#e5eff4}.gray{color:#66727c;background:#eef1f2}.status{display:grid;grid-template-columns:1fr auto;gap:12px;border:1px solid var(--line);border-radius:8px;background:white;padding:12px;margin-top:10px}.progress{height:9px;background:#edf1f2;border-radius:99px;overflow:hidden;margin-top:8px}.bar{height:100%;background:var(--green)}.bar.amber{background:var(--amber)}.bar.red{background:var(--red)}.risk{height:360px;border:1px solid var(--line);border-radius:8px;position:relative;background:linear-gradient(90deg,#4f9b7612,#d59d2f12,#a3163d12),white;overflow:hidden}.risk:before{content:"";position:absolute;left:50%;top:0;bottom:0;border-left:1px solid var(--line)}.risk:after{content:"";position:absolute;top:50%;left:0;right:0;border-top:1px solid var(--line)}.point{position:absolute;transform:translate(-50%,-50%);width:170px;background:white;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 20px #1f2a3324;padding:8px;font-size:10px}.point strong{display:block;font-size:11px}form{display:grid;gap:14px}.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}label{display:grid;gap:6px;font-size:13px;font-weight:700}input,select,textarea{border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit}textarea{min-height:88px}.full{grid-column:1/-1}.reports{display:grid;gap:10px}.report{border:1px solid var(--line);border-radius:8px;background:white;padding:13px;cursor:pointer}.report.selected{outline:2px solid var(--ink)}.timeline{display:grid;gap:12px}.item{display:grid;grid-template-columns:26px 1fr;gap:10px}.node{width:24px;height:24px;border-radius:50%;background:var(--ink);color:white;display:grid;place-items:center;font-size:12px;font-weight:800}.empty{border:1px dashed var(--line);border-radius:8px;padding:28px;text-align:center;color:var(--muted);background:#ffffffcc}@media(max-width:900px){.app,.metrics,.two,.three,.form-grid{grid-template-columns:1fr}.side{position:static;height:auto}.side-actions{position:static;margin-top:20px}main{padding:18px}.header{display:block}.header .btn{margin-top:12px}}
+    :root {
+      --ink: #17212b;
+      --muted: #64717d;
+      --line: #d8e0e5;
+      --panel: #ffffff;
+      --canvas: #f6f8f7;
+      --soft: #eef3f4;
+      --green: #4f9b76;
+      --green-soft: #e3f1e9;
+      --amber: #d59d2f;
+      --amber-soft: #fff0cf;
+      --red: #a3163d;
+      --red-soft: #f8e5eb;
+      --blue: #4e7896;
+      --blue-soft: #e5eff4;
+      --shadow: 0 14px 35px rgba(31, 42, 51, 0.1);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(var(--line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px),
+        var(--canvas);
+      background-size: 24px 24px;
+    }
+
+    button, input, select, textarea { font: inherit; }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+    }
+
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 24px 18px;
+      background: rgba(255, 255, 255, 0.82);
+      border-right: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+    }
+
+    main { padding: 28px; }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      color: white;
+      background: var(--ink);
+      font-weight: 800;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+
+    h1 { font-size: 20px; line-height: 1.1; }
+    h2 { font-size: 28px; margin-bottom: 4px; }
+    h3 { font-size: 15px; margin-bottom: 12px; }
+
+    .muted { color: var(--muted); }
+
+    .tabs {
+      display: grid;
+      gap: 8px;
+    }
+
+    .tab {
+      width: 100%;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 11px 12px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .tab.active {
+      background: var(--ink);
+      color: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    .side-actions {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 20px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 10px 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 40px;
+    }
+
+    .btn.primary {
+      background: var(--ink);
+      color: #fff;
+      border-color: var(--ink);
+    }
+
+    .btn.danger {
+      color: var(--red);
+      border-color: #e8b6c5;
+    }
+
+    .header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .view { display: none; }
+    .view.active { display: block; }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .summary-grid {
+      grid-template-columns: repeat(3, minmax(180px, 1fr));
+      margin-bottom: 16px;
+    }
+
+    .filter-bar {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .filter-bar label {
+      font-size: 12px;
+    }
+
+    .metric-split {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .metric-split span {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 6px 8px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .two-col {
+      grid-template-columns: minmax(0, 1.1fr) minmax(340px, 0.9fr);
+    }
+
+    .three-col {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .panel {
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .metric {
+      min-height: 112px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .metric strong {
+      font-size: 34px;
+      line-height: 1;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 12px;
+      font-weight: 700;
+      width: max-content;
+    }
+
+    .chip::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: currentColor;
+    }
+
+    .green { color: var(--green); background: var(--green-soft); }
+    .amber { color: var(--amber); background: var(--amber-soft); }
+    .red { color: var(--red); background: var(--red-soft); }
+    .blue { color: var(--blue); background: var(--blue-soft); }
+    .gray { color: #68737b; background: #eef1f2; }
+
+    .status-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .status-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .progress {
+      height: 10px;
+      background: #edf1f2;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 9px;
+    }
+
+    .bar {
+      height: 100%;
+      border-radius: inherit;
+      background: var(--green);
+    }
+
+    .bar.amber { background: var(--amber); }
+    .bar.red { background: var(--red); }
+
+    .risk-matrix {
+      position: relative;
+      height: 360px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background:
+        linear-gradient(90deg, rgba(79, 155, 118, .08), rgba(213, 157, 47, .08), rgba(163, 22, 61, .08)),
+        #fff;
+    }
+
+    .risk-matrix::before,
+    .risk-matrix::after {
+      content: "";
+      position: absolute;
+      background: var(--line);
+    }
+
+    .risk-matrix::before { left: 50%; top: 0; bottom: 0; width: 1px; }
+    .risk-matrix::after { top: 50%; left: 0; right: 0; height: 1px; }
+
+    .risk-point {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      width: 168px;
+      padding: 8px 9px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fff;
+      box-shadow: 0 8px 20px rgba(31, 42, 51, 0.13);
+      font-size: 10px;
+      line-height: 1.25;
+    }
+
+    .risk-point strong { display: block; font-size: 11px; margin-bottom: 2px; }
+
+    .matrix-label {
+      position: absolute;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      pointer-events: none;
+    }
+
+    .matrix-label.x { bottom: 10px; left: 50%; transform: translateX(-50%); }
+    .matrix-label.y { top: 50%; left: 10px; transform: translateY(-50%) rotate(-90deg); transform-origin: center; }
+
+    form {
+      display: grid;
+      gap: 16px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      padding: 10px 11px;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 92px;
+      resize: vertical;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .full { grid-column: 1 / -1; }
+
+    .report-list {
+      display: grid;
+      gap: 12px;
+      max-height: 560px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .report-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 14px;
+      cursor: pointer;
+    }
+
+    .report-card.selected {
+      border-color: var(--ink);
+      box-shadow: inset 0 0 0 1px var(--ink);
+    }
+
+    .detail-form {
+      display: grid;
+      gap: 12px;
+    }
+
+    .report-card header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .small {
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 12px;
+    }
+
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 32px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+    }
+
+    .node {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--ink);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .empty {
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      padding: 30px;
+      text-align: center;
+      color: var(--muted);
+      background: rgba(255,255,255,.72);
+    }
+
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 1fr; }
+      aside { position: static; height: auto; }
+      .side-actions { position: static; margin-top: 22px; }
+      main { padding: 18px; }
+      .summary-grid, .two-col, .three-col, .form-grid, .filter-bar { grid-template-columns: 1fr; }
+      .header { flex-direction: column; }
+    }
   </style>
 </head>
 <body>
-<div class="app">
-  <aside class="side">
-    <div class="brand"><div class="mark">PU</div><div><h1>Product & UI/UX Pulse</h1><p class="muted small">Portfolio status dashboard</p></div></div>
-    <button class="tab active" data-view="dashboard">Dashboard</button>
-    <button class="tab" data-view="add">Add Status</button>
-    <button class="tab" data-view="reports">Source Reports</button>
-    <div class="side-actions"><button class="btn" id="exportBtn">Export JSON</button><button class="btn danger" id="reloadBtn">Reload</button></div>
-  </aside>
-  <main>
-    <section id="dashboard" class="view active">
-      <div class="header"><div><h2>Product & UI/UX Dashboard</h2><p id="subtitle" class="muted">Loading Supabase data...</p></div><button class="btn primary" data-jump="add">Add Product Status</button></div>
-      <div id="metrics" class="grid metrics"></div>
-      <div class="grid two"><div class="panel"><h3>Portfolio Health</h3><div id="health"></div></div><div class="panel"><h3>Risk Radar</h3><div id="risk" class="risk"></div></div></div>
-      <div class="grid three"><div class="panel"><h3>Wins</h3><div id="wins" class="timeline"></div></div><div class="panel"><h3>Blockers</h3><div id="blockers" class="timeline"></div></div><div class="panel"><h3>Next Actions</h3><div id="nexts" class="timeline"></div></div></div>
-    </section>
-    <section id="add" class="view">
-      <div class="header"><div><h2>Add Status Report</h2><p class="muted">Add a product, delivery, or UI/UX update.</p></div></div>
-      <div class="panel"><form id="form"><div class="form-grid">
-        <label>Product / workstream<input name="product" required></label><label>Owner<input name="owner"></label><label>Week<input name="week" type="date" required></label>
-        <label>Health<select name="health"><option value="green">On Track</option><option value="amber">In Progress</option><option value="red">At Risk</option><option value="gray">Paused</option></select></label>
-        <label>Progress<input name="progress" type="number" min="0" max="100" value="60"></label><label>Stage<input name="stage" value="Discovery"></label>
-        <label class="full">Summary<textarea name="summary" required></textarea></label><label>Win<textarea name="win"></textarea></label><label>Blocker<textarea name="blocker"></textarea></label><label>Next action<textarea name="next"></textarea></label>
-        <label>Impact<select name="impact"><option value="1">Low</option><option value="2">Medium</option><option value="3">High</option></select></label><label>Time<select name="time"><option value="1">Short</option><option value="2">Medium</option><option value="3">Long</option></select></label><label>Priority<select name="priority"><option>Normal</option><option>High</option><option>Critical</option></select></label>
-      </div><div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn primary" id="saveBtn">Save Report</button></div></form></div>
-    </section>
-    <section id="reports" class="view"><div class="header"><div><h2>Source Reports</h2><p class="muted">Shared reports from Supabase.</p></div></div><div class="grid two"><div class="panel"><div id="reportList" class="reports"></div></div><div class="panel" id="detail"><div class="empty">Select a report.</div></div></div></section>
-  </main>
-</div>
-<script src="./supabase-config.js"></script>
-<script>
-const labels={green:"On Track",amber:"In Progress",red:"At Risk",gray:"Paused"};
-const cfg=window.SUPABASE_CONFIG||{}, table=cfg.table||"status_reports", base=cfg.url?`${cfg.url.replace(/\/$/,"")}/rest/v1/${table}`:"";
-let reports=[], selected=null;
-function cls(r){return r.health==="red"||r.priority==="Critical"?"red":r.health==="amber"?"amber":r.health==="gray"?"gray":"green"}
-function esc(v=""){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
-async function api(path="",opts={}){if(!cfg.url||!cfg.anonKey)throw Error("Missing Supabase config");const h={apikey:cfg.anonKey,Authorization:`Bearer ${cfg.anonKey}`,"Content-Type":"application/json",Prefer:opts.prefer||"return=representation"};const r=await fetch(base+path,{method:opts.method||"GET",headers:h,body:opts.body?JSON.stringify(opts.body):undefined});if(!r.ok)throw Error(await r.text());return r.status===204?null:r.json()}
-function db(r){return{product:r.product,owner:r.owner||null,week:r.week,health:r.health,progress:+r.progress||0,stage:r.stage||"Discovery",priority:r.priority||"Normal",impact:+r.impact||1,time:+r.time||1,summary:r.summary,win:r.win||null,blocker:r.blocker||null,next:r.next||null}}
-async function load(){try{reports=await api("?select=*&order=week.desc,created_at.desc",{prefer:""});selected=reports[0]?.id||null;render("Synced with Supabase")}catch(e){console.error(e);render("Could not load Supabase data")}}
-async function create(r){const data=await api("?select=*",{method:"POST",body:db(r)});reports=[data[0],...reports];selected=data[0].id;render("Saved to Supabase")}
-async function remove(id){await api(`?id=eq.${encodeURIComponent(id)}`,{method:"DELETE",prefer:"return=minimal"});reports=reports.filter(r=>r.id!==id);selected=reports[0]?.id||null;render("Deleted from Supabase")}
-function render(status){const weeks=reports.map(r=>r.week).sort(),latest=weeks.at(-1)||"";subtitle.textContent=latest?`Latest week: ${latest} - ${reports.length} product and UI/UX updates - ${status}.`:`${status}.`;const total=reports.length,on=reports.filter(r=>r.health==="green").length,risk=reports.filter(r=>r.health==="red"||r.priority==="Critical").length,avg=total?Math.round(reports.reduce((s,r)=>s+(+r.progress||0),0)/total):0;metrics.innerHTML=[["Tracks",total,"blue"],["On Track",on,"green"],["At Risk",risk,risk?"red":"green"],["Avg Progress",avg+"%",avg<50?"red":avg<75?"amber":"green"]].map(m=>`<div class="panel metric"><span class="chip ${m[2]}">${m[0]}</span><strong>${m[1]}</strong></div>`).join("");health.innerHTML=reports.slice().sort((a,b)=>({red:0,amber:1,gray:2,green:3}[a.health]-{red:0,amber:1,gray:2,green:3}[b.health])).map(r=>`<div class="status"><div><b>${esc(r.product)}</b><p class="muted small">${esc(r.owner||"Unassigned")} - ${esc(r.stage)} - ${esc(r.summary)}</p><div class="progress"><div class="bar ${cls(r)}" style="width:${+r.progress||0}%"></div></div></div><span class="chip ${cls(r)}">${labels[r.health]||r.health}</span></div>`).join("")||`<div class="empty">No reports.</div>`;riskRadar();list("wins","win");list("blockers","blocker");list("nexts","next");renderReports()}
-function riskRadar(){const pos=[[78,24],[44,28],[24,49],[69,55],[36,76]];risk.innerHTML="";reports.filter(r=>r.blocker).sort((a,b)=>({Critical:3,High:2,Normal:1}[b.priority||"Normal"]-({Critical:3,High:2,Normal:1}[a.priority||"Normal"]))).slice(0,5).forEach((r,i)=>{let p=document.createElement("div");p.className=`point ${cls(r)}`;p.style.left=pos[i][0]+"%";p.style.top=pos[i][1]+"%";p.innerHTML=`<strong>${esc(r.product)}</strong>${esc(r.blocker)}`;risk.appendChild(p)})}
-function list(id,key){const items=reports.filter(r=>r[key]).slice(0,6);document.getElementById(id).innerHTML=items.map((r,i)=>`<div class="item"><div class="node">${i+1}</div><div><b>${esc(r.product)}</b><p class="muted small">${esc(r[key])}</p></div></div>`).join("")||`<div class="empty">None captured.</div>`}
-function renderReports(){reportList.innerHTML=reports.map(r=>`<div class="report ${r.id===selected?"selected":""}" data-id="${r.id}"><b>${esc(r.product)}</b><p class="small muted">${esc(r.owner||"Unassigned")} - ${esc(r.week)}</p><p class="small">${esc(r.summary)}</p></div>`).join("");const r=reports.find(x=>x.id===selected);detail.innerHTML=r?`<h3>${esc(r.product)}</h3><p class="muted small">${esc(r.owner||"Unassigned")} - ${esc(r.week)} - ${esc(r.stage)}</p><p><b>Summary</b><br>${esc(r.summary)}</p><p><b>Win</b><br>${esc(r.win||"")}</p><p><b>Blocker</b><br>${esc(r.blocker||"")}</p><p><b>Next</b><br>${esc(r.next||"")}</p><button class="btn danger" onclick="remove('${r.id}')">Delete</button>`:`<div class="empty">Select a report.</div>`}
-document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===b.dataset.view));document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t===b))});document.querySelectorAll("[data-jump]").forEach(b=>b.onclick=()=>document.querySelector(`[data-view="${b.dataset.jump}"]`).click());
-form.onsubmit=async e=>{e.preventDefault();saveBtn.textContent="Saving...";const r=Object.fromEntries(new FormData(form));try{await create({...r,progress:+r.progress,impact:+r.impact,time:+r.time});form.reset();form.week.valueAsDate=new Date();document.querySelector('[data-view="dashboard"]').click()}catch(err){alert("Could not save. Check Supabase settings.");console.error(err)}finally{saveBtn.textContent="Save Report"}};
-reportList.onclick=e=>{const c=e.target.closest(".report");if(c){selected=c.dataset.id;render("Synced with Supabase")}};exportBtn.onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(reports,null,2)],{type:"application/json"}));a.download="portfolio-pulse-reports.json";a.click()};reloadBtn.onclick=load;form.week.valueAsDate=new Date();load();
-</script>
+  <div class="app">
+    <aside>
+      <div class="brand">
+        <div class="mark">PU</div>
+        <div>
+          <h1>Product & UI/UX Pulse</h1>
+          <p class="muted small">Portfolio status dashboard</p>
+        </div>
+      </div>
+      <nav class="tabs" aria-label="Primary">
+        <button class="tab active" data-view="dashboard">â–¦ Dashboard</button>
+        <button class="tab" data-view="intake">âœŽ Add Status</button>
+        <button class="tab" data-view="reports">â˜· Source Reports</button>
+      </nav>
+      <div class="side-actions">
+        <button class="btn danger" id="resetBtn">Reload This Week</button>
+      </div>
+    </aside>
+
+    <main>
+      <section class="view active" id="dashboard">
+        <div class="header">
+          <div>
+            <h2>Product & UI/UX Dashboard</h2>
+            <p class="muted" id="dashboardSubtitle">Live rollup from the latest product and design reports.</p>
+          </div>
+          <button class="btn primary" data-jump="intake">Add Product Status</button>
+        </div>
+
+        <div class="panel filter-bar">
+          <label>
+            Period
+            <select id="periodFilter">
+              <option value="all">All dates</option>
+              <option value="day">Daily</option>
+              <option value="week">Weekly</option>
+              <option value="month">Monthly</option>
+            </select>
+          </label>
+          <label>
+            Date
+            <input id="periodDate" type="date" />
+          </label>
+          <label>
+            Portfolio health
+            <select id="dashboardRoleFilter">
+              <option value="all">Product Manager + UI/UX</option>
+              <option value="Product Manager">Product Manager</option>
+              <option value="UI/UX">UI/UX</option>
+            </select>
+          </label>
+          <label>
+            Health
+            <select id="dashboardHealthFilter">
+              <option value="all">All health</option>
+              <option value="green">On Track</option>
+              <option value="amber">In Progress</option>
+              <option value="red">At Risk</option>
+              <option value="gray">Paused</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="grid summary-grid" id="metrics"></div>
+
+        <div class="grid two-col">
+          <div class="panel">
+            <h3>Portfolio Health</h3>
+            <div class="status-list" id="healthList"></div>
+          </div>
+          <div class="panel">
+            <h3>Risk Radar</h3>
+            <div class="risk-matrix" id="riskMatrix">
+              <span class="matrix-label y">Impact</span>
+              <span class="matrix-label x">Time to resolve</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid three-col" style="margin-top:16px">
+          <div class="panel">
+            <h3>Wins</h3>
+            <div class="timeline" id="winsList"></div>
+          </div>
+          <div class="panel">
+            <h3>Blockers</h3>
+            <div class="timeline" id="blockerList"></div>
+          </div>
+          <div class="panel">
+            <h3>Next Actions</h3>
+            <div class="timeline" id="nextList"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="intake">
+        <div class="header">
+          <div>
+            <h2>Add Product or UI/UX Status Report</h2>
+            <p class="muted">Capture one product, delivery, or design update. The dashboard recalculates automatically.</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <form id="statusForm">
+            <div class="form-grid">
+              <label>
+                Product, feature, or workstream
+                <input name="product" required placeholder="e.g., Unified Design System" />
+              </label>
+              <label>
+                Owner
+                <input name="owner" placeholder="e.g., Saurabh" />
+              </label>
+              <label>
+                Role
+                <select name="role">
+                  <option>Product Manager</option>
+                  <option>UI/UX</option>
+                </select>
+              </label>
+              <label>
+                Reporting week
+                <input name="week" type="date" required />
+              </label>
+              <label>
+                Due date
+                <input name="due_date" type="date" />
+              </label>
+              <label>
+                Health
+                <select name="health">
+                  <option value="green">On Track</option>
+                  <option value="amber">In Progress</option>
+                  <option value="red">At Risk</option>
+                  <option value="gray">Paused</option>
+                </select>
+              </label>
+              <label>
+                Progress
+                <input name="progress" type="number" min="0" max="100" value="60" />
+              </label>
+              <label>
+                Stage
+                <select name="stage">
+                  <option>Discovery</option>
+                  <option>Research</option>
+                  <option>Documentation</option>
+                  <option>Demo</option>
+                  <option>Testing</option>
+                  <option>QA</option>
+                  <option>Environment</option>
+                  <option>Wireframes</option>
+                  <option>Visual Design</option>
+                  <option>Prototype</option>
+                  <option>Design Review</option>
+                  <option>Dev Handoff</option>
+                  <option>QA Review</option>
+                  <option>Release</option>
+                  <option>Paused</option>
+                  <option>Completed</option>
+                </select>
+              </label>
+              <label class="full">
+                Summary
+                <textarea name="summary" required placeholder="What changed this week?"></textarea>
+              </label>
+              <label>
+                Win
+                <textarea name="win" placeholder="What progress should leadership notice?"></textarea>
+              </label>
+              <label>
+                Blocker or risk
+                <textarea name="blocker" placeholder="What is blocking delivery, design, review, feedback, or handoff?"></textarea>
+              </label>
+              <label>
+                Next action
+                <textarea name="next" placeholder="What is the next delivery, design, review, or handoff step?"></textarea>
+              </label>
+              <label>
+                Risk impact
+                <select name="impact">
+                  <option value="1">Low</option>
+                  <option value="2">Medium</option>
+                  <option value="3">High</option>
+                </select>
+              </label>
+              <label>
+                Time to resolve
+                <select name="time">
+                  <option value="1">Short</option>
+                  <option value="2">Medium</option>
+                  <option value="3">Long</option>
+                </select>
+              </label>
+              <label>
+                Priority
+                <select name="priority">
+                  <option>Normal</option>
+                  <option>High</option>
+                  <option>Critical</option>
+                </select>
+              </label>
+            </div>
+            <div style="display:flex; gap:10px; justify-content:flex-end">
+              <button class="btn" type="reset">Clear</button>
+              <button class="btn primary" type="submit" id="saveReportBtn">Save Report</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="view" id="reports">
+        <div class="header">
+          <div>
+            <h2>Source Status Reports</h2>
+            <p class="muted">Browse transformed product and UI/UX updates.</p>
+          </div>
+          <button class="btn primary" data-jump="dashboard">Back to Dashboard</button>
+        </div>
+        <div class="grid two-col">
+          <div class="panel">
+            <h3>Submitted Reports</h3>
+            <div class="filter-bar" style="grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:12px">
+              <label>
+                Owner
+                <select id="reportOwnerFilter"></select>
+              </label>
+              <label>
+                Product / workstream
+                <select id="reportProductFilter"></select>
+              </label>
+              <label>
+                Date
+                <input id="reportDateFilter" type="date" />
+              </label>
+              <label>
+                Role
+                <select id="reportRoleFilter">
+                  <option value="all">All roles</option>
+                  <option value="Product Manager">Product Manager</option>
+                  <option value="UI/UX">UI/UX</option>
+                </select>
+              </label>
+            </div>
+            <div class="report-list" id="reportList"></div>
+          </div>
+          <div class="panel" id="reportDetail">
+            <div class="empty">Select a report to inspect the full update.</div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./supabase-config.js"></script>
+  <script>
+    const STORAGE_KEY = "product-uiux-pulse-reports-v1";
+    const labels = {
+      green: "On Track",
+      amber: "In Progress",
+      red: "At Risk",
+      gray: "Paused"
+    };
+
+    const sampleReports = [
+      {
+        id: crypto.randomUUID(), product: "Surveyor's System", owner: "Nadishani", week: "2026-05-26",
+        health: "green", progress: 82, stage: "Release", priority: "High", impact: 1, time: 1,
+        summary: "Production release completed Tuesday. Seven company accounts are created, and onboarding is continuing for the remaining companies.",
+        win: "Production release is complete and onboarding has started with 7 company accounts created.",
+        blocker: "Contacts are still needed for the remaining 11 companies; only 6 companies are currently in the Teams chat and account-ready.",
+        next: "Gather remaining contacts and continue onboarding companies from the previous system."
+      },
+      {
+        id: crypto.randomUUID(), product: "Cardinal", owner: "Nadishani", week: "2026-05-26",
+        health: "gray", progress: 15, stage: "Discovery", priority: "Normal", impact: 1, time: 2,
+        summary: "Requirement gathering meetings were requested with Holly, but discussions are on hold while Holly focuses on the Ajera to Vantagepoint migration.",
+        win: "Requirement-gathering request has been initiated.",
+        blocker: "Stakeholder availability is blocked by Ajera to Vantagepoint migration priorities.",
+        next: "Resume requirement gathering once Holly is available."
+      },
+      {
+        id: crypto.randomUUID(), product: "KJM Migration", owner: "Nadishani", week: "2026-05-26",
+        health: "amber", progress: 45, stage: "Discovery", priority: "High", impact: 3, time: 2,
+        summary: "Company account and access confirmation are complete. ERD and an initial Claude-assisted migration plan are prepared.",
+        win: "ERD and initial migration plan are ready.",
+        blocker: "Data migration is pending because client emails, latitude/longitude data, and dataset consistency need cleanup.",
+        next: "Coordinate missing data and resolve dataset inconsistencies before migration proceeds."
+      },
+      {
+        id: crypto.randomUUID(), product: "Now Solutions", owner: "Nadishani", week: "2026-05-26",
+        health: "amber", progress: 62, stage: "Documentation", priority: "High", impact: 2, time: 2,
+        summary: "Technical documentation and KT planning are underway. The release management workflow is finalized and pending Laurent's validation.",
+        win: "KT/replacement plan and release management workflow are finalized.",
+        blocker: "Documentation is outdated or undocumented in several areas, and access-management tracking is still being prepared.",
+        next: "Schedule technical sessions, validate release workflow with Laurent, and complete access tracking."
+      },
+      {
+        id: crypto.randomUUID(), product: "Othership â€“ IWG Integration", owner: "Nadishani / Krishina", week: "2026-05-26",
+        health: "red", progress: 58, stage: "QA", priority: "Critical", impact: 3, time: 3,
+        summary: "End-to-end testing has started with Sarath. Pricing logic was clarified with IWG and shared with devs, but production API issues remain.",
+        win: "Major pricing calculation issue was identified, clarified, and calculation logic was finalized.",
+        blocker: "Public production APIs are returning 401 Unauthorized responses and require IWG response/fix.",
+        next: "Run final production-card testing with Sarath after API fix and confirm go-live readiness."
+      },
+      {
+        id: crypto.randomUUID(), product: "DaaS360", owner: "Nadishani", week: "2026-05-26",
+        health: "amber", progress: 28, stage: "Discovery", priority: "Normal", impact: 1, time: 2,
+        summary: "Application access and technical documents were requested. Desktop EXE setup and user manual were received.",
+        win: "Initial setup and user manual are now available.",
+        blocker: "Workflow understanding is still early and LP360 review has not started.",
+        next: "Review the desktop application and LP360 next week."
+      },
+      {
+        id: crypto.randomUUID(), product: "Zena Call Center AI", owner: "Nadishani", week: "2026-05-26",
+        health: "amber", progress: 65, stage: "QA", priority: "High", impact: 2, time: 2,
+        summary: "First version has been developed, and initial automation testing using Claude Code is complete.",
+        win: "Initial AI automation testing is complete.",
+        blocker: "Manual validation against the SRS, functionality testing, and missing-requirement checks are still pending.",
+        next: "Complete manual validation and implement any missing requirements."
+      },
+      {
+        id: crypto.randomUUID(), product: "Provitrac", owner: "Faran / Jocasta", week: "2026-05-26",
+        health: "amber", progress: 56, stage: "Design Review", priority: "Normal", impact: 1, time: 2,
+        summary: "Demo was given to Sales, Marketing, and HR. Jocasta is preparing UI/UX issue documentation, and QA testing will start when environment is ready.",
+        win: "Cross-functional demo is complete.",
+        blocker: "Environment creation is delayed until developers return from holidays.",
+        next: "Complete UI/UX issue document and coordinate QA testing once the environment is ready."
+      },
+      {
+        id: crypto.randomUUID(), product: "Jadian", owner: "Faran", week: "2026-05-26",
+        health: "amber", progress: 22, stage: "Discovery", priority: "Normal", impact: 1, time: 2,
+        summary: "Product discussion with the developer has not happened yet due to competing product priorities.",
+        win: "Existing materials are available for initial product-flow review.",
+        blocker: "Developer walkthrough is still pending.",
+        next: "Connect with the developer on Friday and schedule Sales/Marketing demo early next week."
+      },
+      {
+        id: crypto.randomUUID(), product: "ZenaCDP", owner: "Krishina", week: "2026-05-26",
+        health: "green", progress: 100, stage: "Completed", priority: "Normal", impact: 1, time: 1,
+        summary: "Brand new ZenaCDP product is now 100% complete from Krishina's side.",
+        win: "Product work is complete.",
+        blocker: "",
+        next: "Move to final stakeholder review or operational handoff as needed."
+      },
+      {
+        id: crypto.randomUUID(), product: "ZenaBooks", owner: "Krishina", week: "2026-05-26",
+        health: "gray", progress: 5, stage: "Paused", priority: "Normal", impact: 1, time: 3,
+        summary: "ZenaBooks is currently on hold.",
+        win: "",
+        blocker: "Workstream is paused.",
+        next: "Reconfirm priority and restart criteria."
+      },
+      {
+        id: crypto.randomUUID(), product: "TSentra", owner: "Swatti / Saurabh", week: "2026-05-26",
+        health: "amber", progress: 72, stage: "Design Review", priority: "High", impact: 2, time: 2,
+        summary: "TSentra is in testing. Most QA issues are fixed, design updates were reviewed with Saurabh, and an updated APK was shared with Saurabh, Anja, Ella, and Cita for feedback.",
+        win: "Branding and logo are complete, and the updated APK is now in the stakeholder feedback loop with marketing, sales, and content included.",
+        blocker: "Design updates still need to be discussed with developers on Friday before the flow can be fully closed.",
+        next: "Review feedback, align with devs on Friday, and finalize remaining UI/UX updates."
+      },
+      {
+        id: crypto.randomUUID(), product: "Osra+", owner: "Swatti", week: "2026-05-26",
+        health: "amber", progress: 54, stage: "Visual Design", priority: "High", impact: 2, time: 2,
+        summary: "Work is underway on a new aligned system for Osra+. Sales requested trade fair updates for Hannover, and fixes are being applied to the old Osra experience.",
+        win: "Brand direction can follow the completed TSentra branding approach.",
+        blocker: "Dev support is needed to align the new system and complete trade fair fixes.",
+        next: "Meet with devs tomorrow, complete old Osra fixes by Friday, then test Friday or Monday."
+      },
+      {
+        id: crypto.randomUUID(), product: "ZenaTMS", owner: "Swatti", week: "2026-05-26",
+        health: "amber", progress: 82, stage: "Design Review", priority: "Normal", impact: 1, time: 1,
+        summary: "ZenaTMS is almost ready, with small changes remaining before review.",
+        win: "The app is close to review-ready and targeted to be ready by Friday.",
+        blocker: "Logo is not yet available, and dev ownership still needs to be confirmed.",
+        next: "Share with Saurabh, Daniela, and Sajjad for review, then work with the assigned dev team."
+      },
+      {
+        id: crypto.randomUUID(), product: "ZenaWealth", owner: "Swatti", week: "2026-05-26",
+        health: "gray", progress: 18, stage: "Discovery", priority: "Normal", impact: 1, time: 2,
+        summary: "New project discovery has started. Documentation is being read and summarized before prompt/design direction is drafted.",
+        win: "Project intake has started.",
+        blocker: "Logo and brand assets are not available yet.",
+        next: "Finish document summary and draft the first prompt/design direction tomorrow."
+      },
+      {
+        id: crypto.randomUUID(), product: "Unified Design System", owner: "Saurabh / Riya / Jocasta", week: "2026-05-26",
+        health: "amber", progress: 66, stage: "Prototype", priority: "High", impact: 2, time: 2,
+        summary: "The team is improving product consistency through a markdown-based design system and organizing the Figma design system into a more interactive structure.",
+        win: "Testing a solid .md design-system file with Claude appears to work and could help make products look and feel more consistent.",
+        blocker: "The approach needs refining before it becomes the standard way to drive consistency across products.",
+        next: "Refine the markdown design system, continue Figma organization, and connect the system to product-specific UI issue docs."
+      },
+      {
+        id: crypto.randomUUID(), product: "Zinergy", owner: "Riya / Faran", week: "2026-05-26",
+        health: "amber", progress: 70, stage: "QA Review", priority: "High", impact: 2, time: 1,
+        summary: "UI/UX feedback was provided to the developer and implemented. Riya is working on final UI/UX tweaks, but the latest implementation still needs review.",
+        win: "The developer has already implemented the UI/UX feedback from the previous review cycle.",
+        blocker: "Final acceptance testing and UI/UX review are pending after recent changes.",
+        next: "Review implemented feedback, close final tweaks, and prepare for acceptance testing."
+      },
+      {
+        id: crypto.randomUUID(), product: "DeskFlex", owner: "Riya / Deepa", week: "2026-05-26",
+        health: "amber", progress: 48, stage: "Visual Design", priority: "High", impact: 2, time: 2,
+        summary: "DeskFlex demos were completed last week. Riya is working on UI/UX issues, bugs, and the assets flow while web-app issues are actively being addressed.",
+        win: "Demo is complete and UI/UX issue work is underway.",
+        blocker: "Work is partly paused until developers return, and the assets flow still needs to be laid out.",
+        next: "Resume with devs, document asset flow, and close UI/UX bug list."
+      },
+      {
+        id: crypto.randomUUID(), product: "Worksware UI/UX Documentation", owner: "Riya / Deepa", week: "2026-05-26",
+        health: "amber", progress: 36, stage: "Research", priority: "Normal", impact: 2, time: 2,
+        summary: "Worksware demos are complete and web-app issues are being addressed. UI/UX issues still need to be documented.",
+        win: "Product context is available from completed demos.",
+        blocker: "UI/UX issue documentation has not yet been created.",
+        next: "Document UI/UX issues and align fixes once developers are back."
+      },
+      {
+        id: crypto.randomUUID(), product: "Pace+", owner: "Jocasta / Faran", week: "2026-05-26",
+        health: "green", progress: 78, stage: "Design Review", priority: "Normal", impact: 1, time: 1,
+        summary: "Pace+ is ONC Certified. A new version demo, product overview, and user manual were shared with Sales and Marketing; designer credentials were provided for feedback.",
+        win: "ONC Certification is complete and design feedback access is now open.",
+        blocker: "Designer feedback is still pending before implementation.",
+        next: "Collect designer feedback, document UI/UX issues, and send changes for implementation."
+      },
+      {
+        id: crypto.randomUUID(), product: "K9SKY", owner: "Jocasta / Deepa", week: "2026-05-26",
+        health: "amber", progress: 52, stage: "Design Review", priority: "Normal", impact: 2, time: 2,
+        summary: "K9SKY demo was completed last week. Mobile app work is active, and Jocasta is preparing UI/UX issue documentation.",
+        win: "Demo is complete and the product is now in the UI/UX documentation queue.",
+        blocker: "Some work is paused until developers return Thursday.",
+        next: "Document UI/UX issues and resume mobile/web issue resolution with developers."
+      },
+      {
+        id: crypto.randomUUID(), product: "Othership UI/UX", owner: "Jocasta / Krishina", week: "2026-05-26",
+        health: "red", progress: 42, stage: "Research", priority: "High", impact: 3, time: 3,
+        summary: "Othership demo is complete and migration requirements are being identified. Jocasta still needs to review Othership UI/UX.",
+        win: "Product demo is complete, giving design a starting point for review.",
+        blocker: "Production API 401 issues and migration work may delay final UI/UX validation.",
+        next: "Review Othership UI/UX, document issues, and validate changes after API fixes."
+      },
+      {
+        id: crypto.randomUUID(), product: "HWMS", owner: "Krishina", week: "2026-05-26",
+        health: "green", progress: 88, stage: "QA Review", priority: "Normal", impact: 1, time: 1,
+        summary: "The delivered HWMS module was verified, with nothing major pending beyond minor UI polish.",
+        win: "No major UI/UX issues remain.",
+        blocker: "A few minor UI polish items still need cleanup.",
+        next: "Close minor polish items and mark the module ready from UI/UX."
+      },
+      {
+        id: crypto.randomUUID(), product: "PS Portals", owner: "Krishina", week: "2026-05-26",
+        health: "amber", progress: 32, stage: "Discovery", priority: "Normal", impact: 2, time: 3,
+        summary: "PS Portals is a large product. The team is building a deeper understanding of workflows and overall structure before demoing.",
+        win: "Workflow discovery has started.",
+        blocker: "Product complexity means UI/UX understanding is still early.",
+        next: "Continue workflow discovery and prepare for a confident product demo."
+      }
+    ];
+
+    const config = window.SUPABASE_CONFIG || {};
+    const hasSupabaseConfig = Boolean(config.url && config.anonKey);
+    const supabaseTable = config.table || "status_reports";
+    const supabaseBaseUrl = hasSupabaseConfig ? `${config.url.replace(/\/$/, "")}/rest/v1/${supabaseTable}` : "";
+    let reports = [];
+    let selectedReportId = null;
+    const dashboardFilters = {
+      period: "all",
+      date: "",
+      role: "all",
+      health: "all"
+    };
+    const reportFilters = {
+      owner: "all",
+      product: "all",
+      date: "",
+      role: "all"
+    };
+
+    function loadReports() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleReports));
+        return sampleReports;
+      }
+      try {
+        const parsed = JSON.parse(saved);
+        if (!Array.isArray(parsed)) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleReports));
+          return sampleReports;
+        }
+        const seen = new Set(parsed.map(report => `${report.product}|${report.owner}|${report.week}`));
+        const missingSeeds = sampleReports.filter(report => !seen.has(`${report.product}|${report.owner}|${report.week}`));
+        const merged = [...parsed, ...missingSeeds];
+        if (missingSeeds.length) localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        return merged;
+      }
+      catch { return sampleReports; }
+    }
+
+    function saveReports() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(reports));
+    }
+
+    function normalizeReport(row) {
+      const normalized = {
+        product: row.product || "",
+        owner: row.owner || "",
+        stage: row.stage || "Discovery",
+        role: row.role || ""
+      };
+      return {
+        id: row.id,
+        product: normalized.product,
+        owner: normalized.owner,
+        role: normalized.role || inferRole(normalized),
+        week: row.week || "",
+        due_date: row.due_date || "",
+        health: row.health || "amber",
+        progress: Number(row.progress || 0),
+        stage: normalized.stage,
+        priority: row.priority || "Normal",
+        impact: Number(row.impact || 1),
+        time: Number(row.time || 1),
+        summary: row.summary || "",
+        win: row.win || "",
+        blocker: row.blocker || "",
+        next: row.next || "",
+      };
+    }
+
+    function toDbReport(report, legacy = false) {
+      const base = {
+        product: report.product,
+        owner: report.owner || null,
+        week: report.week,
+        health: report.health,
+        progress: report.progress,
+        stage: report.stage,
+        priority: report.priority,
+        impact: report.impact,
+        time: report.time,
+        summary: report.summary,
+        win: report.win || null,
+        blocker: report.blocker || null,
+        next: report.next || null,
+      };
+      if (legacy) return base;
+      return {
+        ...base,
+        role: report.role || inferRole(report),
+        due_date: report.due_date || null,
+      };
+    }
+
+    function inferRole(report) {
+      const text = `${report.owner || ""} ${report.product || ""} ${report.stage || ""}`.toLowerCase();
+      const uiuxOwners = ["saurabh", "riya", "jocasta"];
+      const uiuxTerms = ["ui/ux", "uiux", "design", "figma", "wireframe", "prototype", "visual"];
+      return uiuxOwners.some(name => text.includes(name)) || uiuxTerms.some(term => text.includes(term))
+        ? "UI/UX"
+        : "Product Manager";
+    }
+
+    function setSyncStatus(text) {
+      const subtitle = document.getElementById("dashboardSubtitle");
+      subtitle.dataset.syncStatus = text;
+    }
+
+    async function supabaseRequest(path = "", options = {}) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), options.timeoutMs || 8000);
+      const headers = {
+        apikey: config.anonKey,
+        Authorization: `Bearer ${config.anonKey}`,
+        "Content-Type": "application/json",
+        ...(options.headers || {})
+      };
+      if (options.prefer !== "") headers.Prefer = options.prefer || "return=representation";
+      const response = await fetch(`${supabaseBaseUrl}${path}`, {
+        method: options.method || "GET",
+        headers,
+        body: options.body ? JSON.stringify(options.body) : undefined,
+        signal: controller.signal
+      }).finally(() => clearTimeout(timeoutId));
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || `Supabase request failed: ${response.status}`);
+      }
+      if (response.status === 204) return null;
+      return response.json();
+    }
+
+    async function fetchReports() {
+      if (!hasSupabaseConfig) {
+        reports = loadReports();
+        selectedReportId = reports[0]?.id || null;
+        setSyncStatus("Local browser storage");
+        renderAll();
+        return;
+      }
+
+      let data;
+      try {
+        data = await supabaseRequest("?select=*&order=week.desc,created_at.desc", { prefer: "" });
+      } catch (error) {
+        console.error("Supabase load failed:", error);
+        reports = loadReports();
+        selectedReportId = reports[0]?.id || null;
+        setSyncStatus("Supabase unavailable; showing local fallback");
+        renderAll();
+        return;
+        return;
+      }
+
+      if (!data.length) {
+        try {
+          const seeded = await supabaseRequest("?select=*", {
+            method: "POST",
+            body: sampleReports.map(toDbReport)
+          });
+          reports = seeded.map(normalizeReport);
+          setSyncStatus("Synced with Supabase");
+        } catch (seedError) {
+          console.error("Supabase seed failed:", seedError);
+          reports = loadReports();
+          setSyncStatus("Supabase seed failed; showing local fallback");
+        }
+      } else {
+        reports = data.map(normalizeReport);
+        setSyncStatus("Synced with Supabase");
+      }
+
+      selectedReportId = reports[0]?.id || null;
+      renderAll();
+    }
+
+    async function createReport(report) {
+      if (!hasSupabaseConfig) {
+        reports = [report, ...reports];
+        selectedReportId = report.id;
+        saveReports();
+        renderAll();
+        return;
+      }
+
+      let data;
+      try {
+        data = await supabaseRequest("?select=*", {
+          method: "POST",
+          body: toDbReport(report)
+        });
+      } catch (error) {
+        console.warn("Retrying create without new schema columns:", error);
+        data = await supabaseRequest("?select=*", {
+          method: "POST",
+          body: toDbReport(report, true)
+        });
+      }
+      const created = Array.isArray(data) ? data[0] : data;
+      if (!created) throw new Error("Supabase did not return the created report.");
+      reports = [normalizeReport({ ...created, role: report.role, due_date: report.due_date }), ...reports];
+      selectedReportId = created.id;
+      renderAll();
+    }
+
+    async function updateReport(report) {
+      if (!hasSupabaseConfig) {
+        reports = reports.map(existing => existing.id === report.id ? report : existing);
+        selectedReportId = report.id;
+        saveReports();
+        renderAll();
+        return;
+      }
+
+      let data;
+      try {
+        data = await supabaseRequest(`?id=eq.${encodeURIComponent(report.id)}&select=*`, {
+          method: "PATCH",
+          body: toDbReport(report)
+        });
+      } catch (error) {
+        console.warn("Retrying update via delete and insert:", error);
+        await supabaseRequest(`?id=eq.${encodeURIComponent(report.id)}`, {
+          method: "DELETE",
+          prefer: "return=minimal"
+        });
+        try {
+          data = await supabaseRequest("?select=*", {
+            method: "POST",
+            body: toDbReport(report)
+          });
+        } catch (insertError) {
+          console.warn("Retrying update insert without new schema columns:", insertError);
+          data = await supabaseRequest("?select=*", {
+            method: "POST",
+            body: toDbReport(report, true)
+          });
+        }
+      }
+      const updated = Array.isArray(data) ? data[0] : data;
+      if (!updated) throw new Error("Supabase did not return the updated report.");
+      reports = reports.map(existing => existing.id === report.id ? normalizeReport({ ...updated, role: report.role, due_date: report.due_date }) : existing);
+      selectedReportId = updated.id;
+      renderAll();
+    }
+
+    async function deleteReportById(id) {
+      if (!hasSupabaseConfig) {
+        reports = reports.filter(r => r.id !== id);
+        selectedReportId = reports[0]?.id || null;
+        saveReports();
+        renderAll();
+        return;
+      }
+
+      await supabaseRequest(`?id=eq.${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        prefer: "return=minimal"
+      });
+      reports = reports.filter(r => r.id !== id);
+      selectedReportId = reports[0]?.id || null;
+      renderAll();
+    }
+
+    async function reloadSeedData() {
+      const fresh = sampleReports.map(r => ({ ...r, id: crypto.randomUUID() }));
+      if (!hasSupabaseConfig) {
+        reports = fresh;
+        selectedReportId = reports[0].id;
+        saveReports();
+        renderAll();
+        return;
+      }
+
+      const ids = reports.map(report => report.id).filter(Boolean);
+      if (ids.length) {
+        await supabaseRequest(`?id=in.(${ids.map(encodeURIComponent).join(",")})`, {
+          method: "DELETE",
+          prefer: "return=minimal"
+        });
+      }
+      const data = await supabaseRequest("?select=*", {
+        method: "POST",
+        body: fresh.map(toDbReport)
+      });
+      reports = data.map(normalizeReport);
+      selectedReportId = reports[0]?.id || null;
+      renderAll();
+    }
+
+    function switchView(id) {
+      document.querySelectorAll(".view").forEach(view => view.classList.toggle("active", view.id === id));
+      document.querySelectorAll(".tab").forEach(tab => tab.classList.toggle("active", tab.dataset.view === id));
+    }
+
+    function healthClass(report) {
+      if (report.health === "red" || report.priority === "Critical") return "red";
+      if (report.health === "amber") return "amber";
+      if (report.health === "gray") return "gray";
+      return "green";
+    }
+
+    function isSameDay(value, anchor) {
+      return Boolean(value && anchor && value === anchor);
+    }
+
+    function isSameMonth(value, anchor) {
+      return Boolean(value && anchor && value.slice(0, 7) === anchor.slice(0, 7));
+    }
+
+    function isSameWeek(value, anchor) {
+      if (!value || !anchor) return false;
+      const date = new Date(`${value}T00:00:00`);
+      const target = new Date(`${anchor}T00:00:00`);
+      const start = new Date(target);
+      const day = (start.getDay() + 6) % 7;
+      start.setDate(start.getDate() - day);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 7);
+      return date >= start && date < end;
+    }
+
+    function matchesPeriod(report) {
+      if (dashboardFilters.period === "all" || !dashboardFilters.date) return true;
+      if (dashboardFilters.period === "day") return isSameDay(report.week, dashboardFilters.date);
+      if (dashboardFilters.period === "week") return isSameWeek(report.week, dashboardFilters.date);
+      if (dashboardFilters.period === "month") return isSameMonth(report.week, dashboardFilters.date);
+      return true;
+    }
+
+    function getDashboardReports() {
+      return reports.filter(report =>
+        matchesPeriod(report) &&
+        (dashboardFilters.role === "all" || report.role === dashboardFilters.role) &&
+        (dashboardFilters.health === "all" || report.health === dashboardFilters.health)
+      );
+    }
+
+    function getReportList() {
+      return reports.filter(report =>
+        (reportFilters.owner === "all" || report.owner === reportFilters.owner) &&
+        (reportFilters.product === "all" || report.product === reportFilters.product) &&
+        (!reportFilters.date || report.week === reportFilters.date || report.due_date === reportFilters.date) &&
+        (reportFilters.role === "all" || report.role === reportFilters.role)
+      );
+    }
+
+    function roleStats(role, source) {
+      const scoped = source.filter(report => report.role === role);
+      const total = scoped.length;
+      const atRisk = scoped.filter(report => report.health === "red" || report.priority === "Critical").length;
+      const avg = total ? Math.round(scoped.reduce((sum, report) => sum + Number(report.progress || 0), 0) / total) : 0;
+      return { total, atRisk, avg };
+    }
+
+    function renderMetrics() {
+      const source = getDashboardReports();
+      const pm = roleStats("Product Manager", source);
+      const ux = roleStats("UI/UX", source);
+      const total = source.length;
+      const atRisk = source.filter(r => r.health === "red" || r.priority === "Critical").length;
+      const avg = total ? Math.round(source.reduce((sum, r) => sum + Number(r.progress || 0), 0) / total) : 0;
+      const metrics = [
+        ["Tracks", total, "blue", "Active workstreams", `${pm.total} PM`, `${ux.total} UI/UX`],
+        ["At Risk", atRisk, atRisk ? "red" : "green", "Needs attention", `${pm.atRisk} PM`, `${ux.atRisk} UI/UX`],
+        ["Avg Progress", `${avg}%`, avg < 50 ? "red" : avg < 75 ? "amber" : "green", "Across filtered reports", `${pm.avg}% PM`, `${ux.avg}% UI/UX`],
+      ];
+      document.getElementById("metrics").innerHTML = metrics.map(([name, value, tone, note, pmNote, uxNote]) => `
+        <div class="panel metric">
+          <span class="chip ${tone}">${name}</span>
+          <strong>${value}</strong>
+          <span class="muted small">${note}</span>
+          <div class="metric-split"><span>${pmNote}</span><span>${uxNote}</span></div>
+        </div>
+      `).join("");
+    }
+
+    function renderHealth() {
+      const sorted = [...getDashboardReports()].sort((a, b) => {
+        const rank = { red: 0, amber: 1, gray: 2, green: 3 };
+        return rank[a.health] - rank[b.health] || b.progress - a.progress;
+      });
+      document.getElementById("healthList").innerHTML = sorted.length ? sorted.map(r => `
+        <div class="status-row">
+          <div>
+            <strong>${escapeHtml(r.product)}</strong>
+            <p class="muted small">${escapeHtml(r.owner || "Unassigned")} - ${escapeHtml(r.role)} - ${escapeHtml(r.stage)}${r.due_date ? ` - Due ${escapeHtml(r.due_date)}` : ""}</p>
+            <p class="muted small">${escapeHtml(r.summary)}</p>
+            <div class="progress"><div class="bar ${healthClass(r)}" style="width:${Number(r.progress || 0)}%"></div></div>
+          </div>
+          <span class="chip ${healthClass(r)}">${labels[r.health] || r.health}</span>
+        </div>
+      `).join("") : `<div class="empty">No reports match these filters.</div>`;
+    }
+    function renderRiskMatrix() {
+      const matrix = document.getElementById("riskMatrix");
+      matrix.querySelectorAll(".risk-point").forEach(el => el.remove());
+      const priorityRank = { Critical: 3, High: 2, Normal: 1 };
+      const positions = [
+        [78, 24], [44, 28], [24, 49], [69, 55], [36, 76]
+      ];
+      getDashboardReports()
+        .filter(r => r.blocker)
+        .sort((a, b) =>
+          (priorityRank[b.priority] || 0) - (priorityRank[a.priority] || 0) ||
+          Number(b.impact || 0) - Number(a.impact || 0) ||
+          Number(b.time || 0) - Number(a.time || 0)
+        )
+        .slice(0, 5)
+        .forEach((r, index) => {
+        const [x, y] = positions[index];
+        const point = document.createElement("div");
+        point.className = `risk-point ${healthClass(r)}`;
+        point.style.left = `${x}%`;
+        point.style.top = `${y}%`;
+        point.innerHTML = `<strong>${escapeHtml(r.product)}</strong>${escapeHtml(r.blocker)}`;
+        matrix.appendChild(point);
+      });
+    }
+
+    function renderTimeline(targetId, key, emptyText) {
+      const items = getDashboardReports().filter(r => r[key]).slice(0, 6);
+      document.getElementById(targetId).innerHTML = items.length ? items.map((r, i) => `
+        <div class="timeline-item">
+          <div class="node">${i + 1}</div>
+          <div>
+            <strong>${escapeHtml(r.product)}</strong>
+            <p class="muted small">${escapeHtml(r[key])}</p>
+          </div>
+        </div>
+      `).join("") : `<div class="empty">${emptyText}</div>`;
+    }
+
+    function renderReports() {
+      populateReportFilters();
+      const list = document.getElementById("reportList");
+      const filtered = getReportList();
+      if (!filtered.some(report => report.id === selectedReportId)) selectedReportId = filtered[0]?.id || null;
+      list.innerHTML = filtered.length ? filtered.map(r => `
+        <article class="report-card ${r.id === selectedReportId ? "selected" : ""}" data-id="${r.id}">
+          <header>
+            <div>
+              <strong>${escapeHtml(r.product)}</strong>
+              <p class="muted small">${escapeHtml(r.owner || "Unassigned")} - ${escapeHtml(r.role)} - ${escapeHtml(r.week)}${r.due_date ? ` - Due ${escapeHtml(r.due_date)}` : ""}</p>
+            </div>
+            <span class="chip ${healthClass(r)}">${labels[r.health] || r.health}</span>
+          </header>
+          <p class="small">${escapeHtml(r.summary)}</p>
+        </article>
+      `).join("") : `<div class="empty">No reports match these filters.</div>`;
+      renderDetail();
+    }
+
+    function populateReportFilters() {
+      fillSelect("reportOwnerFilter", reports.map(r => r.owner).filter(Boolean), "All owners", reportFilters.owner);
+      fillSelect("reportProductFilter", reports.map(r => r.product).filter(Boolean), "All products", reportFilters.product);
+    }
+
+    function fillSelect(id, values, allLabel, current) {
+      const select = document.getElementById(id);
+      const unique = [...new Set(values)].sort((a, b) => a.localeCompare(b));
+      const nextValue = current && (current === "all" || unique.includes(current)) ? current : "all";
+      select.innerHTML = [`<option value="all">${allLabel}</option>`, ...unique.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)].join("");
+      select.value = nextValue;
+      if (id === "reportOwnerFilter") reportFilters.owner = nextValue;
+      if (id === "reportProductFilter") reportFilters.product = nextValue;
+    }
+
+    function renderDetail() {
+      const report = reports.find(r => r.id === selectedReportId);
+      const detail = document.getElementById("reportDetail");
+      if (!report) {
+        detail.innerHTML = `<div class="empty">Select a report to inspect or edit the full update.</div>`;
+        return;
+      }
+      detail.innerHTML = `
+        <h3>Edit Report</h3>
+        <form class="detail-form" id="editReportForm">
+          <div class="form-grid">
+            ${editField("Product, feature, or workstream", "product", report.product, "text", true)}
+            ${editField("Owner", "owner", report.owner)}
+            <label>Role<select name="role"><option ${report.role === "Product Manager" ? "selected" : ""}>Product Manager</option><option ${report.role === "UI/UX" ? "selected" : ""}>UI/UX</option></select></label>
+            ${editField("Reporting week", "week", report.week, "date", true)}
+            ${editField("Due date", "due_date", report.due_date, "date")}
+            <label>Health<select name="health"><option value="green" ${report.health === "green" ? "selected" : ""}>On Track</option><option value="amber" ${report.health === "amber" ? "selected" : ""}>In Progress</option><option value="red" ${report.health === "red" ? "selected" : ""}>At Risk</option><option value="gray" ${report.health === "gray" ? "selected" : ""}>Paused</option></select></label>
+            ${editField("Progress", "progress", report.progress, "number")}
+            ${editField("Stage", "stage", report.stage)}
+            <label>Priority<select name="priority"><option ${report.priority === "Normal" ? "selected" : ""}>Normal</option><option ${report.priority === "High" ? "selected" : ""}>High</option><option ${report.priority === "Critical" ? "selected" : ""}>Critical</option></select></label>
+            <label>Risk impact<select name="impact"><option value="1" ${Number(report.impact) === 1 ? "selected" : ""}>Low</option><option value="2" ${Number(report.impact) === 2 ? "selected" : ""}>Medium</option><option value="3" ${Number(report.impact) === 3 ? "selected" : ""}>High</option></select></label>
+            <label>Time to resolve<select name="time"><option value="1" ${Number(report.time) === 1 ? "selected" : ""}>Short</option><option value="2" ${Number(report.time) === 2 ? "selected" : ""}>Medium</option><option value="3" ${Number(report.time) === 3 ? "selected" : ""}>Long</option></select></label>
+            ${editArea("Summary", "summary", report.summary, true)}
+            ${editArea("Win", "win", report.win)}
+            ${editArea("Blocker or risk", "blocker", report.blocker)}
+            ${editArea("Next action", "next", report.next)}
+          </div>
+          <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:6px">
+            <button class="btn danger" type="button" id="deleteReport">Delete Report</button>
+            <button class="btn primary" type="submit" id="updateReportBtn">Save Changes</button>
+          </div>
+        </form>
+      `;
+      document.getElementById("deleteReport").addEventListener("click", async () => {
+        try {
+          await deleteReportById(report.id);
+        } catch (error) {
+          console.error(error);
+          alert("Could not delete this report. Check Supabase permissions or connection.");
+        }
+      });
+      document.getElementById("editReportForm").addEventListener("submit", async event => {
+        event.preventDefault();
+        const btn = document.getElementById("updateReportBtn");
+        btn.disabled = true;
+        btn.textContent = "Saving...";
+        try {
+          await updateReport(readReportForm(event.currentTarget, report.id));
+          btn.textContent = "Saved";
+          setTimeout(() => { btn.textContent = "Save Changes"; }, 1200);
+        } catch (error) {
+          console.error(error);
+          btn.textContent = "Save Changes";
+          alert("Could not update this report. Check Supabase permissions or connection.");
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    }
+
+    function editField(label, name, value = "", type = "text", required = false) {
+      return `<label>${label}<input name="${name}" type="${type}" value="${escapeHtml(value)}" ${required ? "required" : ""}></label>`;
+    }
+
+    function editArea(label, name, value = "", required = false) {
+      return `<label class="${name === "summary" ? "full" : ""}">${label}<textarea name="${name}" ${required ? "required" : ""}>${escapeHtml(value)}</textarea></label>`;
+    }
+
+    function readReportForm(form, id = crypto.randomUUID()) {
+      const data = Object.fromEntries(new FormData(form).entries());
+      return {
+        ...data,
+        id,
+        role: data.role || "Product Manager",
+        progress: Math.max(0, Math.min(100, Number(data.progress || 0))),
+        impact: Number(data.impact || 1),
+        time: Number(data.time || 1)
+      };
+    }
+
+    function renderAll() {
+      const weeks = reports.map(r => r.week).filter(Boolean).sort();
+      const latest = weeks[weeks.length - 1];
+      const syncStatus = document.getElementById("dashboardSubtitle").dataset.syncStatus || "Local browser storage";
+      const filteredCount = getDashboardReports().length;
+      document.getElementById("dashboardSubtitle").textContent = latest ? `Latest reporting week: ${latest} - ${filteredCount} of ${reports.length} product and UI/UX updates - ${syncStatus}.` : `Live rollup from submitted product and UI/UX reports - ${syncStatus}.`;
+      renderMetrics();
+      renderHealth();
+      renderRiskMatrix();
+      renderTimeline("winsList", "win", "No wins captured yet.");
+      renderTimeline("blockerList", "blocker", "No blockers captured yet.");
+      renderTimeline("nextList", "next", "No next actions captured yet.");
+      renderReports();
+    }
+
+    function escapeHtml(value = "") {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    document.querySelectorAll("[data-view]").forEach(tab => {
+      tab.addEventListener("click", () => switchView(tab.dataset.view));
+    });
+
+    document.querySelectorAll("[data-jump]").forEach(btn => {
+      btn.addEventListener("click", () => switchView(btn.dataset.jump));
+    });
+
+    document.getElementById("statusForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      const report = readReportForm(event.currentTarget);
+      const saveBtn = document.getElementById("saveReportBtn");
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Saving...";
+      try {
+        await createReport(report);
+        event.currentTarget.reset();
+        event.currentTarget.week.valueAsDate = new Date();
+        saveBtn.textContent = "Saved";
+        setTimeout(() => { saveBtn.textContent = "Save Report"; }, 1400);
+        switchView("dashboard");
+      } catch (error) {
+        console.error(error);
+        saveBtn.textContent = "Save Report";
+        alert("Could not save this report. Check Supabase configuration or connection.");
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+
+    document.getElementById("reportList").addEventListener("click", event => {
+      const card = event.target.closest(".report-card");
+      if (!card) return;
+      selectedReportId = card.dataset.id;
+      renderReports();
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", async () => {
+      try {
+        await reloadSeedData();
+      } catch (error) {
+        console.error(error);
+        alert("Could not reload weekly data. Check Supabase permissions or connection.");
+      }
+    });
+
+    document.getElementById("periodFilter").addEventListener("change", event => {
+      dashboardFilters.period = event.target.value;
+      renderAll();
+    });
+
+    document.getElementById("periodDate").addEventListener("change", event => {
+      dashboardFilters.date = event.target.value;
+      renderAll();
+    });
+
+    document.getElementById("dashboardRoleFilter").addEventListener("change", event => {
+      dashboardFilters.role = event.target.value;
+      renderAll();
+    });
+
+    document.getElementById("dashboardHealthFilter").addEventListener("change", event => {
+      dashboardFilters.health = event.target.value;
+      renderAll();
+    });
+
+    document.getElementById("reportOwnerFilter").addEventListener("change", event => {
+      reportFilters.owner = event.target.value;
+      renderReports();
+    });
+
+    document.getElementById("reportProductFilter").addEventListener("change", event => {
+      reportFilters.product = event.target.value;
+      renderReports();
+    });
+
+    document.getElementById("reportDateFilter").addEventListener("change", event => {
+      reportFilters.date = event.target.value;
+      renderReports();
+    });
+
+    document.getElementById("reportRoleFilter").addEventListener("change", event => {
+      reportFilters.role = event.target.value;
+      renderReports();
+    });
+
+    document.querySelector('input[name="week"]').valueAsDate = new Date();
+    document.getElementById("periodDate").valueAsDate = new Date();
+    dashboardFilters.date = document.getElementById("periodDate").value;
+    fetchReports();
+  </script>
 </body>
 </html>
+
+
