@@ -1157,6 +1157,9 @@
           method: "PATCH",
           body: report
         });
+        if (!Array.isArray(data) || data.length === 0) {
+          throw new Error("Supabase update returned no rows. Falling back to replace.");
+        }
       } catch (error) {
         console.warn("Retrying update via delete and insert:", error);
         await supabaseRequest(`?id=eq.${encodeURIComponent(report.id)}`, {
@@ -1172,6 +1175,7 @@
       if (!updated) throw new Error("Supabase did not return the updated report.");
       reports = reports.map(existing => existing.id === report.id ? normalizeReport({ ...updated, role: report.role, due_date: report.due_date }) : existing);
       selectedReportId = updated.id;
+      setSyncStatus(useLegacySupabasePayload ? "Saved with Supabase legacy schema" : "Saved to Supabase");
       renderAll();
     }
 
