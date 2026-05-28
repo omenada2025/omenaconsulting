@@ -450,9 +450,9 @@
         </div>
       </div>
       <nav class="tabs" aria-label="Primary">
-        <button class="tab active" data-view="dashboard">â–¦ Dashboard</button>
-        <button class="tab" data-view="intake">âœŽ Add Status</button>
-        <button class="tab" data-view="reports">â˜· Source Reports</button>
+        <button class="tab active" data-view="dashboard">Dashboard</button>
+        <button class="tab" data-view="intake">Add Status</button>
+        <button class="tab" data-view="reports">Source Reports</button>
       </nav>
       <div class="side-actions">
         <button class="btn danger" id="resetBtn">Reload This Week</button>
@@ -739,7 +739,7 @@
         next: "Schedule technical sessions, validate release workflow with Laurent, and complete access tracking."
       },
       {
-        id: crypto.randomUUID(), product: "Othership â€“ IWG Integration", owner: "Nadishani / Krishina", week: "2026-05-26",
+        id: crypto.randomUUID(), product: "Othership - IWG Integration", owner: "Nadishani / Krishina", week: "2026-05-26",
         health: "red", progress: 58, stage: "QA", priority: "Critical", impact: 3, time: 3,
         summary: "End-to-end testing has started with Sarath. Pricing logic was clarified with IWG and shared with devs, but production API issues remain.",
         win: "Major pricing calculation issue was identified, clarified, and calculation logic was finalized.",
@@ -906,6 +906,7 @@
     const supabaseBaseUrl = hasSupabaseConfig ? `${config.url.replace(/\/$/, "")}/rest/v1/${supabaseTable}` : "";
     let reports = [];
     let selectedReportId = null;
+    let useLegacySupabasePayload = false;
     const dashboardFilters = {
       period: "all",
       date: "",
@@ -995,6 +996,51 @@
       };
     }
 
+    function toSupabasePayload(payload) {
+      if (Array.isArray(payload)) return payload.map(report => toDbReport(report, useLegacySupabasePayload));
+      return toDbReport(payload, useLegacySupabasePayload);
+    }
+
+    function parseSupabaseError(status, text) {
+      let detail = {};
+      try {
+        detail = JSON.parse(text);
+      } catch {
+        detail = { message: text };
+      }
+      const error = new Error(detail.message || `Supabase request failed: ${status}`);
+      error.status = status;
+      error.code = detail.code;
+      error.details = detail.details;
+      error.hint = detail.hint;
+      return error;
+    }
+
+    function isMissingColumnError(error) {
+      return error?.code === "PGRST204" || /column.+schema cache/i.test(error?.message || "");
+    }
+
+    async function supabaseWrite(path, options = {}) {
+      try {
+        return await supabaseRequest(path, {
+          ...options,
+          body: options.body !== undefined ? toSupabasePayload(options.body) : undefined
+        });
+      } catch (error) {
+        if (!isMissingColumnError(error) || useLegacySupabasePayload || options.legacyRetry === false) {
+          throw error;
+        }
+        useLegacySupabasePayload = true;
+        setSyncStatus("Synced with Supabase legacy schema");
+        return supabaseRequest(path, {
+          ...options,
+          body: options.body !== undefined
+            ? (Array.isArray(options.body) ? options.body.map(report => toDbReport(report, true)) : toDbReport(options.body, true))
+            : undefined
+        });
+      }
+    }
+
     function inferRole(report) {
       const text = `${report.owner || ""} ${report.product || ""} ${report.stage || ""}`.toLowerCase();
       const uiuxOwners = ["saurabh", "riya", "jocasta"];
@@ -1026,8 +1072,7 @@
         signal: controller.signal
       }).finally(() => clearTimeout(timeoutId));
       if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || `Supabase request failed: ${response.status}`);
+        throw parseSupabaseError(response.status, await response.text());
       }
       if (response.status === 204) return null;
       return response.json();
@@ -1052,17 +1097,16 @@
         setSyncStatus("Supabase unavailable; showing local fallback");
         renderAll();
         return;
-        return;
       }
 
       if (!data.length) {
         try {
-          const seeded = await supabaseRequest("?select=*", {
+          const seeded = await supabaseWrite("?select=*", {
             method: "POST",
-            body: sampleReports.map(toDbReport)
+            body: sampleReports
           });
           reports = seeded.map(normalizeReport);
-          setSyncStatus("Synced with Supabase");
+          setSyncStatus(useLegacySupabasePayload ? "Synced with Supabase legacy schema" : "Synced with Supabase");
         } catch (seedError) {
           console.error("Supabase seed failed:", seedError);
           reports = loadReports();
@@ -1087,18 +1131,10 @@
       }
 
       let data;
-      try {
-        data = await supabaseRequest("?select=*", {
-          method: "POST",
-          body: toDbReport(report)
-        });
-      } catch (error) {
-        console.warn("Retrying create without new schema columns:", error);
-        data = await supabaseRequest("?select=*", {
-          method: "POST",
-          body: toDbReport(report, true)
-        });
-      }
+      data = await supabaseWrite("?select=*", {
+        method: "POST",
+        body: report
+      });
       const created = Array.isArray(data) ? data[0] : data;
       if (!created) throw new Error("Supabase did not return the created report.");
       reports = [normalizeReport({ ...created, role: report.role, due_date: report.due_date }), ...reports];
@@ -1117,9 +1153,9 @@
 
       let data;
       try {
-        data = await supabaseRequest(`?id=eq.${encodeURIComponent(report.id)}&select=*`, {
+        data = await supabaseWrite(`?id=eq.${encodeURIComponent(report.id)}&select=*`, {
           method: "PATCH",
-          body: toDbReport(report)
+          body: report
         });
       } catch (error) {
         console.warn("Retrying update via delete and insert:", error);
@@ -1127,18 +1163,10 @@
           method: "DELETE",
           prefer: "return=minimal"
         });
-        try {
-          data = await supabaseRequest("?select=*", {
-            method: "POST",
-            body: toDbReport(report)
-          });
-        } catch (insertError) {
-          console.warn("Retrying update insert without new schema columns:", insertError);
-          data = await supabaseRequest("?select=*", {
-            method: "POST",
-            body: toDbReport(report, true)
-          });
-        }
+        data = await supabaseWrite("?select=*", {
+          method: "POST",
+          body: report
+        });
       }
       const updated = Array.isArray(data) ? data[0] : data;
       if (!updated) throw new Error("Supabase did not return the updated report.");
@@ -1182,9 +1210,9 @@
           prefer: "return=minimal"
         });
       }
-      const data = await supabaseRequest("?select=*", {
+      const data = await supabaseWrite("?select=*", {
         method: "POST",
-        body: fresh.map(toDbReport)
+        body: fresh
       });
       reports = data.map(normalizeReport);
       selectedReportId = reports[0]?.id || null;

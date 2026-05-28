@@ -1,3 +1,5 @@
+create extension if not exists pgcrypto;
+
 create table if not exists public.status_reports (
   id uuid primary key default gen_random_uuid(),
   product text not null,
@@ -51,3 +53,5 @@ create policy "status_reports_update_all"
 on public.status_reports for update
 using (true)
 with check (true);
+
+notify pgrst, 'reload schema';
