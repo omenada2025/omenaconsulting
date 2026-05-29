@@ -622,6 +622,22 @@
           <button class="btn primary" data-jump="reports">Review Source Reports</button>
         </div>
 
+        <div class="panel filter-bar">
+          <label>
+            Period
+            <select id="executivePeriodFilter">
+              <option value="all">All dates</option>
+              <option value="day">Daily</option>
+              <option value="week">Weekly</option>
+              <option value="month">Monthly</option>
+            </select>
+          </label>
+          <label>
+            Date
+            <input id="executivePeriodDate" type="date" />
+          </label>
+        </div>
+
         <div class="grid exec-metrics" id="executiveMetrics"></div>
 
         <div class="grid exec-grid">
@@ -1025,6 +1041,10 @@
       role: "all",
       health: "all"
     };
+    const executiveFilters = {
+      period: "all",
+      date: ""
+    };
     const reportFilters = {
       owner: "all",
       product: "all",
@@ -1375,6 +1395,14 @@
       return true;
     }
 
+    function matchesExecutivePeriod(report) {
+      if (executiveFilters.period === "all" || !executiveFilters.date) return true;
+      if (executiveFilters.period === "day") return isSameDay(report.week, executiveFilters.date);
+      if (executiveFilters.period === "week") return isSameWeek(report.week, executiveFilters.date);
+      if (executiveFilters.period === "month") return isSameMonth(report.week, executiveFilters.date);
+      return true;
+    }
+
     function getDashboardReports() {
       return reports.filter(report =>
         matchesPeriod(report) &&
@@ -1423,7 +1451,7 @@
     }
 
     function renderExecutiveDashboard() {
-      const source = reports;
+      const source = reports.filter(matchesExecutivePeriod);
       const total = source.length;
       const atRisk = source.filter(report => report.health === "red" || report.priority === "Critical").length;
       const inProgress = source.filter(report => report.health === "amber").length;
@@ -1438,9 +1466,12 @@
           Number(a.progress || 0) - Number(b.progress || 0)
         );
 
+      const periodLabel = executiveFilters.period === "all" || !executiveFilters.date
+        ? "all dates"
+        : `${executiveFilters.period} view for ${executiveFilters.date}`;
       document.getElementById("executiveSubtitle").textContent = latest
-        ? `Latest reporting week: ${latest} - ${total} active product and UI/UX updates.`
-        : "Leadership snapshot across product and UI/UX delivery.";
+        ? `Showing ${periodLabel} - latest reporting week: ${latest} - ${total} active product and UI/UX updates.`
+        : `Showing ${periodLabel} - no reports match this executive filter.`;
 
       const metricRows = [
         ["Portfolio", total, "blue", "Active workstreams"],
@@ -1802,6 +1833,16 @@
       renderAll();
     });
 
+    document.getElementById("executivePeriodFilter").addEventListener("change", event => {
+      executiveFilters.period = event.target.value;
+      renderExecutiveDashboard();
+    });
+
+    document.getElementById("executivePeriodDate").addEventListener("change", event => {
+      executiveFilters.date = event.target.value;
+      renderExecutiveDashboard();
+    });
+
     document.getElementById("dashboardRoleFilter").addEventListener("change", event => {
       dashboardFilters.role = event.target.value;
       renderAll();
@@ -1835,6 +1876,8 @@
     document.querySelector('input[name="week"]').valueAsDate = new Date();
     document.getElementById("periodDate").valueAsDate = new Date();
     dashboardFilters.date = document.getElementById("periodDate").value;
+    document.getElementById("executivePeriodDate").valueAsDate = new Date();
+    executiveFilters.date = document.getElementById("executivePeriodDate").value;
     fetchReports();
   </script>
 </body>
