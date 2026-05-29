@@ -359,10 +359,30 @@
 
     .report-list {
       display: grid;
-      gap: 12px;
+      gap: 16px;
       max-height: 560px;
       overflow: auto;
       padding-right: 4px;
+    }
+
+    .owner-group {
+      display: grid;
+      gap: 10px;
+    }
+
+    .owner-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 2px 0;
+      color: var(--ink);
+    }
+
+    .owner-heading span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
     }
 
     .report-card {
@@ -370,7 +390,6 @@
       border-radius: 8px;
       background: #fff;
       padding: 14px;
-      cursor: pointer;
     }
 
     .report-card.selected {
@@ -389,6 +408,13 @@
       justify-content: space-between;
       gap: 12px;
       margin-bottom: 8px;
+    }
+
+    .report-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 12px;
     }
 
     .small {
@@ -688,7 +714,7 @@
             <div class="report-list" id="reportList"></div>
           </div>
           <div class="panel" id="reportDetail">
-            <div class="empty">Select a report to inspect the full update.</div>
+            <div class="empty">Click Edit on a report to update it.</div>
           </div>
         </div>
       </section>
@@ -1370,20 +1396,45 @@
       populateReportFilters();
       const list = document.getElementById("reportList");
       const filtered = getReportList();
-      if (!filtered.some(report => report.id === selectedReportId)) selectedReportId = filtered[0]?.id || null;
-      list.innerHTML = filtered.length ? filtered.map(r => `
-        <article class="report-card ${r.id === selectedReportId ? "selected" : ""}" data-id="${r.id}">
-          <header>
-            <div>
-              <strong>${escapeHtml(r.product)}</strong>
-              <p class="muted small">${escapeHtml(r.owner || "Unassigned")} - ${escapeHtml(r.role)} - ${escapeHtml(r.week)}${r.due_date ? ` - Due ${escapeHtml(r.due_date)}` : ""}</p>
-            </div>
-            <span class="chip ${healthClass(r)}">${labels[r.health] || r.health}</span>
-          </header>
-          <p class="small">${escapeHtml(r.summary)}</p>
-        </article>
-      `).join("") : `<div class="empty">No reports match these filters.</div>`;
-      renderDetail();
+      if (!filtered.some(report => report.id === selectedReportId)) {
+        selectedReportId = null;
+        renderDetail();
+      }
+      if (!filtered.length) {
+        list.innerHTML = `<div class="empty">No reports match these filters.</div>`;
+        return;
+      }
+
+      const groups = filtered.reduce((acc, report) => {
+        const owner = report.owner || "Unassigned";
+        if (!acc.has(owner)) acc.set(owner, []);
+        acc.get(owner).push(report);
+        return acc;
+      }, new Map());
+
+      list.innerHTML = [...groups.entries()].map(([owner, ownerReports]) => `
+        <section class="owner-group">
+          <div class="owner-heading">
+            <h3>${escapeHtml(owner)}</h3>
+            <span>${ownerReports.length} ${ownerReports.length === 1 ? "report" : "reports"}</span>
+          </div>
+          ${ownerReports.map(r => `
+            <article class="report-card ${r.id === selectedReportId ? "selected" : ""}" data-id="${r.id}">
+              <header>
+                <div>
+                  <strong>${escapeHtml(r.product)}</strong>
+                  <p class="muted small">${escapeHtml(r.role)} - ${escapeHtml(r.week)}${r.due_date ? ` - Due ${escapeHtml(r.due_date)}` : ""}</p>
+                </div>
+                <span class="chip ${healthClass(r)}">${labels[r.health] || r.health}</span>
+              </header>
+              <p class="small">${escapeHtml(r.summary)}</p>
+              <div class="report-actions">
+                <button class="btn" type="button" data-edit-report="${r.id}">Edit</button>
+              </div>
+            </article>
+          `).join("")}
+        </section>
+      `).join("");
     }
 
     function populateReportFilters() {
@@ -1405,7 +1456,7 @@
       const report = reports.find(r => r.id === selectedReportId);
       const detail = document.getElementById("reportDetail");
       if (!report) {
-        detail.innerHTML = `<div class="empty">Select a report to inspect or edit the full update.</div>`;
+        detail.innerHTML = `<div class="empty">Click Edit on a report to update it.</div>`;
         return;
       }
       detail.innerHTML = `
@@ -1536,10 +1587,11 @@
     });
 
     document.getElementById("reportList").addEventListener("click", event => {
-      const card = event.target.closest(".report-card");
-      if (!card) return;
-      selectedReportId = card.dataset.id;
+      const editButton = event.target.closest("[data-edit-report]");
+      if (!editButton) return;
+      selectedReportId = editButton.dataset.editReport;
       renderReports();
+      renderDetail();
     });
 
     document.getElementById("resetBtn").addEventListener("click", async () => {
