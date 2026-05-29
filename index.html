@@ -453,6 +453,43 @@
       gap: 12px;
     }
 
+    .inline-message {
+      border-radius: 8px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .inline-message.success {
+      color: var(--green);
+      background: var(--green-soft);
+      border-color: #b8ddca;
+    }
+
+    .inline-message.danger {
+      color: var(--red);
+      background: var(--red-soft);
+      border-color: #e8b6c5;
+    }
+
+    .confirm-box {
+      display: grid;
+      gap: 10px;
+      border: 1px solid #e8b6c5;
+      border-radius: 8px;
+      padding: 12px;
+      background: var(--red-soft);
+    }
+
+    .confirm-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
     .report-card header {
       display: flex;
       align-items: flex-start;
@@ -1665,6 +1702,26 @@
       if (id === "reportProductFilter") reportFilters.product = nextValue;
     }
 
+    function showReportMessage(message, tone = "success") {
+      const target = document.getElementById("reportFormMessage");
+      if (!target) return;
+      target.className = `inline-message ${tone}`;
+      target.textContent = message;
+      target.hidden = false;
+    }
+
+    function hideReportMessage() {
+      const target = document.getElementById("reportFormMessage");
+      if (!target) return;
+      target.hidden = true;
+      target.textContent = "";
+    }
+
+    function toggleDeleteConfirm(show) {
+      const box = document.getElementById("deleteConfirmBox");
+      if (box) box.hidden = !show;
+    }
+
     function renderDetail() {
       const report = reports.find(r => r.id === selectedReportId);
       const detail = document.getElementById("reportDetail");
@@ -1675,6 +1732,7 @@
       detail.innerHTML = `
         <h3>Edit Report</h3>
         <form class="detail-form" id="editReportForm">
+          <div class="inline-message success" id="reportFormMessage" hidden></div>
           <div class="form-grid">
             ${editField("Product, feature, or workstream", "product", report.product, "text", true)}
             ${editField("Owner", "owner", report.owner)}
@@ -1697,6 +1755,14 @@
             <button class="btn danger" type="button" id="deleteReport">Delete Report</button>
             <button class="btn primary" type="submit" id="updateReportBtn">Save Changes</button>
           </div>
+          <div class="confirm-box" id="deleteConfirmBox" hidden>
+            <strong>Do you really want to delete this report?</strong>
+            <p class="small">This action cannot be undone.</p>
+            <div class="confirm-actions">
+              <button class="btn" type="button" id="cancelDeleteReport">No</button>
+              <button class="btn danger" type="button" id="confirmDeleteReport">Yes</button>
+            </div>
+          </div>
         </form>
       `;
       document.getElementById("cancelEditReport").addEventListener("click", () => {
@@ -1704,12 +1770,27 @@
         renderReports();
         renderDetail();
       });
-      document.getElementById("deleteReport").addEventListener("click", async () => {
+      document.getElementById("deleteReport").addEventListener("click", () => {
+        hideReportMessage();
+        toggleDeleteConfirm(true);
+      });
+      document.getElementById("cancelDeleteReport").addEventListener("click", () => {
+        toggleDeleteConfirm(false);
+      });
+      document.getElementById("confirmDeleteReport").addEventListener("click", async () => {
+        const btn = document.getElementById("confirmDeleteReport");
+        btn.disabled = true;
+        btn.textContent = "Deleting...";
         try {
           await deleteReportById(report.id);
+          selectedReportId = null;
+          renderReports();
+          detail.innerHTML = `<div class="inline-message success">Your report was deleted.</div>`;
         } catch (error) {
           console.error(error);
-          alert("Could not delete this report. Check Supabase permissions or connection.");
+          btn.disabled = false;
+          btn.textContent = "Yes";
+          showReportMessage("Could not delete this report. Check Supabase permissions or connection.", "danger");
         }
       });
       document.getElementById("editReportForm").addEventListener("submit", async event => {
@@ -1717,14 +1798,16 @@
         const btn = document.getElementById("updateReportBtn");
         btn.disabled = true;
         btn.textContent = "Saving...";
+        hideReportMessage();
+        toggleDeleteConfirm(false);
         try {
           await updateReport(readReportForm(event.currentTarget, report.id));
-          btn.textContent = "Saved";
-          setTimeout(() => { btn.textContent = "Save Changes"; }, 1200);
+          btn.textContent = "Save Changes";
+          showReportMessage("Your report has been successfully updated.");
         } catch (error) {
           console.error(error);
           btn.textContent = "Save Changes";
-          alert("Could not update this report. Check Supabase permissions or connection.");
+          showReportMessage("Could not update this report. Check Supabase permissions or connection.", "danger");
         } finally {
           btn.disabled = false;
         }
