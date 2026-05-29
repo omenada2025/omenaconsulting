@@ -1480,11 +1480,17 @@
             ${editArea("Next action", "next", report.next)}
           </div>
           <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:6px">
+            <button class="btn" type="button" id="cancelEditReport">Cancel</button>
             <button class="btn danger" type="button" id="deleteReport">Delete Report</button>
             <button class="btn primary" type="submit" id="updateReportBtn">Save Changes</button>
           </div>
         </form>
       `;
+      document.getElementById("cancelEditReport").addEventListener("click", () => {
+        selectedReportId = null;
+        renderReports();
+        renderDetail();
+      });
       document.getElementById("deleteReport").addEventListener("click", async () => {
         try {
           await deleteReportById(report.id);
