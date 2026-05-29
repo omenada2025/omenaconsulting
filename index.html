@@ -197,6 +197,57 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
+    .exec-grid {
+      grid-template-columns: 1.15fr .85fr;
+    }
+
+    .exec-metrics {
+      grid-template-columns: repeat(4, minmax(150px, 1fr));
+      margin-bottom: 16px;
+    }
+
+    .exec-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .exec-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .exec-row strong {
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .health-stack {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .health-slice {
+      min-height: 96px;
+      border-radius: 8px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      display: grid;
+      align-content: space-between;
+    }
+
+    .health-slice strong {
+      font-size: 28px;
+      line-height: 1;
+    }
+
     .panel {
       background: rgba(255, 255, 255, 0.9);
       border: 1px solid var(--line);
@@ -460,7 +511,7 @@
       aside { position: static; height: auto; }
       .side-actions { position: static; margin-top: 22px; }
       main { padding: 18px; }
-      .summary-grid, .two-col, .three-col, .form-grid, .filter-bar { grid-template-columns: 1fr; }
+      .summary-grid, .two-col, .three-col, .exec-grid, .exec-metrics, .health-stack, .form-grid, .filter-bar { grid-template-columns: 1fr; }
       .header { flex-direction: column; }
     }
   </style>
@@ -477,6 +528,7 @@
       </div>
       <nav class="tabs" aria-label="Primary">
         <button class="tab active" data-view="dashboard">Dashboard</button>
+        <button class="tab" data-view="executive">Executive Dashboard</button>
         <button class="tab" data-view="intake">Add Status</button>
         <button class="tab" data-view="reports">Source Reports</button>
       </nav>
@@ -557,6 +609,40 @@
           <div class="panel">
             <h3>Next Actions</h3>
             <div class="timeline" id="nextList"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="executive">
+        <div class="header">
+          <div>
+            <h2>Executive Dashboard</h2>
+            <p class="muted" id="executiveSubtitle">Leadership snapshot across product and UI/UX delivery.</p>
+          </div>
+          <button class="btn primary" data-jump="reports">Review Source Reports</button>
+        </div>
+
+        <div class="grid exec-metrics" id="executiveMetrics"></div>
+
+        <div class="grid exec-grid">
+          <div class="panel">
+            <h3>Portfolio Health Summary</h3>
+            <div class="health-stack" id="executiveHealth"></div>
+          </div>
+          <div class="panel">
+            <h3>Executive Attention</h3>
+            <div class="exec-list" id="executiveAttention"></div>
+          </div>
+        </div>
+
+        <div class="grid exec-grid" style="margin-top:16px">
+          <div class="panel">
+            <h3>Owner Performance</h3>
+            <div class="exec-list" id="executiveOwners"></div>
+          </div>
+          <div class="panel">
+            <h3>Decisions & Next Actions</h3>
+            <div class="exec-list" id="executiveActions"></div>
           </div>
         </div>
       </section>
@@ -1336,6 +1422,102 @@
       `).join("");
     }
 
+    function renderExecutiveDashboard() {
+      const source = reports;
+      const total = source.length;
+      const atRisk = source.filter(report => report.health === "red" || report.priority === "Critical").length;
+      const inProgress = source.filter(report => report.health === "amber").length;
+      const onTrack = source.filter(report => report.health === "green").length;
+      const avg = total ? Math.round(source.reduce((sum, report) => sum + Number(report.progress || 0), 0) / total) : 0;
+      const latest = source.map(report => report.week).filter(Boolean).sort().pop();
+      const critical = source
+        .filter(report => report.health === "red" || report.priority === "Critical" || Number(report.impact || 0) >= 3)
+        .sort((a, b) =>
+          Number(b.impact || 0) - Number(a.impact || 0) ||
+          Number(b.time || 0) - Number(a.time || 0) ||
+          Number(a.progress || 0) - Number(b.progress || 0)
+        );
+
+      document.getElementById("executiveSubtitle").textContent = latest
+        ? `Latest reporting week: ${latest} - ${total} active product and UI/UX updates.`
+        : "Leadership snapshot across product and UI/UX delivery.";
+
+      const metricRows = [
+        ["Portfolio", total, "blue", "Active workstreams"],
+        ["On Track", onTrack, "green", "Healthy delivery"],
+        ["Needs Attention", atRisk, atRisk ? "red" : "green", "Risk or critical priority"],
+        ["Avg Progress", `${avg}%`, avg < 50 ? "red" : avg < 75 ? "amber" : "green", "Across all reports"],
+      ];
+      document.getElementById("executiveMetrics").innerHTML = metricRows.map(([name, value, tone, note]) => `
+        <div class="panel metric">
+          <span class="chip ${tone}">${name}</span>
+          <strong>${value}</strong>
+          <span class="muted small">${note}</span>
+        </div>
+      `).join("");
+
+      const healthRows = [
+        ["On Track", onTrack, "green"],
+        ["In Progress", inProgress, "amber"],
+        ["At Risk", source.filter(report => report.health === "red").length, "red"],
+        ["Paused", source.filter(report => report.health === "gray").length, "gray"],
+      ];
+      document.getElementById("executiveHealth").innerHTML = healthRows.map(([label, value, tone]) => `
+        <div class="health-slice">
+          <span class="chip ${tone}">${label}</span>
+          <strong>${value}</strong>
+        </div>
+      `).join("");
+
+      document.getElementById("executiveAttention").innerHTML = critical.length ? critical.slice(0, 6).map(report => `
+        <div class="exec-row">
+          <div>
+            <strong>${escapeHtml(report.product)}</strong>
+            <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.blocker || report.summary)}</p>
+          </div>
+          <span class="chip ${healthClass(report)}">${labels[report.health] || report.health}</span>
+        </div>
+      `).join("") : `<div class="empty">No critical risks need executive attention.</div>`;
+
+      const owners = [...source.reduce((acc, report) => {
+        const owner = report.owner || "Unassigned";
+        if (!acc.has(owner)) acc.set(owner, []);
+        acc.get(owner).push(report);
+        return acc;
+      }, new Map()).entries()].sort((a, b) => a[0].localeCompare(b[0]));
+      document.getElementById("executiveOwners").innerHTML = owners.length ? owners.map(([owner, ownerReports]) => {
+        const ownerAvg = Math.round(ownerReports.reduce((sum, report) => sum + Number(report.progress || 0), 0) / ownerReports.length);
+        const ownerRisk = ownerReports.filter(report => report.health === "red" || report.priority === "Critical").length;
+        const tone = ownerRisk ? "red" : ownerAvg < 75 ? "amber" : "green";
+        return `
+          <div class="exec-row">
+            <div>
+              <strong>${escapeHtml(owner)}</strong>
+              <p class="muted small">${ownerReports.length} reports - ${ownerRisk} need attention</p>
+            </div>
+            <span class="chip ${tone}">${ownerAvg}%</span>
+          </div>
+        `;
+      }).join("") : `<div class="empty">No owner data available.</div>`;
+
+      const actions = source
+        .filter(report => report.next)
+        .sort((a, b) =>
+          (b.priority === "Critical") - (a.priority === "Critical") ||
+          Number(b.impact || 0) - Number(a.impact || 0)
+        )
+        .slice(0, 6);
+      document.getElementById("executiveActions").innerHTML = actions.length ? actions.map(report => `
+        <div class="exec-row">
+          <div>
+            <strong>${escapeHtml(report.product)}</strong>
+            <p class="muted small">${escapeHtml(report.next)}</p>
+          </div>
+          <span class="chip ${healthClass(report)}">${escapeHtml(report.priority || "Normal")}</span>
+        </div>
+      `).join("") : `<div class="empty">No next actions captured yet.</div>`;
+    }
+
     function renderHealth() {
       const sorted = [...getDashboardReports()].sort((a, b) => {
         const rank = { red: 0, amber: 1, gray: 2, green: 3 };
@@ -1545,6 +1727,7 @@
       const filteredCount = getDashboardReports().length;
       document.getElementById("dashboardSubtitle").textContent = latest ? `Latest reporting week: ${latest} - ${filteredCount} of ${reports.length} product and UI/UX updates - ${syncStatus}.` : `Live rollup from submitted product and UI/UX reports - ${syncStatus}.`;
       renderMetrics();
+      renderExecutiveDashboard();
       renderHealth();
       renderRiskMatrix();
       renderTimeline("winsList", "win", "No wins captured yet.");
