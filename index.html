@@ -1397,6 +1397,15 @@
       document.querySelectorAll(".tab").forEach(tab => tab.classList.toggle("active", tab.dataset.view === id));
     }
 
+    function getActiveView() {
+      return document.querySelector(".view.active")?.id || "dashboard";
+    }
+
+    async function refreshSharedDashboards() {
+      if (!hasSupabaseConfig || getActiveView() === "intake") return;
+      await fetchReports();
+    }
+
     function healthClass(report) {
       if (report.health === "red" || report.priority === "Critical") return "red";
       if (report.health === "amber") return "amber";
@@ -1836,11 +1845,17 @@
     }
 
     document.querySelectorAll("[data-view]").forEach(tab => {
-      tab.addEventListener("click", () => switchView(tab.dataset.view));
+      tab.addEventListener("click", async () => {
+        switchView(tab.dataset.view);
+        await refreshSharedDashboards();
+      });
     });
 
     document.querySelectorAll("[data-jump]").forEach(btn => {
-      btn.addEventListener("click", () => switchView(btn.dataset.jump));
+      btn.addEventListener("click", async () => {
+        switchView(btn.dataset.jump);
+        await refreshSharedDashboards();
+      });
     });
 
     document.getElementById("statusForm").addEventListener("submit", async event => {
@@ -1939,6 +1954,9 @@
     document.getElementById("executivePeriodDate").valueAsDate = new Date();
     executiveFilters.date = document.getElementById("executivePeriodDate").value;
     fetchReports();
+    setInterval(() => {
+      if (document.visibilityState === "visible") refreshSharedDashboards();
+    }, 30000);
   </script>
 </body>
 </html>
