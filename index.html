@@ -1869,14 +1869,15 @@
 
     document.getElementById("statusForm").addEventListener("submit", async event => {
       event.preventDefault();
-      const report = readReportForm(event.currentTarget);
+      const form = event.currentTarget;
+      const report = readReportForm(form);
       const saveBtn = document.getElementById("saveReportBtn");
       saveBtn.disabled = true;
       saveBtn.textContent = "Saving...";
       try {
         await createReport(report);
-        event.currentTarget.reset();
-        event.currentTarget.week.valueAsDate = new Date();
+        form.reset();
+        form.week.valueAsDate = new Date();
         saveBtn.textContent = "Saved";
         setTimeout(() => { saveBtn.textContent = "Save Report"; }, 1400);
         switchView("dashboard");
