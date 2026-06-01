@@ -1759,7 +1759,7 @@
       });
       document.getElementById("deleteReport").addEventListener("click", async () => {
         hideReportMessage();
-        if (!confirm(`Delete ${report.product}? This action cannot be undone.`)) return;
+        if (!confirm("Are you sure you want to delete the report?")) return;
         try {
           await deleteReportById(report.id);
           selectedReportId = null;
