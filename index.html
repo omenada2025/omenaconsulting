@@ -1717,11 +1717,6 @@
       target.textContent = "";
     }
 
-    function toggleDeleteConfirm(show) {
-      const box = document.getElementById("deleteConfirmBox");
-      if (box) box.hidden = !show;
-    }
-
     function renderDetail() {
       const report = reports.find(r => r.id === selectedReportId);
       const detail = document.getElementById("reportDetail");
@@ -1755,14 +1750,6 @@
             <button class="btn danger" type="button" id="deleteReport">Delete Report</button>
             <button class="btn primary" type="submit" id="updateReportBtn">Save Changes</button>
           </div>
-          <div class="confirm-box" id="deleteConfirmBox" hidden>
-            <strong>Do you really want to delete this report?</strong>
-            <p class="small">This action cannot be undone.</p>
-            <div class="confirm-actions">
-              <button class="btn" type="button" id="cancelDeleteReport">No</button>
-              <button class="btn danger" type="button" id="confirmDeleteReport">Yes</button>
-            </div>
-          </div>
         </form>
       `;
       document.getElementById("cancelEditReport").addEventListener("click", () => {
@@ -1783,32 +1770,12 @@
           showReportMessage("Could not delete this report. Check Supabase permissions or connection.", "danger");
         }
       });
-      document.getElementById("cancelDeleteReport").addEventListener("click", () => {
-        toggleDeleteConfirm(false);
-      });
-      document.getElementById("confirmDeleteReport").addEventListener("click", async () => {
-        const btn = document.getElementById("confirmDeleteReport");
-        btn.disabled = true;
-        btn.textContent = "Deleting...";
-        try {
-          await deleteReportById(report.id);
-          selectedReportId = null;
-          renderReports();
-          detail.innerHTML = `<div class="inline-message success">Your report was deleted.</div>`;
-        } catch (error) {
-          console.error(error);
-          btn.disabled = false;
-          btn.textContent = "Yes";
-          showReportMessage("Could not delete this report. Check Supabase permissions or connection.", "danger");
-        }
-      });
       document.getElementById("editReportForm").addEventListener("submit", async event => {
         event.preventDefault();
         const btn = document.getElementById("updateReportBtn");
         btn.disabled = true;
         btn.textContent = "Saving...";
         hideReportMessage();
-        toggleDeleteConfirm(false);
         try {
           await updateReport(readReportForm(event.currentTarget, report.id));
           btn.textContent = "Save Changes";
