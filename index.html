@@ -1770,9 +1770,18 @@
         renderReports();
         renderDetail();
       });
-      document.getElementById("deleteReport").addEventListener("click", () => {
+      document.getElementById("deleteReport").addEventListener("click", async () => {
         hideReportMessage();
-        toggleDeleteConfirm(true);
+        if (!confirm(`Delete ${report.product}? This action cannot be undone.`)) return;
+        try {
+          await deleteReportById(report.id);
+          selectedReportId = null;
+          renderReports();
+          detail.innerHTML = `<div class="inline-message success">Your report was deleted.</div>`;
+        } catch (error) {
+          console.error(error);
+          showReportMessage("Could not delete this report. Check Supabase permissions or connection.", "danger");
+        }
       });
       document.getElementById("cancelDeleteReport").addEventListener("click", () => {
         toggleDeleteConfirm(false);
