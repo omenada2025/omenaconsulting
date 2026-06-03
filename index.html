@@ -1027,6 +1027,7 @@
                 Stage
                 <select name="stage">
                   <option>Discovery</option>
+                  <option>Work in Progress</option>
                   <option>Research</option>
                   <option>Documentation</option>
                   <option>Demo</option>
@@ -2292,7 +2293,7 @@
     }
 
     function stageSelect(current = "Discovery") {
-      const stages = ["Discovery", "Research", "Documentation", "Demo", "Testing", "QA", "Environment", "Wireframes", "Visual Design", "Prototype", "Design Review", "Dev Handoff", "QA Review", "Release", "Paused", "Completed"];
+      const stages = ["Discovery", "Work in Progress", "Research", "Documentation", "Demo", "Testing", "QA", "Environment", "Wireframes", "Visual Design", "Prototype", "Design Review", "Dev Handoff", "QA Review", "Release", "Paused", "Completed"];
       return `
         <label>Stage
           <select name="stage">

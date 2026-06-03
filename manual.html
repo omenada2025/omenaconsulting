@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Product & UI/UX Pulse Dashboard Visual Manual</title>
+  <style>
+    :root {
+      --ink: #17212b;
+      --muted: #64717d;
+      --line: #d8e0e5;
+      --canvas: #f6f8f7;
+      --panel: #ffffff;
+      --soft: #eef3f4;
+      --blue: #4e7896;
+      --blue-soft: #e5eff4;
+      --green: #4f9b76;
+      --green-soft: #e3f1e9;
+      --amber: #d59d2f;
+      --amber-soft: #fff0cf;
+      --red: #a3163d;
+      --red-soft: #f8e5eb;
+      --shadow: 0 16px 45px rgba(31, 42, 51, .1);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(var(--line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px),
+        var(--canvas);
+      background-size: 24px 24px;
+      line-height: 1.5;
+    }
+
+    main {
+      width: min(1180px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 36px 0 60px;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+
+    h1 { font-size: clamp(34px, 6vw, 64px); line-height: .96; letter-spacing: -.04em; }
+    h2 { font-size: 30px; margin-bottom: 12px; letter-spacing: -.025em; }
+    h3 { font-size: 18px; margin-bottom: 6px; }
+
+    .muted { color: var(--muted); }
+    .small { font-size: 13px; }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap: 22px;
+      align-items: stretch;
+      margin-bottom: 22px;
+    }
+
+    .hero-card, .panel, .step, .field, .callout {
+      background: rgba(255, 255, 255, .92);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card {
+      padding: 36px;
+      display: grid;
+      align-content: space-between;
+      min-height: 360px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .mark {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--ink);
+      font-weight: 900;
+    }
+
+    .hero-note {
+      padding: 24px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .pill {
+      border-radius: 999px;
+      padding: 7px 11px;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--blue);
+      background: var(--blue-soft);
+    }
+
+    .section {
+      margin-top: 28px;
+    }
+
+    .panel {
+      padding: 24px;
+      margin-top: 14px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .workflow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .step {
+      position: relative;
+      padding: 18px;
+      min-height: 150px;
+    }
+
+    .step-number {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 14px;
+      color: #fff;
+      background: var(--ink);
+      font-weight: 900;
+    }
+
+    .step h3 { font-size: 16px; }
+
+    .view-card {
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+    }
+
+    .view-card ul, .field ul, .checklist, .trouble-list {
+      margin: 10px 0 0;
+      padding-left: 18px;
+    }
+
+    li + li { margin-top: 6px; }
+
+    .add-status-flow {
+      display: grid;
+      grid-template-columns: 270px 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .nav-card {
+      padding: 18px;
+      border-radius: 14px;
+      background: var(--ink);
+      color: #fff;
+      position: sticky;
+      top: 18px;
+    }
+
+    .nav-card p { color: rgba(255, 255, 255, .72); }
+
+    .form-map {
+      display: grid;
+      gap: 12px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      font-weight: 900;
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
+    .required {
+      color: var(--red);
+      font-weight: 900;
+      font-size: 12px;
+      margin-left: 6px;
+    }
+
+    .field {
+      padding: 18px;
+      box-shadow: none;
+    }
+
+    .field strong {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .health-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .health {
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .health.green { color: var(--green); background: var(--green-soft); }
+    .health.amber { color: var(--amber); background: var(--amber-soft); }
+    .health.red { color: var(--red); background: var(--red-soft); }
+    .health.gray { color: #68737b; background: #eef1f2; }
+
+    .callout {
+      padding: 18px;
+      box-shadow: none;
+      border-left: 5px solid var(--blue);
+      background: #fff;
+    }
+
+    .footer {
+      margin-top: 28px;
+      padding: 20px;
+      border-radius: 18px;
+      background: var(--ink);
+      color: #fff;
+    }
+
+    .footer p { color: rgba(255, 255, 255, .75); }
+
+    code {
+      border-radius: 6px;
+      padding: 2px 5px;
+      background: var(--soft);
+      color: var(--ink);
+    }
+
+    @media print {
+      body { background: #fff; }
+      main { width: auto; padding: 0; }
+      .hero-card, .panel, .step, .field, .callout { box-shadow: none; }
+      .nav-card { position: static; }
+      .section { break-inside: avoid; }
+    }
+
+    @media (max-width: 900px) {
+      .hero, .grid-3, .grid-2, .workflow, .add-status-flow, .health-grid {
+        grid-template-columns: 1fr;
+      }
+      .hero-card { min-height: auto; }
+      .nav-card { position: static; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <div class="hero-card">
+        <div>
+          <div class="brand">
+            <div class="mark">PU</div>
+            <div>
+              <h3>Product & UI/UX Pulse</h3>
+              <p class="muted small">Visual Manual</p>
+            </div>
+          </div>
+          <h1>Dashboard Workflow & Add Status Guide</h1>
+        </div>
+        <div>
+          <p class="muted">A simple operating guide for capturing weekly product, delivery, and design updates, then reviewing them in Dashboard, Executive Dashboard, and Source Reports.</p>
+          <div class="pill-row">
+            <span class="pill">Weekly reporting</span>
+            <span class="pill">Executive review</span>
+            <span class="pill">Product + UI/UX</span>
+            <span class="pill">Status hygiene</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-note panel">
+        <h2>What This Dashboard Does</h2>
+        <p>The dashboard centralizes weekly updates so leaders can see health, risks, progress, product mix, blockers, wins, and next actions in one place.</p>
+        <div class="callout">
+          <h3>Core interaction</h3>
+          <p>Use filters to focus the view. Click status cards, then click project cards to reveal Wins, Blockers, and Next Action.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Dashboard Workflow</h2>
+      <p class="muted">The dashboard is designed around a simple weekly reporting loop.</p>
+      <div class="workflow">
+        <div class="step">
+          <div class="step-number">1</div>
+          <h3>Add Status</h3>
+          <p class="muted small">Submit one product, delivery, or design update.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <h3>Review Dashboard</h3>
+          <p class="muted small">Check portfolio health, product mix, risks, wins, and next actions.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <h3>Present Executive View</h3>
+          <p class="muted small">Use the leadership-ready view for focused discussion.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">4</div>
+          <h3>Edit Source Reports</h3>
+          <p class="muted small">Correct submitted reports and keep the source data clean.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">5</div>
+          <h3>Save & Recalculate</h3>
+          <p class="muted small">Saved changes update dashboard calculations automatically.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Main Views</h2>
+      <div class="grid-3">
+        <div class="view-card">
+          <h3>Dashboard</h3>
+          <p class="muted small">Working portfolio overview.</p>
+          <ul>
+            <li>Filter by reporting week, type of product, role, and delivery health.</li>
+            <li>Review Tracks, At Risk, Product Mix, and Avg Progress.</li>
+            <li>Click Portfolio Health cards for inline details.</li>
+          </ul>
+        </div>
+        <div class="view-card">
+          <h3>Executive Dashboard</h3>
+          <p class="muted small">Presentation-ready leadership view.</p>
+          <ul>
+            <li>Click a health status to focus projects.</li>
+            <li>Click a project to show Wins, Blockers, and Next Action.</li>
+            <li>Review Executive Attention and Owner Performance.</li>
+          </ul>
+        </div>
+        <div class="view-card">
+          <h3>Source Reports</h3>
+          <p class="muted small">Source-of-truth report list.</p>
+          <ul>
+            <li>Filter by owner, type, reporting week, health, and role.</li>
+            <li>Click a card to show all details.</li>
+            <li>Edit the form and click Save Changes.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>How To Add A Status Report</h2>
+      <div class="add-status-flow">
+        <div class="nav-card">
+          <h3>Where to Start</h3>
+          <p>Open <strong>Add Status</strong> from the left navigation. Complete the report, then click <strong>Save Report</strong>.</p>
+          <div class="pill-row">
+            <span class="pill">Required fields</span>
+            <span class="pill">Weekly cadence</span>
+            <span class="pill">Auto rollup</span>
+          </div>
+        </div>
+        <div class="form-map">
+          <div class="form-row">
+            <div class="badge">1</div>
+            <div>
+              <h3>Identify the work</h3>
+              <p><strong>Product, feature, or workstream</strong><span class="required">Required</span>, Owner, Type of product, Role.</p>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="badge">2</div>
+            <div>
+              <h3>Set timing</h3>
+              <p><strong>Reporting week</strong><span class="required">Required</span>, Start date, End date.</p>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="badge">3</div>
+            <div>
+              <h3>Mark delivery state</h3>
+              <p>Health, Progress, Stage, Priority, Risk impact, and Time to solve.</p>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="badge">4</div>
+            <div>
+              <h3>Write the update</h3>
+              <p><strong>Summary</strong><span class="required">Required</span>, Win, Blocker or risk, and Next action.</p>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="badge">5</div>
+            <div>
+              <h3>Save the report</h3>
+              <p>Click <strong>Save Report</strong>. The Dashboard and Executive Dashboard recalculate automatically.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Field Guidance</h2>
+      <div class="grid-3">
+        <div class="field"><strong>Product, Feature, Or Workstream</strong><p class="muted small">Use a consistent, recognizable project name. Example: <code>Surveyor System - Onboarding</code>.</p></div>
+        <div class="field"><strong>Owner</strong><p class="muted small">Enter the responsible person or team. Multiple owners are okay.</p></div>
+        <div class="field"><strong>Type Of Product</strong><p class="muted small"><code>Legacy</code> for existing products. <code>New product</code> for new initiatives, modules, or builds.</p></div>
+        <div class="field"><strong>Role</strong><p class="muted small">Use Product Manager for delivery/product updates and UI/UX for design/research/handoff updates.</p></div>
+        <div class="field"><strong>Reporting Week</strong><p class="muted small">The week this update belongs to. This drives filtering.</p></div>
+        <div class="field"><strong>Start Date / End Date</strong><p class="muted small">Use start date for when work began and end date for target close or delivery.</p></div>
+        <div class="field"><strong>Progress</strong><p class="muted small">Use a percentage from 0 to 100.</p></div>
+        <div class="field"><strong>Stage</strong><p class="muted small">Examples: Discovery, Work in Progress, Testing, Design Review, Dev Handoff, Release, Completed.</p></div>
+        <div class="field"><strong>Priority</strong><p class="muted small">Use Normal, High, or Critical depending on urgency and visibility.</p></div>
+      </div>
+
+      <div class="panel">
+        <h3>Delivery Health</h3>
+        <div class="health-grid">
+          <div class="health green"><strong>On Track</strong><p class="small">Progress is healthy and no major action is needed.</p></div>
+          <div class="health amber"><strong>In Progress</strong><p class="small">Work is active and moving through execution or review.</p></div>
+          <div class="health red"><strong>At Risk</strong><p class="small">Blocked, delayed, unclear, or needs leadership attention.</p></div>
+          <div class="health gray"><strong>Paused</strong><p class="small">Work is not currently active.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Writing The Update</h2>
+      <div class="grid-2">
+        <div class="callout">
+          <h3>Good Summary</h3>
+          <p>Say what changed this week. Keep it specific and factual. Avoid broad statements that do not explain progress.</p>
+        </div>
+        <div class="callout">
+          <h3>Required Next Action</h3>
+          <p>Always include a concrete next step. This makes the dashboard useful during follow-up meetings.</p>
+        </div>
+        <div class="field"><strong>Win</strong><p class="muted small">The most important progress or achievement.</p></div>
+        <div class="field"><strong>Blocker Or Risk</strong><p class="muted small">Anything that could delay delivery, design, review, feedback, or handoff.</p></div>
+        <div class="field"><strong>Risk Impact</strong><p class="muted small">Low, Medium, or High based on how much the blocker affects delivery.</p></div>
+        <div class="field"><strong>Time To Solve</strong><p class="muted small">Short, Medium, or Long based on expected effort or time needed.</p></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Recommended Weekly Process</h2>
+      <div class="panel">
+        <ol class="checklist">
+          <li>Each owner submits or updates their status report for the reporting week.</li>
+          <li>Product and UI/UX leads review Source Reports for accuracy.</li>
+          <li>Update health, blockers, and next actions before leadership review.</li>
+          <li>Use Executive Dashboard during the presentation.</li>
+          <li>Capture follow-up decisions as next actions for the following week.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Best Practices</h2>
+      <div class="grid-2">
+        <div class="field"><strong>Keep summaries short</strong><p class="muted small">Specific updates are easier to scan and present.</p></div>
+        <div class="field"><strong>Always add Next Action</strong><p class="muted small">Every update should make the next step clear.</p></div>
+        <div class="field"><strong>Mark true risks as At Risk</strong><p class="muted small">Do not hide risks inside the summary.</p></div>
+        <div class="field"><strong>Use consistent project names</strong><p class="muted small">Consistent naming keeps weekly reports easier to compare.</p></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Troubleshooting</h2>
+      <div class="panel">
+        <ul class="trouble-list">
+          <li><strong>Type of product does not appear saved:</strong> refresh the page and check Source Reports. If it still does not persist, Supabase may need the latest <code>product_type</code> schema migration.</li>
+          <li><strong>No projects appear:</strong> change Reporting week, Type of product, Role / Portfolio view, or Delivery health.</li>
+          <li><strong>Save Changes is not available:</strong> click a submitted report card first. The edit form opens on the right.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="footer">
+      <h2>Quick Reminder</h2>
+      <p>Submit one clear weekly update per workstream. Keep the Summary factual, the Blocker honest, and the Next Action concrete.</p>
+    </section>
+  </main>
+</body>
+</html>
