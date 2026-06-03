@@ -315,6 +315,30 @@
       background: #fff;
     }
 
+    .executive-health-projects .exec-row.interactive {
+      cursor: pointer;
+      text-align: left;
+      color: inherit;
+      width: 100%;
+    }
+
+    .executive-health-projects .exec-row.interactive:hover,
+    .executive-health-projects .exec-row.interactive:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(78, 120, 150, .14);
+      outline: none;
+    }
+
+    .executive-health-projects .exec-row.selected {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(78, 120, 150, .18);
+    }
+
+    .executive-inline-detail {
+      margin-top: -4px;
+      border-left: 4px solid var(--blue);
+    }
+
     .presentation-copy {
       max-width: 70ch;
     }
@@ -738,7 +762,7 @@
         <div class="header">
           <div>
             <h2>Product & UI/UX Dashboard</h2>
-            <p class="muted" id="dashboardSubtitle">Live rollup from the latest product and design reports.</p>
+            <p class="muted" id="dashboardSubtitle">Use filters to focus the view. Click project cards for wins, blockers, and next actions.</p>
           </div>
           <button class="btn primary" data-jump="intake">Add Product Status</button>
         </div>
@@ -753,7 +777,7 @@
             <select id="dashboardTypeFilter"></select>
           </label>
           <label>
-            Portfolio health
+            Role / Portfolio view
             <select id="dashboardRoleFilter">
               <option value="all">Product Manager + UI/UX</option>
               <option value="Product Manager">Product Manager</option>
@@ -761,7 +785,7 @@
             </select>
           </label>
           <label>
-            Health
+            Delivery health
             <select id="dashboardHealthFilter">
               <option value="all">All health</option>
               <option value="green">On Track</option>
@@ -786,9 +810,6 @@
                   <option value="owner">Owner</option>
                 </select>
               </label>
-            </div>
-            <div class="health-detail" id="healthDetail">
-              <div class="empty">Click a portfolio health card to view wins, blockers, and next action.</div>
             </div>
             <div class="status-list" id="healthList"></div>
           </div>
@@ -821,24 +842,37 @@
         <div class="header">
           <div>
             <h2>Executive Dashboard</h2>
-            <p class="muted" id="executiveSubtitle">Leadership snapshot across product and UI/UX delivery.</p>
+            <p class="muted" id="executiveSubtitle">Use filters to focus the view. Click status cards, then project cards for detail.</p>
           </div>
           <button class="btn primary" data-jump="reports">Review Source Reports</button>
         </div>
 
         <div class="panel filter-bar">
           <label>
-            Period
-            <select id="executivePeriodFilter">
-              <option value="all">All dates</option>
-              <option value="day">Daily</option>
-              <option value="week">Weekly</option>
-              <option value="month">Monthly</option>
+            Reporting week
+            <input id="executiveWeekFilter" type="date" />
+          </label>
+          <label>
+            Type of product
+            <select id="executiveTypeFilter"></select>
+          </label>
+          <label>
+            Role / Portfolio view
+            <select id="executiveRoleFilter">
+              <option value="all">Product Manager + UI/UX</option>
+              <option value="Product Manager">Product Manager</option>
+              <option value="UI/UX">UI/UX</option>
             </select>
           </label>
           <label>
-            Date
-            <input id="executivePeriodDate" type="date" />
+            Delivery health
+            <select id="executiveHealthFilter">
+              <option value="all">All health</option>
+              <option value="green">On Track</option>
+              <option value="amber">In Progress</option>
+              <option value="red">At Risk</option>
+              <option value="gray">Paused</option>
+            </select>
           </label>
         </div>
 
@@ -849,7 +883,7 @@
             <div class="panel-title">
               <div>
                 <h3>Portfolio Health Summary</h3>
-                <p class="muted small">Click a status to focus the project list for presentation.</p>
+                <p class="muted small">Click a status, then select a project to view Wins, Blockers, and Next Action.</p>
               </div>
             </div>
             <div class="health-stack" id="executiveHealth"></div>
@@ -860,7 +894,7 @@
               </div>
             </div>
             <div class="executive-health-projects" id="executiveHealthProjects">
-              <div class="empty">Select a health status to show matching projects.</div>
+              <div class="empty">Select a delivery health status to show matching projects.</div>
             </div>
           </div>
           <div class="panel">
@@ -1291,6 +1325,7 @@
     let selectedReportId = null;
     let selectedPortfolioHealthId = null;
     let selectedExecutiveHealth = "red";
+    let selectedExecutiveProjectId = null;
     let useLegacySupabasePayload = false;
     const dashboardFilters = {
       week: "",
@@ -1302,8 +1337,10 @@
       groupBy: "date"
     };
     const executiveFilters = {
-      period: "all",
-      date: ""
+      week: "",
+      productType: "all",
+      role: "all",
+      health: "all"
     };
     const reportFilters = {
       owner: "all",
@@ -1715,11 +1752,12 @@
     }
 
     function matchesExecutivePeriod(report) {
-      if (executiveFilters.period === "all" || !executiveFilters.date) return true;
-      if (executiveFilters.period === "day") return isSameDay(report.week, executiveFilters.date);
-      if (executiveFilters.period === "week") return isSameWeek(report.week, executiveFilters.date);
-      if (executiveFilters.period === "month") return isSameMonth(report.week, executiveFilters.date);
-      return true;
+      return (
+        (!executiveFilters.week || report.week === executiveFilters.week) &&
+        (executiveFilters.productType === "all" || report.product_type === executiveFilters.productType) &&
+        (executiveFilters.role === "all" || report.role === executiveFilters.role) &&
+        (executiveFilters.health === "all" || report.health === executiveFilters.health)
+      );
     }
 
     function getDashboardReports() {
@@ -1769,7 +1807,7 @@
       const metrics = [
         ["Tracks", total, "blue", "Active workstreams", `${pm.total} PM`, `${ux.total} UI/UX`],
         ["At Risk", atRisk, atRisk ? "red" : "green", "Needs attention", `${pm.atRisk} PM`, `${ux.atRisk} UI/UX`],
-        ["Type of Product", selectedTypeCount, "blue", `${selectedTypePercent}% ${selectedTypeLabel}`, `${legacy} Legacy`, `${newProducts} New`],
+        ["Product Mix", selectedTypeCount, "blue", `${selectedTypePercent}% ${selectedTypeLabel}`, `${legacy} Legacy`, `${newProducts} New`],
         ["Avg Progress", `${avg}%`, avg < 50 ? "red" : avg < 75 ? "amber" : "green", "Across filtered reports", `${pm.avg}% PM`, `${ux.avg}% UI/UX`],
       ];
       document.getElementById("metrics").innerHTML = metrics.map(([name, value, tone, note, pmNote, uxNote]) => `
@@ -1784,6 +1822,7 @@
 
     function renderExecutiveDashboard() {
       const source = reports.filter(matchesExecutivePeriod);
+      fillSelect("executiveTypeFilter", reports.map(r => r.product_type || "Legacy").filter(Boolean), "All product types", executiveFilters.productType);
       const total = source.length;
       const atRisk = source.filter(report => report.health === "red" || report.priority === "Critical").length;
       const inProgress = source.filter(report => report.health === "amber").length;
@@ -1798,12 +1837,12 @@
           Number(a.progress || 0) - Number(b.progress || 0)
         );
 
-      const periodLabel = executiveFilters.period === "all" || !executiveFilters.date
-        ? "all dates"
-        : `${executiveFilters.period} view for ${executiveFilters.date}`;
+      const periodLabel = executiveFilters.week
+        ? `reporting week ${executiveFilters.week}`
+        : "all reporting weeks";
       document.getElementById("executiveSubtitle").textContent = latest
-        ? `Showing ${periodLabel} - latest reporting week: ${latest} - ${total} active product and UI/UX updates.`
-        : `Showing ${periodLabel} - no reports match this executive filter.`;
+        ? `Showing ${periodLabel} - latest reporting week: ${latest} - ${total} active product and UI/UX updates. Click status cards, then project cards for detail.`
+        : `No reports match these filters. Try changing Reporting week, Type of product, Role / Portfolio view, or Delivery health.`;
 
       const metricRows = [
         ["Portfolio", total, "blue", "Active workstreams"],
@@ -1895,13 +1934,13 @@
       const subtitle = document.getElementById("executiveHealthProjectsSubtitle");
       if (!selectedExecutiveHealth) {
         title.textContent = "Portfolio Projects";
-        subtitle.textContent = "Select a health status to focus this list.";
-        target.innerHTML = `<div class="empty">No projects are available for the current period.</div>`;
+        subtitle.textContent = "Select a delivery health status to focus this list.";
+        target.innerHTML = `<div class="empty">No projects are available for the current filters. Try changing Reporting week, Type of product, Role / Portfolio view, or Delivery health.</div>`;
         return;
       }
       const selectedLabel = labels[selectedExecutiveHealth] || selectedExecutiveHealth;
-      title.textContent = `${selectedLabel} Projects`;
-      subtitle.textContent = "Highest-priority projects are shown first for presentation.";
+      title.textContent = `Showing: ${selectedLabel} projects`;
+      subtitle.textContent = "Select a project card below to view Wins, Blockers, and Next Action.";
       const projectRows = source
         .filter(report => report.health === selectedExecutiveHealth)
         .sort((a, b) =>
@@ -1909,16 +1948,47 @@
           Number(b.progress || 0) - Number(a.progress || 0)
         )
         .slice(0, 8);
+      if (!projectRows.some(report => report.id === selectedExecutiveProjectId)) {
+        selectedExecutiveProjectId = null;
+      }
       target.innerHTML = projectRows.length ? projectRows.map(report => `
-        <div class="exec-row">
+        <button class="exec-row interactive ${report.id === selectedExecutiveProjectId ? "selected" : ""}" type="button" data-executive-project="${escapeHtml(report.id)}">
           <div>
             <strong>${escapeHtml(report.product)}</strong>
             <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.product_type || "Legacy")} - ${escapeHtml(report.role)} - Reporting week ${escapeHtml(report.week || "No date")}</p>
             <p class="muted small">${escapeHtml(report.summary || "No summary captured.")}</p>
           </div>
           <span class="chip ${healthClass(report)}">${labels[report.health] || report.health}</span>
+        </button>
+        ${report.id === selectedExecutiveProjectId ? projectDetailMarkup(report, "project") : ""}
+      `).join("") : `<div class="empty">No projects match these filters. Try changing Reporting week, Type of product, Role / Portfolio view, or Delivery health.</div>`;
+    }
+
+    function projectDetailMarkup(report, noun = "card") {
+      const detailRows = [
+        ["Wins", report.win || `No wins captured for this ${noun} yet.`],
+        ["Blockers", report.blocker || `No blockers captured for this ${noun} yet.`],
+        ["Next Action", report.next || `No next action captured for this ${noun} yet.`]
+      ];
+      return `
+        <div class="health-detail executive-inline-detail">
+        <header>
+          <div>
+            <h3>${escapeHtml(report.product)}</h3>
+            <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.product_type || "Legacy")} - ${escapeHtml(report.week || "No reporting week")}</p>
+          </div>
+          <span class="chip ${healthClass(report)}">${labels[report.health] || report.health}</span>
+        </header>
+        <div class="health-detail-grid">
+          ${detailRows.map(([label, value]) => `
+            <div class="health-detail-card">
+              <strong>${escapeHtml(label)}</strong>
+              <p class="muted small">${escapeHtml(value)}</p>
+            </div>
+          `).join("")}
         </div>
-      `).join("") : `<div class="empty">No projects match this health status.</div>`;
+        </div>
+      `;
     }
 
     function renderHealth() {
@@ -1961,41 +2031,10 @@
           </div>
           <span class="chip ${healthClass(r)}">${labels[r.health] || r.health}</span>
         </button>
+        ${r.id === selectedPortfolioHealthId ? projectDetailMarkup(r, "card") : ""}
           `).join("")}
         </section>
-      `).join("") : `<div class="empty">No reports match these filters.</div>`;
-      renderHealthDetail();
-    }
-
-    function renderHealthDetail() {
-      const detail = document.getElementById("healthDetail");
-      const report = reports.find(r => r.id === selectedPortfolioHealthId);
-      if (!report) {
-        detail.innerHTML = `<div class="empty">Click a portfolio health card to view wins, blockers, and next action.</div>`;
-        return;
-      }
-      const detailRows = [
-        ["Wins", report.win || "No wins captured for this card yet."],
-        ["Blockers", report.blocker || "No blockers captured for this card yet."],
-        ["Next Action", report.next || "No next action captured for this card yet."]
-      ];
-      detail.innerHTML = `
-        <header>
-          <div>
-            <h3>${escapeHtml(report.product)}</h3>
-            <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.week || "No reporting date")}</p>
-          </div>
-          <span class="chip ${healthClass(report)}">${labels[report.health] || report.health}</span>
-        </header>
-        <div class="health-detail-grid">
-          ${detailRows.map(([label, value]) => `
-            <div class="health-detail-card">
-              <strong>${escapeHtml(label)}</strong>
-              <p class="muted small">${escapeHtml(value)}</p>
-            </div>
-          `).join("")}
-        </div>
-      `;
+      `).join("") : `<div class="empty">No reports match these filters. Try changing Reporting week, Type of product, Role / Portfolio view, or Delivery health.</div>`;
     }
 
     function renderRiskMatrix() {
@@ -2046,7 +2085,7 @@
         renderDetail();
       }
       if (!filtered.length) {
-        list.innerHTML = `<div class="empty">No reports match these filters.</div>`;
+        list.innerHTML = `<div class="empty">No reports match these filters. Try changing owner, type of product, reporting week, health, or role.</div>`;
         return;
       }
 
@@ -2094,6 +2133,7 @@
       select.innerHTML = [`<option value="all">${allLabel}</option>`, ...unique.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)].join("");
       select.value = nextValue;
       if (id === "dashboardTypeFilter") dashboardFilters.productType = nextValue;
+      if (id === "executiveTypeFilter") executiveFilters.productType = nextValue;
       if (id === "reportOwnerFilter") reportFilters.owner = nextValue;
       if (id === "reportTypeFilter") reportFilters.productType = nextValue;
       return nextValue;
@@ -2298,13 +2338,23 @@
       renderAll();
     });
 
-    document.getElementById("executivePeriodFilter").addEventListener("change", event => {
-      executiveFilters.period = event.target.value;
+    document.getElementById("executiveWeekFilter").addEventListener("change", event => {
+      executiveFilters.week = event.target.value;
       renderExecutiveDashboard();
     });
 
-    document.getElementById("executivePeriodDate").addEventListener("change", event => {
-      executiveFilters.date = event.target.value;
+    document.getElementById("executiveTypeFilter").addEventListener("change", event => {
+      executiveFilters.productType = event.target.value;
+      renderExecutiveDashboard();
+    });
+
+    document.getElementById("executiveRoleFilter").addEventListener("change", event => {
+      executiveFilters.role = event.target.value;
+      renderExecutiveDashboard();
+    });
+
+    document.getElementById("executiveHealthFilter").addEventListener("change", event => {
+      executiveFilters.health = event.target.value;
       renderExecutiveDashboard();
     });
 
@@ -2312,6 +2362,14 @@
       const card = event.target.closest("[data-executive-health]");
       if (!card) return;
       selectedExecutiveHealth = card.dataset.executiveHealth;
+      selectedExecutiveProjectId = null;
+      renderExecutiveDashboard();
+    });
+
+    document.getElementById("executiveHealthProjects").addEventListener("click", event => {
+      const project = event.target.closest("[data-executive-project]");
+      if (!project) return;
+      selectedExecutiveProjectId = project.dataset.executiveProject;
       renderExecutiveDashboard();
     });
 
@@ -2365,8 +2423,8 @@
     document.querySelector('input[name="week"]').valueAsDate = new Date();
     document.getElementById("dashboardWeekFilter").valueAsDate = new Date();
     dashboardFilters.week = document.getElementById("dashboardWeekFilter").value;
-    document.getElementById("executivePeriodDate").valueAsDate = new Date();
-    executiveFilters.date = document.getElementById("executivePeriodDate").value;
+    document.getElementById("executiveWeekFilter").valueAsDate = new Date();
+    executiveFilters.week = document.getElementById("executiveWeekFilter").value;
     fetchReports();
     setInterval(() => {
       if (document.visibilityState === "visible") refreshSharedDashboards();
