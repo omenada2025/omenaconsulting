@@ -1721,28 +1721,32 @@
     }
 
     async function reloadSeedData() {
-      const fresh = sampleReports.map(r => ({ ...r, id: crypto.randomUUID() }));
+      const existingKeys = new Set(reports.map(report => `${report.product}|${report.owner}|${report.week}`));
+      const missingSeeds = sampleReports
+        .filter(report => !existingKeys.has(`${report.product}|${report.owner}|${report.week}`))
+        .map(report => ({ ...report, id: crypto.randomUUID() }));
+
+      if (!missingSeeds.length) {
+        setSyncStatus("No seed reports were missing");
+        return;
+      }
+
       if (!hasSupabaseConfig) {
-        reports = fresh;
-        selectedReportId = reports[0].id;
+        reports = [...missingSeeds, ...reports];
+        selectedReportId = missingSeeds[0].id;
         saveReports();
         renderAll();
         return;
       }
 
-      const ids = reports.map(report => report.id).filter(Boolean);
-      if (ids.length) {
-        await supabaseRequest(`?id=in.(${ids.map(encodeURIComponent).join(",")})`, {
-          method: "DELETE",
-          prefer: "return=minimal"
-        });
-      }
       const data = await supabaseWrite("?select=*", {
         method: "POST",
-        body: fresh
+        body: missingSeeds
       });
-      reports = data.map(normalizeReport);
-      selectedReportId = reports[0]?.id || null;
+      const restoredSeeds = data.map(normalizeReport);
+      reports = [...restoredSeeds, ...reports];
+      selectedReportId = restoredSeeds[0]?.id || reports[0]?.id || null;
+      setSyncStatus(`Added ${restoredSeeds.length} missing seed report${restoredSeeds.length === 1 ? "" : "s"}`);
       renderAll();
     }
 
