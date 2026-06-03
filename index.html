@@ -626,9 +626,44 @@
       padding: 14px;
     }
 
+    .report-card.interactive {
+      cursor: pointer;
+      text-align: left;
+      color: inherit;
+      width: 100%;
+    }
+
+    .report-card.interactive:hover,
+    .report-card.interactive:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(78, 120, 150, .14);
+      outline: none;
+    }
+
     .report-card.selected {
       border-color: var(--ink);
       box-shadow: inset 0 0 0 1px var(--ink);
+    }
+
+    .report-card-detail {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+    }
+
+    .report-card-detail div {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: var(--soft);
+    }
+
+    .report-card-detail strong {
+      display: block;
+      margin-bottom: 4px;
     }
 
     .detail-form {
@@ -731,7 +766,7 @@
       aside { position: static; height: auto; }
       .side-actions { position: static; margin-top: 22px; }
       main { padding: 18px; }
-      .summary-grid, .two-col, .three-col, .exec-grid, .exec-metrics, .health-stack, .form-grid, .filter-bar, .health-toolbar, .health-detail-grid { grid-template-columns: 1fr; }
+      .summary-grid, .two-col, .three-col, .exec-grid, .exec-metrics, .health-stack, .form-grid, .filter-bar, .health-toolbar, .health-detail-grid, .report-card-detail { grid-template-columns: 1fr; }
       .header { flex-direction: column; }
     }
   </style>
@@ -1104,7 +1139,7 @@
             <div class="report-list" id="reportList"></div>
           </div>
           <div class="panel" id="reportDetail">
-            <div class="empty">Click Edit on a report to update it.</div>
+            <div class="empty">Click a submitted report card to view all details and enable Save Changes.</div>
           </div>
         </div>
       </section>
@@ -2103,7 +2138,7 @@
             <span>${ownerReports.length} ${ownerReports.length === 1 ? "report" : "reports"}</span>
           </div>
           ${ownerReports.map(r => `
-            <article class="report-card ${r.id === selectedReportId ? "selected" : ""}" data-id="${r.id}">
+            <button class="report-card interactive ${r.id === selectedReportId ? "selected" : ""}" type="button" data-report-card="${escapeHtml(r.id)}">
               <header>
                 <div>
                   <strong>${escapeHtml(r.product)}</strong>
@@ -2112,13 +2147,32 @@
                 <span class="chip ${healthClass(r)}">${labels[r.health] || r.health}</span>
               </header>
               <p class="small">${escapeHtml(r.summary)}</p>
-              <div class="report-actions">
-                <button class="btn" type="button" data-edit-report="${r.id}">Edit</button>
-              </div>
-            </article>
+              ${r.id === selectedReportId ? reportCardDetailMarkup(r) : ""}
+            </button>
           `).join("")}
         </section>
       `).join("");
+    }
+
+    function reportCardDetailMarkup(report) {
+      const rows = [
+        ["Win", report.win || "No win captured yet."],
+        ["Blocker or risk", report.blocker || "No blocker captured yet."],
+        ["Next action", report.next || "No next action captured yet."],
+        ["Stage", report.stage || "No stage captured."],
+        ["Progress", `${Number(report.progress || 0)}%`],
+        ["Priority", report.priority || "Normal"]
+      ];
+      return `
+        <div class="report-card-detail">
+          ${rows.map(([label, value]) => `
+            <div>
+              <strong>${escapeHtml(label)}</strong>
+              <p class="muted small">${escapeHtml(value)}</p>
+            </div>
+          `).join("")}
+        </div>
+      `;
     }
 
     function populateReportFilters() {
@@ -2158,7 +2212,7 @@
       const report = reports.find(r => r.id === selectedReportId);
       const detail = document.getElementById("reportDetail");
       if (!report) {
-        detail.innerHTML = `<div class="empty">Click Edit on a report to update it.</div>`;
+        detail.innerHTML = `<div class="empty">Click a submitted report card to view all details and enable Save Changes.</div>`;
         return;
       }
       detail.innerHTML = `
@@ -2175,7 +2229,7 @@
             ${editField("End date", "due_date", report.due_date, "date")}
             <label>Health<select name="health"><option value="green" ${report.health === "green" ? "selected" : ""}>On Track</option><option value="amber" ${report.health === "amber" ? "selected" : ""}>In Progress</option><option value="red" ${report.health === "red" ? "selected" : ""}>At Risk</option><option value="gray" ${report.health === "gray" ? "selected" : ""}>Paused</option></select></label>
             ${editField("Progress", "progress", report.progress, "number")}
-            ${editField("Stage", "stage", report.stage)}
+            ${stageSelect(report.stage)}
             ${editArea("Summary", "summary", report.summary, true)}
             ${editArea("Win", "win", report.win)}
             ${editArea("Blocker or risk", "blocker", report.blocker)}
@@ -2235,6 +2289,17 @@
 
     function editArea(label, name, value = "", required = false) {
       return `<label class="${name === "summary" ? "full" : ""}">${label}<textarea name="${name}" ${required ? "required" : ""}>${escapeHtml(value)}</textarea></label>`;
+    }
+
+    function stageSelect(current = "Discovery") {
+      const stages = ["Discovery", "Research", "Documentation", "Demo", "Testing", "QA", "Environment", "Wireframes", "Visual Design", "Prototype", "Design Review", "Dev Handoff", "QA Review", "Release", "Paused", "Completed"];
+      return `
+        <label>Stage
+          <select name="stage">
+            ${stages.map(stage => `<option ${stage === current ? "selected" : ""}>${escapeHtml(stage)}</option>`).join("")}
+          </select>
+        </label>
+      `;
     }
 
     function readReportForm(form, id = crypto.randomUUID()) {
@@ -2312,9 +2377,9 @@
     });
 
     document.getElementById("reportList").addEventListener("click", event => {
-      const editButton = event.target.closest("[data-edit-report]");
-      if (!editButton) return;
-      selectedReportId = editButton.dataset.editReport;
+      const card = event.target.closest("[data-report-card]");
+      if (!card) return;
+      selectedReportId = card.dataset.reportCard;
       renderReports();
       renderDetail();
     });
