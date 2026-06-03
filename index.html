@@ -173,6 +173,10 @@
       font-size: 12px;
     }
 
+    .report-filter-bar {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
     .metric-split {
       display: flex;
       gap: 8px;
@@ -201,6 +205,27 @@
       grid-template-columns: 1.15fr .85fr;
     }
 
+    .executive-stage {
+      max-width: 1480px;
+    }
+
+    .executive-stage .panel {
+      border-radius: 14px;
+      box-shadow: 0 10px 28px rgba(31, 42, 51, 0.08);
+    }
+
+    .panel-title {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .panel-title h3 {
+      margin-bottom: 3px;
+    }
+
     .exec-metrics {
       grid-template-columns: repeat(4, minmax(150px, 1fr));
       margin-bottom: 16px;
@@ -220,6 +245,10 @@
       border: 1px solid var(--line);
       border-radius: 8px;
       background: #fff;
+    }
+
+    .exec-row.featured {
+      border-left: 4px solid var(--blue);
     }
 
     .exec-row strong {
@@ -243,9 +272,51 @@
       align-content: space-between;
     }
 
+    .health-slice.interactive {
+      cursor: pointer;
+      text-align: left;
+      color: inherit;
+    }
+
+    .health-slice.interactive:hover,
+    .health-slice.interactive:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(78, 120, 150, .14);
+      outline: none;
+    }
+
+    .health-slice.selected {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(78, 120, 150, .18);
+    }
+
     .health-slice strong {
       font-size: 28px;
       line-height: 1;
+    }
+
+    .executive-health-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .executive-health-projects {
+      display: grid;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .executive-health-projects .exec-row {
+      background: #fff;
+    }
+
+    .presentation-copy {
+      max-width: 70ch;
     }
 
     .panel {
@@ -297,6 +368,75 @@
       gap: 10px;
     }
 
+    .health-toolbar {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin: 12px 0;
+    }
+
+    .health-toolbar label {
+      font-size: 12px;
+    }
+
+    .health-group {
+      display: grid;
+      gap: 10px;
+    }
+
+    .health-group + .health-group {
+      margin-top: 14px;
+    }
+
+    .health-group-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding-bottom: 7px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .health-group-heading span {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .health-detail {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      margin-bottom: 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--soft);
+    }
+
+    .health-detail header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .health-detail-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .health-detail-card {
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .health-detail-card strong {
+      display: block;
+      margin-bottom: 5px;
+    }
+
     .status-row {
       display: grid;
       grid-template-columns: 1fr auto;
@@ -306,6 +446,25 @@
       border: 1px solid var(--line);
       border-radius: 8px;
       background: #fff;
+    }
+
+    .status-row.interactive {
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      color: inherit;
+    }
+
+    .status-row.interactive:hover,
+    .status-row.interactive:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(78, 120, 150, .14);
+      outline: none;
+    }
+
+    .status-row.selected {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(78, 120, 150, .18);
     }
 
     .progress {
@@ -548,7 +707,7 @@
       aside { position: static; height: auto; }
       .side-actions { position: static; margin-top: 22px; }
       main { padding: 18px; }
-      .summary-grid, .two-col, .three-col, .exec-grid, .exec-metrics, .health-stack, .form-grid, .filter-bar { grid-template-columns: 1fr; }
+      .summary-grid, .two-col, .three-col, .exec-grid, .exec-metrics, .health-stack, .form-grid, .filter-bar, .health-toolbar, .health-detail-grid { grid-template-columns: 1fr; }
       .header { flex-direction: column; }
     }
   </style>
@@ -586,17 +745,12 @@
 
         <div class="panel filter-bar">
           <label>
-            Period
-            <select id="periodFilter">
-              <option value="all">All dates</option>
-              <option value="day">Daily</option>
-              <option value="week">Weekly</option>
-              <option value="month">Monthly</option>
-            </select>
+            Reporting week
+            <input id="dashboardWeekFilter" type="date" />
           </label>
           <label>
-            Date
-            <input id="periodDate" type="date" />
+            Type of product
+            <select id="dashboardTypeFilter"></select>
           </label>
           <label>
             Portfolio health
@@ -623,6 +777,19 @@
         <div class="grid two-col">
           <div class="panel">
             <h3>Portfolio Health</h3>
+            <div class="health-toolbar">
+              <label>
+                Group by
+                <select id="healthGroupBy">
+                  <option value="date">Reporting date</option>
+                  <option value="project">Project</option>
+                  <option value="owner">Owner</option>
+                </select>
+              </label>
+            </div>
+            <div class="health-detail" id="healthDetail">
+              <div class="empty">Click a portfolio health card to view wins, blockers, and next action.</div>
+            </div>
             <div class="status-list" id="healthList"></div>
           </div>
           <div class="panel">
@@ -650,7 +817,7 @@
         </div>
       </section>
 
-      <section class="view" id="executive">
+      <section class="view executive-stage" id="executive">
         <div class="header">
           <div>
             <h2>Executive Dashboard</h2>
@@ -679,22 +846,51 @@
 
         <div class="grid exec-grid">
           <div class="panel">
-            <h3>Portfolio Health Summary</h3>
+            <div class="panel-title">
+              <div>
+                <h3>Portfolio Health Summary</h3>
+                <p class="muted small">Click a status to focus the project list for presentation.</p>
+              </div>
+            </div>
             <div class="health-stack" id="executiveHealth"></div>
+            <div class="executive-health-title">
+              <div>
+                <h3 id="executiveHealthProjectsTitle">Projects Needing Attention</h3>
+                <p class="muted small" id="executiveHealthProjectsSubtitle">Highest-priority projects are shown first.</p>
+              </div>
+            </div>
+            <div class="executive-health-projects" id="executiveHealthProjects">
+              <div class="empty">Select a health status to show matching projects.</div>
+            </div>
           </div>
           <div class="panel">
-            <h3>Executive Attention</h3>
+            <div class="panel-title">
+              <div>
+                <h3>Executive Attention</h3>
+                <p class="muted small">Risks, blockers, and critical-priority work.</p>
+              </div>
+            </div>
             <div class="exec-list" id="executiveAttention"></div>
           </div>
         </div>
 
         <div class="grid exec-grid" style="margin-top:16px">
           <div class="panel">
-            <h3>Owner Performance</h3>
+            <div class="panel-title">
+              <div>
+                <h3>Owner Performance</h3>
+                <p class="muted small">Progress and attention points by owner.</p>
+              </div>
+            </div>
             <div class="exec-list" id="executiveOwners"></div>
           </div>
           <div class="panel">
-            <h3>Decisions & Next Actions</h3>
+            <div class="panel-title">
+              <div>
+                <h3>Decisions & Next Actions</h3>
+                <p class="muted small">Short list of next moves for follow-up.</p>
+              </div>
+            </div>
             <div class="exec-list" id="executiveActions"></div>
           </div>
         </div>
@@ -720,6 +916,13 @@
                 <input name="owner" placeholder="e.g., Saurabh" />
               </label>
               <label>
+                Type of product
+                <select name="product_type">
+                  <option>Legacy</option>
+                  <option>New product</option>
+                </select>
+              </label>
+              <label>
                 Role
                 <select name="role">
                   <option>Product Manager</option>
@@ -731,7 +934,11 @@
                 <input name="week" type="date" required />
               </label>
               <label>
-                Due date
+                Start date
+                <input name="start_date" type="date" />
+              </label>
+              <label>
+                End date
                 <input name="due_date" type="date" />
               </label>
               <label>
@@ -793,7 +1000,7 @@
                 </select>
               </label>
               <label>
-                Time to resolve
+                Time to solve
                 <select name="time">
                   <option value="1">Short</option>
                   <option value="2">Medium</option>
@@ -828,18 +1035,28 @@
         <div class="grid two-col">
           <div class="panel">
             <h3>Submitted Reports</h3>
-            <div class="filter-bar" style="grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:12px">
+            <div class="filter-bar report-filter-bar">
               <label>
                 Owner
                 <select id="reportOwnerFilter"></select>
               </label>
               <label>
-                Product / workstream
-                <select id="reportProductFilter"></select>
+                Type of product
+                <select id="reportTypeFilter"></select>
               </label>
               <label>
-                Date
-                <input id="reportDateFilter" type="date" />
+                Reporting week
+                <input id="reportWeekFilter" type="date" />
+              </label>
+              <label>
+                Health
+                <select id="reportHealthFilter">
+                  <option value="all">All health</option>
+                  <option value="green">On Track</option>
+                  <option value="amber">In Progress</option>
+                  <option value="red">At Risk</option>
+                  <option value="gray">Paused</option>
+                </select>
               </label>
               <label>
                 Role
@@ -863,6 +1080,7 @@
   <script src="./supabase-config.js"></script>
   <script>
     const STORAGE_KEY = "product-uiux-pulse-reports-v1";
+    const FIELD_OVERRIDES_KEY = "product-uiux-pulse-field-overrides-v1";
     const labels = {
       green: "On Track",
       amber: "In Progress",
@@ -1071,12 +1289,17 @@
     const supabaseBaseUrl = hasSupabaseConfig ? `${config.url.replace(/\/$/, "")}/rest/v1/${supabaseTable}` : "";
     let reports = [];
     let selectedReportId = null;
+    let selectedPortfolioHealthId = null;
+    let selectedExecutiveHealth = "red";
     let useLegacySupabasePayload = false;
     const dashboardFilters = {
-      period: "all",
-      date: "",
+      week: "",
+      productType: "all",
       role: "all",
       health: "all"
+    };
+    const portfolioHealthFilters = {
+      groupBy: "date"
     };
     const executiveFilters = {
       period: "all",
@@ -1084,8 +1307,9 @@
     };
     const reportFilters = {
       owner: "all",
-      product: "all",
-      date: "",
+      productType: "all",
+      week: "",
+      health: "all",
       role: "all"
     };
 
@@ -1114,6 +1338,39 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(reports));
     }
 
+    function loadFieldOverrides() {
+      try {
+        return JSON.parse(localStorage.getItem(FIELD_OVERRIDES_KEY) || "{}");
+      } catch {
+        return {};
+      }
+    }
+
+    function saveFieldOverride(report) {
+      if (!report?.id) return;
+      const overrides = loadFieldOverrides();
+      overrides[report.id] = {
+        product_type: report.product_type || "Legacy",
+        start_date: report.start_date || "",
+        due_date: report.due_date || ""
+      };
+      localStorage.setItem(FIELD_OVERRIDES_KEY, JSON.stringify(overrides));
+    }
+
+    function removeFieldOverride(id) {
+      const overrides = loadFieldOverrides();
+      if (!overrides[id]) return;
+      delete overrides[id];
+      localStorage.setItem(FIELD_OVERRIDES_KEY, JSON.stringify(overrides));
+    }
+
+    function applyFieldOverride(report) {
+      const overrides = loadFieldOverrides();
+      return report?.id && overrides[report.id]
+        ? { ...report, ...overrides[report.id] }
+        : report;
+    }
+
     function normalizeReport(row) {
       const normalized = {
         product: row.product || "",
@@ -1121,12 +1378,14 @@
         stage: row.stage || "Discovery",
         role: row.role || ""
       };
-      return {
+      return applyFieldOverride({
         id: row.id,
         product: normalized.product,
         owner: normalized.owner,
+        product_type: row.product_type || row.productType || "Legacy",
         role: normalized.role || inferRole(normalized),
         week: row.week || "",
+        start_date: row.start_date || row.startDate || "",
         due_date: row.due_date || "",
         health: row.health || "amber",
         progress: Number(row.progress || 0),
@@ -1138,7 +1397,7 @@
         win: row.win || "",
         blocker: row.blocker || "",
         next: row.next || "",
-      };
+      });
     }
 
     function toDbReport(report, legacy = false) {
@@ -1160,7 +1419,9 @@
       if (legacy) return base;
       return {
         ...base,
+        product_type: report.product_type || "Legacy",
         role: report.role || inferRole(report),
+        start_date: report.start_date || null,
         due_date: report.due_date || null,
       };
     }
@@ -1306,7 +1567,15 @@
       });
       const created = Array.isArray(data) ? data[0] : data;
       if (!created) throw new Error("Supabase did not return the created report.");
-      reports = [normalizeReport({ ...created, role: report.role, due_date: report.due_date }), ...reports];
+      const createdReport = normalizeReport({
+        ...created,
+        product_type: report.product_type,
+        role: report.role,
+        start_date: report.start_date,
+        due_date: report.due_date
+      });
+      saveFieldOverride(createdReport);
+      reports = [createdReport, ...reports];
       selectedReportId = created.id;
       renderAll();
     }
@@ -1342,8 +1611,19 @@
       }
       const updated = Array.isArray(data) ? data[0] : data;
       if (!updated) throw new Error("Supabase did not return the updated report.");
-      reports = reports.map(existing => existing.id === report.id ? normalizeReport({ ...updated, role: report.role, due_date: report.due_date }) : existing);
-      selectedReportId = updated.id;
+      const updatedReport = normalizeReport({
+        ...updated,
+        product_type: report.product_type,
+        role: report.role,
+        start_date: report.start_date,
+        due_date: report.due_date
+      });
+      saveFieldOverride(updatedReport);
+      reports = reports.map(existing => existing.id === report.id ? updatedReport : existing);
+      if (!reports.some(existing => existing.id === updatedReport.id)) {
+        reports = [updatedReport, ...reports.filter(existing => existing.id !== report.id)];
+      }
+      selectedReportId = updatedReport.id;
       setSyncStatus(useLegacySupabasePayload ? "Saved with Supabase legacy schema" : "Saved to Supabase");
       renderAll();
     }
@@ -1361,6 +1641,7 @@
         method: "DELETE",
         prefer: "return=minimal"
       });
+      removeFieldOverride(id);
       reports = reports.filter(r => r.id !== id);
       selectedReportId = reports[0]?.id || null;
       renderAll();
@@ -1433,14 +1714,6 @@
       return date >= start && date < end;
     }
 
-    function matchesPeriod(report) {
-      if (dashboardFilters.period === "all" || !dashboardFilters.date) return true;
-      if (dashboardFilters.period === "day") return isSameDay(report.week, dashboardFilters.date);
-      if (dashboardFilters.period === "week") return isSameWeek(report.week, dashboardFilters.date);
-      if (dashboardFilters.period === "month") return isSameMonth(report.week, dashboardFilters.date);
-      return true;
-    }
-
     function matchesExecutivePeriod(report) {
       if (executiveFilters.period === "all" || !executiveFilters.date) return true;
       if (executiveFilters.period === "day") return isSameDay(report.week, executiveFilters.date);
@@ -1451,7 +1724,8 @@
 
     function getDashboardReports() {
       return reports.filter(report =>
-        matchesPeriod(report) &&
+        (!dashboardFilters.week || report.week === dashboardFilters.week) &&
+        (dashboardFilters.productType === "all" || report.product_type === dashboardFilters.productType) &&
         (dashboardFilters.role === "all" || report.role === dashboardFilters.role) &&
         (dashboardFilters.health === "all" || report.health === dashboardFilters.health)
       );
@@ -1460,8 +1734,9 @@
     function getReportList() {
       return reports.filter(report =>
         (reportFilters.owner === "all" || report.owner === reportFilters.owner) &&
-        (reportFilters.product === "all" || report.product === reportFilters.product) &&
-        (!reportFilters.date || report.week === reportFilters.date || report.due_date === reportFilters.date) &&
+        (reportFilters.productType === "all" || report.product_type === reportFilters.productType) &&
+        (!reportFilters.week || report.week === reportFilters.week) &&
+        (reportFilters.health === "all" || report.health === reportFilters.health) &&
         (reportFilters.role === "all" || report.role === reportFilters.role)
       );
     }
@@ -1476,14 +1751,25 @@
 
     function renderMetrics() {
       const source = getDashboardReports();
+      fillSelect("dashboardTypeFilter", reports.map(r => r.product_type || "Legacy").filter(Boolean), "All product types", dashboardFilters.productType);
       const pm = roleStats("Product Manager", source);
       const ux = roleStats("UI/UX", source);
       const total = source.length;
       const atRisk = source.filter(r => r.health === "red" || r.priority === "Critical").length;
       const avg = total ? Math.round(source.reduce((sum, r) => sum + Number(r.progress || 0), 0) / total) : 0;
+      const legacy = source.filter(r => (r.product_type || "Legacy") === "Legacy").length;
+      const newProducts = source.filter(r => (r.product_type || "Legacy") === "New product").length;
+      const selectedTypeCount = dashboardFilters.productType === "all"
+        ? Math.max(legacy, newProducts)
+        : source.filter(r => (r.product_type || "Legacy") === dashboardFilters.productType).length;
+      const selectedTypeLabel = dashboardFilters.productType === "all"
+        ? (newProducts >= legacy ? "New product" : "Legacy")
+        : dashboardFilters.productType;
+      const selectedTypePercent = total ? Math.round((selectedTypeCount / total) * 100) : 0;
       const metrics = [
         ["Tracks", total, "blue", "Active workstreams", `${pm.total} PM`, `${ux.total} UI/UX`],
         ["At Risk", atRisk, atRisk ? "red" : "green", "Needs attention", `${pm.atRisk} PM`, `${ux.atRisk} UI/UX`],
+        ["Type of Product", selectedTypeCount, "blue", `${selectedTypePercent}% ${selectedTypeLabel}`, `${legacy} Legacy`, `${newProducts} New`],
         ["Avg Progress", `${avg}%`, avg < 50 ? "red" : avg < 75 ? "amber" : "green", "Across filtered reports", `${pm.avg}% PM`, `${ux.avg}% UI/UX`],
       ];
       document.getElementById("metrics").innerHTML = metrics.map(([name, value, tone, note, pmNote, uxNote]) => `
@@ -1534,20 +1820,28 @@
       `).join("");
 
       const healthRows = [
-        ["On Track", onTrack, "green"],
-        ["In Progress", inProgress, "amber"],
-        ["At Risk", source.filter(report => report.health === "red").length, "red"],
-        ["Paused", source.filter(report => report.health === "gray").length, "gray"],
+        ["On Track", onTrack, "green", "green"],
+        ["In Progress", inProgress, "amber", "amber"],
+        ["At Risk", source.filter(report => report.health === "red").length, "red", "red"],
+        ["Paused", source.filter(report => report.health === "gray").length, "gray", "gray"],
       ];
-      document.getElementById("executiveHealth").innerHTML = healthRows.map(([label, value, tone]) => `
-        <div class="health-slice">
+      const selectedRow = healthRows.find(([, value, , health]) => health === selectedExecutiveHealth && value > 0);
+      if (!selectedRow) {
+        const fallbackRow = healthRows.find(([, value, , health]) => health === "red" && value > 0)
+          || healthRows.find(([, value, , health]) => health === "amber" && value > 0)
+          || healthRows.find(([, value]) => value > 0);
+        selectedExecutiveHealth = fallbackRow ? fallbackRow[3] : null;
+      }
+      document.getElementById("executiveHealth").innerHTML = healthRows.map(([label, value, tone, health]) => `
+        <button class="health-slice interactive ${selectedExecutiveHealth === health ? "selected" : ""}" type="button" data-executive-health="${health}">
           <span class="chip ${tone}">${label}</span>
           <strong>${value}</strong>
-        </div>
+        </button>
       `).join("");
+      renderExecutiveHealthProjects(source);
 
       document.getElementById("executiveAttention").innerHTML = critical.length ? critical.slice(0, 6).map(report => `
-        <div class="exec-row">
+        <div class="exec-row featured">
           <div>
             <strong>${escapeHtml(report.product)}</strong>
             <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.blocker || report.summary)}</p>
@@ -1562,7 +1856,7 @@
         acc.get(owner).push(report);
         return acc;
       }, new Map()).entries()].sort((a, b) => a[0].localeCompare(b[0]));
-      document.getElementById("executiveOwners").innerHTML = owners.length ? owners.map(([owner, ownerReports]) => {
+      document.getElementById("executiveOwners").innerHTML = owners.length ? owners.slice(0, 6).map(([owner, ownerReports]) => {
         const ownerAvg = Math.round(ownerReports.reduce((sum, report) => sum + Number(report.progress || 0), 0) / ownerReports.length);
         const ownerRisk = ownerReports.filter(report => report.health === "red" || report.priority === "Critical").length;
         const tone = ownerRisk ? "red" : ownerAvg < 75 ? "amber" : "green";
@@ -1583,7 +1877,7 @@
           (b.priority === "Critical") - (a.priority === "Critical") ||
           Number(b.impact || 0) - Number(a.impact || 0)
         )
-        .slice(0, 6);
+        .slice(0, 5);
       document.getElementById("executiveActions").innerHTML = actions.length ? actions.map(report => `
         <div class="exec-row">
           <div>
@@ -1595,23 +1889,115 @@
       `).join("") : `<div class="empty">No next actions captured yet.</div>`;
     }
 
+    function renderExecutiveHealthProjects(source) {
+      const target = document.getElementById("executiveHealthProjects");
+      const title = document.getElementById("executiveHealthProjectsTitle");
+      const subtitle = document.getElementById("executiveHealthProjectsSubtitle");
+      if (!selectedExecutiveHealth) {
+        title.textContent = "Portfolio Projects";
+        subtitle.textContent = "Select a health status to focus this list.";
+        target.innerHTML = `<div class="empty">No projects are available for the current period.</div>`;
+        return;
+      }
+      const selectedLabel = labels[selectedExecutiveHealth] || selectedExecutiveHealth;
+      title.textContent = `${selectedLabel} Projects`;
+      subtitle.textContent = "Highest-priority projects are shown first for presentation.";
+      const projectRows = source
+        .filter(report => report.health === selectedExecutiveHealth)
+        .sort((a, b) =>
+          Number(b.impact || 0) - Number(a.impact || 0) ||
+          Number(b.progress || 0) - Number(a.progress || 0)
+        )
+        .slice(0, 8);
+      target.innerHTML = projectRows.length ? projectRows.map(report => `
+        <div class="exec-row">
+          <div>
+            <strong>${escapeHtml(report.product)}</strong>
+            <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.product_type || "Legacy")} - ${escapeHtml(report.role)} - Reporting week ${escapeHtml(report.week || "No date")}</p>
+            <p class="muted small">${escapeHtml(report.summary || "No summary captured.")}</p>
+          </div>
+          <span class="chip ${healthClass(report)}">${labels[report.health] || report.health}</span>
+        </div>
+      `).join("") : `<div class="empty">No projects match this health status.</div>`;
+    }
+
     function renderHealth() {
-      const sorted = [...getDashboardReports()].sort((a, b) => {
+      const sorted = getDashboardReports().sort((a, b) => {
         const rank = { red: 0, amber: 1, gray: 2, green: 3 };
-        return rank[a.health] - rank[b.health] || b.progress - a.progress;
+        return rank[a.health] - rank[b.health] || Number(b.progress || 0) - Number(a.progress || 0);
       });
-      document.getElementById("healthList").innerHTML = sorted.length ? sorted.map(r => `
-        <div class="status-row">
+      if (!sorted.some(report => report.id === selectedPortfolioHealthId)) {
+        selectedPortfolioHealthId = null;
+      }
+
+      const groupLabels = {
+        date: report => report.week || "No reporting date",
+        project: report => report.product || "Unnamed project",
+        owner: report => report.owner || "Unassigned"
+      };
+      const groups = sorted.reduce((acc, report) => {
+        const key = groupLabels[portfolioHealthFilters.groupBy](report);
+        if (!acc.has(key)) acc.set(key, []);
+        acc.get(key).push(report);
+        return acc;
+      }, new Map());
+      const orderedGroups = [...groups.entries()].sort(([a], [b]) =>
+        portfolioHealthFilters.groupBy === "date" ? b.localeCompare(a) : a.localeCompare(b)
+      );
+
+      document.getElementById("healthList").innerHTML = orderedGroups.length ? orderedGroups.map(([group, groupReports]) => `
+        <section class="health-group">
+          <div class="health-group-heading">
+            <h3>${escapeHtml(group)}</h3>
+            <span>${groupReports.length} ${groupReports.length === 1 ? "report" : "reports"}</span>
+          </div>
+          ${groupReports.map(r => `
+        <button class="status-row interactive ${r.id === selectedPortfolioHealthId ? "selected" : ""}" type="button" data-health-report="${escapeHtml(r.id)}">
           <div>
             <strong>${escapeHtml(r.product)}</strong>
-            <p class="muted small">${escapeHtml(r.owner || "Unassigned")} - ${escapeHtml(r.role)} - ${escapeHtml(r.stage)}${r.due_date ? ` - Due ${escapeHtml(r.due_date)}` : ""}</p>
+            <p class="muted small">${escapeHtml(r.owner || "Unassigned")} - ${escapeHtml(r.role)} - ${escapeHtml(r.stage)} - Reported ${escapeHtml(r.week || "No date")}${r.due_date ? ` - Due ${escapeHtml(r.due_date)}` : ""}</p>
             <p class="muted small">${escapeHtml(r.summary)}</p>
             <div class="progress"><div class="bar ${healthClass(r)}" style="width:${Number(r.progress || 0)}%"></div></div>
           </div>
           <span class="chip ${healthClass(r)}">${labels[r.health] || r.health}</span>
-        </div>
+        </button>
+          `).join("")}
+        </section>
       `).join("") : `<div class="empty">No reports match these filters.</div>`;
+      renderHealthDetail();
     }
+
+    function renderHealthDetail() {
+      const detail = document.getElementById("healthDetail");
+      const report = reports.find(r => r.id === selectedPortfolioHealthId);
+      if (!report) {
+        detail.innerHTML = `<div class="empty">Click a portfolio health card to view wins, blockers, and next action.</div>`;
+        return;
+      }
+      const detailRows = [
+        ["Wins", report.win || "No wins captured for this card yet."],
+        ["Blockers", report.blocker || "No blockers captured for this card yet."],
+        ["Next Action", report.next || "No next action captured for this card yet."]
+      ];
+      detail.innerHTML = `
+        <header>
+          <div>
+            <h3>${escapeHtml(report.product)}</h3>
+            <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.week || "No reporting date")}</p>
+          </div>
+          <span class="chip ${healthClass(report)}">${labels[report.health] || report.health}</span>
+        </header>
+        <div class="health-detail-grid">
+          ${detailRows.map(([label, value]) => `
+            <div class="health-detail-card">
+              <strong>${escapeHtml(label)}</strong>
+              <p class="muted small">${escapeHtml(value)}</p>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
     function renderRiskMatrix() {
       const matrix = document.getElementById("riskMatrix");
       matrix.querySelectorAll(".risk-point").forEach(el => el.remove());
@@ -1682,7 +2068,7 @@
               <header>
                 <div>
                   <strong>${escapeHtml(r.product)}</strong>
-                  <p class="muted small">${escapeHtml(r.role)} - ${escapeHtml(r.week)}${r.due_date ? ` - Due ${escapeHtml(r.due_date)}` : ""}</p>
+                  <p class="muted small">${escapeHtml(r.product_type || "Legacy")} - ${escapeHtml(r.role)} - Reporting week ${escapeHtml(r.week)}${r.start_date ? ` - Start ${escapeHtml(r.start_date)}` : ""}${r.due_date ? ` - End ${escapeHtml(r.due_date)}` : ""}</p>
                 </div>
                 <span class="chip ${healthClass(r)}">${labels[r.health] || r.health}</span>
               </header>
@@ -1698,7 +2084,7 @@
 
     function populateReportFilters() {
       fillSelect("reportOwnerFilter", reports.map(r => r.owner).filter(Boolean), "All owners", reportFilters.owner);
-      fillSelect("reportProductFilter", reports.map(r => r.product).filter(Boolean), "All products", reportFilters.product);
+      fillSelect("reportTypeFilter", reports.map(r => r.product_type || "Legacy").filter(Boolean), "All product types", reportFilters.productType);
     }
 
     function fillSelect(id, values, allLabel, current) {
@@ -1707,8 +2093,10 @@
       const nextValue = current && (current === "all" || unique.includes(current)) ? current : "all";
       select.innerHTML = [`<option value="all">${allLabel}</option>`, ...unique.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)].join("");
       select.value = nextValue;
+      if (id === "dashboardTypeFilter") dashboardFilters.productType = nextValue;
       if (id === "reportOwnerFilter") reportFilters.owner = nextValue;
-      if (id === "reportProductFilter") reportFilters.product = nextValue;
+      if (id === "reportTypeFilter") reportFilters.productType = nextValue;
+      return nextValue;
     }
 
     function showReportMessage(message, tone = "success") {
@@ -1740,19 +2128,21 @@
           <div class="form-grid">
             ${editField("Product, feature, or workstream", "product", report.product, "text", true)}
             ${editField("Owner", "owner", report.owner)}
+            <label>Type of product<select name="product_type"><option ${report.product_type === "Legacy" ? "selected" : ""}>Legacy</option><option ${report.product_type === "New product" ? "selected" : ""}>New product</option></select></label>
             <label>Role<select name="role"><option ${report.role === "Product Manager" ? "selected" : ""}>Product Manager</option><option ${report.role === "UI/UX" ? "selected" : ""}>UI/UX</option></select></label>
             ${editField("Reporting week", "week", report.week, "date", true)}
-            ${editField("Due date", "due_date", report.due_date, "date")}
+            ${editField("Start date", "start_date", report.start_date, "date")}
+            ${editField("End date", "due_date", report.due_date, "date")}
             <label>Health<select name="health"><option value="green" ${report.health === "green" ? "selected" : ""}>On Track</option><option value="amber" ${report.health === "amber" ? "selected" : ""}>In Progress</option><option value="red" ${report.health === "red" ? "selected" : ""}>At Risk</option><option value="gray" ${report.health === "gray" ? "selected" : ""}>Paused</option></select></label>
             ${editField("Progress", "progress", report.progress, "number")}
             ${editField("Stage", "stage", report.stage)}
-            <label>Priority<select name="priority"><option ${report.priority === "Normal" ? "selected" : ""}>Normal</option><option ${report.priority === "High" ? "selected" : ""}>High</option><option ${report.priority === "Critical" ? "selected" : ""}>Critical</option></select></label>
-            <label>Risk impact<select name="impact"><option value="1" ${Number(report.impact) === 1 ? "selected" : ""}>Low</option><option value="2" ${Number(report.impact) === 2 ? "selected" : ""}>Medium</option><option value="3" ${Number(report.impact) === 3 ? "selected" : ""}>High</option></select></label>
-            <label>Time to resolve<select name="time"><option value="1" ${Number(report.time) === 1 ? "selected" : ""}>Short</option><option value="2" ${Number(report.time) === 2 ? "selected" : ""}>Medium</option><option value="3" ${Number(report.time) === 3 ? "selected" : ""}>Long</option></select></label>
             ${editArea("Summary", "summary", report.summary, true)}
             ${editArea("Win", "win", report.win)}
             ${editArea("Blocker or risk", "blocker", report.blocker)}
             ${editArea("Next action", "next", report.next)}
+            <label>Risk impact<select name="impact"><option value="1" ${Number(report.impact) === 1 ? "selected" : ""}>Low</option><option value="2" ${Number(report.impact) === 2 ? "selected" : ""}>Medium</option><option value="3" ${Number(report.impact) === 3 ? "selected" : ""}>High</option></select></label>
+            <label>Time to solve<select name="time"><option value="1" ${Number(report.time) === 1 ? "selected" : ""}>Short</option><option value="2" ${Number(report.time) === 2 ? "selected" : ""}>Medium</option><option value="3" ${Number(report.time) === 3 ? "selected" : ""}>Long</option></select></label>
+            <label>Priority<select name="priority"><option ${report.priority === "Normal" ? "selected" : ""}>Normal</option><option ${report.priority === "High" ? "selected" : ""}>High</option><option ${report.priority === "Critical" ? "selected" : ""}>Critical</option></select></label>
           </div>
           <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:6px">
             <button class="btn" type="button" id="cancelEditReport">Cancel</button>
@@ -1898,13 +2288,13 @@
       }
     });
 
-    document.getElementById("periodFilter").addEventListener("change", event => {
-      dashboardFilters.period = event.target.value;
+    document.getElementById("dashboardWeekFilter").addEventListener("change", event => {
+      dashboardFilters.week = event.target.value;
       renderAll();
     });
 
-    document.getElementById("periodDate").addEventListener("change", event => {
-      dashboardFilters.date = event.target.value;
+    document.getElementById("dashboardTypeFilter").addEventListener("change", event => {
+      dashboardFilters.productType = event.target.value;
       renderAll();
     });
 
@@ -1918,6 +2308,13 @@
       renderExecutiveDashboard();
     });
 
+    document.getElementById("executiveHealth").addEventListener("click", event => {
+      const card = event.target.closest("[data-executive-health]");
+      if (!card) return;
+      selectedExecutiveHealth = card.dataset.executiveHealth;
+      renderExecutiveDashboard();
+    });
+
     document.getElementById("dashboardRoleFilter").addEventListener("change", event => {
       dashboardFilters.role = event.target.value;
       renderAll();
@@ -1928,18 +2325,35 @@
       renderAll();
     });
 
+    document.getElementById("healthList").addEventListener("click", event => {
+      const card = event.target.closest("[data-health-report]");
+      if (!card) return;
+      selectedPortfolioHealthId = card.dataset.healthReport;
+      renderHealth();
+    });
+
+    document.getElementById("healthGroupBy").addEventListener("change", event => {
+      portfolioHealthFilters.groupBy = event.target.value;
+      renderHealth();
+    });
+
     document.getElementById("reportOwnerFilter").addEventListener("change", event => {
       reportFilters.owner = event.target.value;
       renderReports();
     });
 
-    document.getElementById("reportProductFilter").addEventListener("change", event => {
-      reportFilters.product = event.target.value;
+    document.getElementById("reportTypeFilter").addEventListener("change", event => {
+      reportFilters.productType = event.target.value;
       renderReports();
     });
 
-    document.getElementById("reportDateFilter").addEventListener("change", event => {
-      reportFilters.date = event.target.value;
+    document.getElementById("reportWeekFilter").addEventListener("change", event => {
+      reportFilters.week = event.target.value;
+      renderReports();
+    });
+
+    document.getElementById("reportHealthFilter").addEventListener("change", event => {
+      reportFilters.health = event.target.value;
       renderReports();
     });
 
@@ -1949,8 +2363,8 @@
     });
 
     document.querySelector('input[name="week"]').valueAsDate = new Date();
-    document.getElementById("periodDate").valueAsDate = new Date();
-    dashboardFilters.date = document.getElementById("periodDate").value;
+    document.getElementById("dashboardWeekFilter").valueAsDate = new Date();
+    dashboardFilters.week = document.getElementById("dashboardWeekFilter").value;
     document.getElementById("executivePeriodDate").valueAsDate = new Date();
     executiveFilters.date = document.getElementById("executivePeriodDate").value;
     fetchReports();

@@ -4,8 +4,10 @@ create table if not exists public.status_reports (
   id uuid primary key default gen_random_uuid(),
   product text not null,
   owner text,
+  product_type text not null default 'Legacy' check (product_type in ('Legacy', 'New product')),
   role text not null default 'Product Manager' check (role in ('Product Manager', 'UI/UX')),
   week date not null,
+  start_date date,
   due_date date,
   health text not null check (health in ('green', 'amber', 'red', 'gray')),
   progress integer not null default 0 check (progress >= 0 and progress <= 100),
@@ -28,8 +30,16 @@ check (role in ('Product Manager', 'UI/UX'));
 alter table public.status_reports
 add column if not exists due_date date;
 
+alter table public.status_reports
+add column if not exists product_type text not null default 'Legacy'
+check (product_type in ('Legacy', 'New product'));
+
+alter table public.status_reports
+add column if not exists start_date date;
+
 create index if not exists status_reports_week_idx on public.status_reports (week desc);
 create index if not exists status_reports_health_idx on public.status_reports (health);
+create index if not exists status_reports_product_type_idx on public.status_reports (product_type);
 
 alter table public.status_reports enable row level security;
 
