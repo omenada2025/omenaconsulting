@@ -1455,6 +1455,7 @@
       const overrides = loadFieldOverrides();
       overrides[report.id] = {
         product_type: report.product_type || "Legacy",
+        role: report.role || inferRole(report),
         start_date: report.start_date || "",
         due_date: report.due_date || ""
       };
@@ -1475,12 +1476,54 @@
         : report;
     }
 
+    const recoveredReportRoles = {
+      "Cardinal|Nadishani|2026-05-26": "Product Manager",
+      "DaaS360|Nadishani|2026-05-26": "Product Manager",
+      "DeskFlex|Riya / Deepa|2026-05-26": "UI/UX",
+      "Jadian|Faran|2026-05-26": "Product Manager",
+      "K9SKY|Jocasta / Deepa|2026-05-26": "UI/UX",
+      "KJM Migration|Nadishani|2026-05-26": "Product Manager",
+      "Now Solutions|Nadishani|2026-05-26": "Product Manager",
+      "Osra+|Swatti|2026-05-26": "Product Manager",
+      "Othership - IWG Integration|Nadishani / Krishina|2026-05-26": "Product Manager",
+      "Othership UI/UX|Jocasta / Krishina|2026-05-26": "UI/UX",
+      "Pace+|Jocasta / Faran|2026-05-26": "UI/UX",
+      "Provitrac|Faran / Jocasta|2026-05-26": "UI/UX",
+      "Surveyor's System|Nadishani|2026-05-26": "Product Manager",
+      "TSentra|Swatti / Saurabh|2026-05-26": "UI/UX",
+      "Unified Design System|Saurabh / Riya / Jocasta|2026-05-26": "UI/UX",
+      "Worksware UI/UX Documentation|Riya / Deepa|2026-05-26": "UI/UX",
+      "Zena Call Center AI|Nadishani|2026-05-26": "Product Manager",
+      "ZenaTMS|Swatti|2026-05-26": "UI/UX",
+      "ZenaWealth|Swatti|2026-05-26": "Product Manager",
+      "Zinergy|Riya / Faran|2026-05-26": "UI/UX",
+      "DeskFlex|Deepa|2026-06-01": "Product Manager",
+      "HWMS|Krishina|2026-06-01": "Product Manager",
+      "Jadian UIUX|Riya|2026-06-01": "UI/UX",
+      "K9SKY|Deepa|2026-06-01": "Product Manager",
+      "Othership|Krishina|2026-06-01": "Product Manager",
+      "Pace+|Faran|2026-06-01": "UI/UX",
+      "Pace+|Jocasta|2026-06-01": "UI/UX",
+      "PS Portals|Krishina|2026-06-01": "Product Manager",
+      "Tsentra|Saurabh|2026-06-01": "UI/UX",
+      "WMS|Deepa|2026-06-01": "Product Manager",
+      "WorkAware|Deepa|2026-06-01": "Product Manager",
+      "Workaware UIUX|Riya|2026-06-01": "UI/UX",
+      "ZenaBooks|Krishina|2026-06-01": "Product Manager",
+      "ZenaCDP|Krishina|2026-06-01": "Product Manager",
+      "Zinergy|Faran|2026-06-01": "Product Manager"
+    };
+
+    function recoveredRole(row) {
+      return recoveredReportRoles[`${row.product || ""}|${row.owner || ""}|${row.week || ""}`] || "";
+    }
+
     function normalizeReport(row) {
       const normalized = {
         product: row.product || "",
         owner: row.owner || "",
         stage: row.stage || "Discovery",
-        role: row.role || ""
+        role: row.role || recoveredRole(row)
       };
       return applyFieldOverride({
         id: row.id,
