@@ -787,9 +787,6 @@
         <button class="tab" data-view="intake">Add Status</button>
         <button class="tab" data-view="reports">Source Reports</button>
       </nav>
-      <div class="side-actions">
-        <button class="btn danger" id="resetBtn">Reload This Week</button>
-      </div>
     </aside>
 
     <main>
@@ -1720,36 +1717,6 @@
       renderAll();
     }
 
-    async function reloadSeedData() {
-      const existingKeys = new Set(reports.map(report => `${report.product}|${report.owner}|${report.week}`));
-      const missingSeeds = sampleReports
-        .filter(report => !existingKeys.has(`${report.product}|${report.owner}|${report.week}`))
-        .map(report => ({ ...report, id: crypto.randomUUID() }));
-
-      if (!missingSeeds.length) {
-        setSyncStatus("No seed reports were missing");
-        return;
-      }
-
-      if (!hasSupabaseConfig) {
-        reports = [...missingSeeds, ...reports];
-        selectedReportId = missingSeeds[0].id;
-        saveReports();
-        renderAll();
-        return;
-      }
-
-      const data = await supabaseWrite("?select=*", {
-        method: "POST",
-        body: missingSeeds
-      });
-      const restoredSeeds = data.map(normalizeReport);
-      reports = [...restoredSeeds, ...reports];
-      selectedReportId = restoredSeeds[0]?.id || reports[0]?.id || null;
-      setSyncStatus(`Added ${restoredSeeds.length} missing seed report${restoredSeeds.length === 1 ? "" : "s"}`);
-      renderAll();
-    }
-
     function switchView(id) {
       document.querySelectorAll(".view").forEach(view => view.classList.toggle("active", view.id === id));
       document.querySelectorAll(".tab").forEach(tab => tab.classList.toggle("active", tab.dataset.view === id));
@@ -2387,15 +2354,6 @@
       selectedReportId = card.dataset.reportCard;
       renderReports();
       renderDetail();
-    });
-
-    document.getElementById("resetBtn").addEventListener("click", async () => {
-      try {
-        await reloadSeedData();
-      } catch (error) {
-        console.error(error);
-        alert("Could not reload weekly data. Check Supabase permissions or connection.");
-      }
     });
 
     document.getElementById("dashboardWeekFilter").addEventListener("change", event => {
