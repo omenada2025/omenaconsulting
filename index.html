@@ -358,6 +358,9 @@
     .exec-list {
       display: grid;
       gap: 10px;
+      max-height: 620px;
+      overflow: auto;
+      padding-right: 4px;
     }
 
     .exec-row {
@@ -433,6 +436,9 @@
       display: grid;
       gap: 10px;
       margin-top: 10px;
+      max-height: 620px;
+      overflow: auto;
+      padding-right: 4px;
     }
 
     .executive-health-projects .exec-row {
@@ -514,6 +520,9 @@
     .status-list {
       display: grid;
       gap: 10px;
+      max-height: 620px;
+      overflow: auto;
+      padding-right: 4px;
     }
 
     .health-toolbar {
@@ -718,7 +727,7 @@
     .report-list {
       display: grid;
       gap: 16px;
-      max-height: 560px;
+      max-height: 620px;
       overflow: auto;
       padding-right: 4px;
     }
@@ -855,6 +864,9 @@
     .timeline {
       display: grid;
       gap: 12px;
+      max-height: 620px;
+      overflow: auto;
+      padding-right: 4px;
     }
 
     .timeline-item {
@@ -966,7 +978,7 @@
               <label>
                 Group by
                 <select id="healthGroupBy">
-                  <option value="date">Reporting date</option>
+                  <option value="date">Reporting week</option>
                   <option value="project">Project</option>
                   <option value="owner">Owner</option>
                 </select>
@@ -1504,6 +1516,7 @@
     let selectedExecutiveProjectId = null;
     let useLegacySupabasePayload = false;
     let actionLoggingDisabled = false;
+    const PRODUCT_TYPE_OPTIONS = ["Legacy", "New product"];
     const dashboardFilters = {
       week: "",
       productType: "all",
@@ -2087,6 +2100,13 @@
         : anchor;
     }
 
+    function reportingWeekGroupLabel(value) {
+      if (!value) return "No reporting week";
+      const monday = mondayForDate(value);
+      const range = workweekRange(monday);
+      return range ? `${formatDate(range.start)} - ${formatDate(range.end)}` : value;
+    }
+
     function matchesReportingDate(value, anchor) {
       if (!anchor) return true;
       if (isWeekend(anchor)) return false;
@@ -2134,7 +2154,7 @@
 
     function renderMetrics() {
       const source = getDashboardReports();
-      fillSelect("dashboardTypeFilter", reports.map(r => r.product_type || "Legacy").filter(Boolean), "All product types", dashboardFilters.productType);
+      fillSelect("dashboardTypeFilter", PRODUCT_TYPE_OPTIONS, "All product types", dashboardFilters.productType);
       fillSelect("dashboardOwnerFilter", reports.map(r => r.owner).filter(Boolean), "All owners", dashboardFilters.owner);
       const pm = roleStats("Product Manager", source);
       const ux = roleStats("UI/UX", source);
@@ -2168,7 +2188,7 @@
 
     function renderExecutiveDashboard() {
       const source = reports.filter(matchesExecutivePeriod);
-      fillSelect("executiveTypeFilter", reports.map(r => r.product_type || "Legacy").filter(Boolean), "All product types", executiveFilters.productType);
+      fillSelect("executiveTypeFilter", PRODUCT_TYPE_OPTIONS, "All product types", executiveFilters.productType);
       const total = source.length;
       const atRisk = source.filter(report => report.health === "red" || report.priority === "Critical").length;
       const inProgress = source.filter(report => report.health === "amber").length;
@@ -2347,7 +2367,7 @@
       }
 
       const groupLabels = {
-        date: report => report.week || "No reporting date",
+        date: report => reportingWeekGroupLabel(report.week),
         project: report => report.product || "Unnamed project",
         owner: report => report.owner || "Unassigned"
       };
@@ -2603,7 +2623,7 @@
 
     function populateReportFilters() {
       fillSelect("reportOwnerFilter", reports.map(r => r.owner).filter(Boolean), "All owners", reportFilters.owner);
-      fillSelect("reportTypeFilter", reports.map(r => r.product_type || "Legacy").filter(Boolean), "All product types", reportFilters.productType);
+      fillSelect("reportTypeFilter", PRODUCT_TYPE_OPTIONS, "All product types", reportFilters.productType);
     }
 
     function fillSelect(id, values, allLabel, current) {
