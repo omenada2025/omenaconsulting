@@ -181,6 +181,21 @@
       grid-template-columns: repeat(5, minmax(0, 1fr));
     }
 
+    .export-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-bottom: 12px;
+    }
+
+    .export-actions .btn {
+      min-height: 34px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
     .metric-split {
       display: flex;
       gap: 8px;
@@ -1105,7 +1120,12 @@
         </div>
         <div class="grid two-col">
           <div class="panel">
-            <h3>Submitted Reports</h3>
+            <div class="panel-title">
+              <div>
+                <h3>Submitted Reports</h3>
+                <p class="muted small">Export uses the currently filtered report list.</p>
+              </div>
+            </div>
             <div class="filter-bar report-filter-bar">
               <label>
                 Owner
@@ -1137,6 +1157,11 @@
                   <option value="UI/UX">UI/UX</option>
                 </select>
               </label>
+            </div>
+            <div class="export-actions" aria-label="Export submitted reports">
+              <button class="btn" type="button" id="exportCsvBtn">Export CSV</button>
+              <button class="btn" type="button" id="exportExcelBtn">Export Excel</button>
+              <button class="btn" type="button" id="exportPdfBtn">Export PDF</button>
             </div>
             <div class="report-list" id="reportList"></div>
           </div>
@@ -1762,9 +1787,44 @@
       return date >= start && date < end;
     }
 
+    function parseDate(value) {
+      return value ? new Date(`${value}T00:00:00`) : null;
+    }
+
+    function formatDate(date) {
+      if (!date) return "";
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    function workweekRange(anchor) {
+      const target = parseDate(anchor);
+      if (!target || Number.isNaN(target.getTime())) return null;
+      const start = new Date(target);
+      const day = (start.getDay() + 6) % 7;
+      start.setDate(start.getDate() - day);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 4);
+      return { start, end };
+    }
+
+    function isSameBusinessWeek(value, anchor) {
+      const date = parseDate(value);
+      const range = workweekRange(anchor);
+      if (!date || !range || Number.isNaN(date.getTime())) return false;
+      return date >= range.start && date <= range.end;
+    }
+
+    function workweekLabel(anchor) {
+      const range = workweekRange(anchor);
+      return range ? `${formatDate(range.start)} to ${formatDate(range.end)}` : "all reporting weeks";
+    }
+
     function matchesExecutivePeriod(report) {
       return (
-        (!executiveFilters.week || report.week === executiveFilters.week) &&
+        (!executiveFilters.week || isSameBusinessWeek(report.week, executiveFilters.week)) &&
         (executiveFilters.productType === "all" || report.product_type === executiveFilters.productType) &&
         (executiveFilters.role === "all" || report.role === executiveFilters.role) &&
         (executiveFilters.health === "all" || report.health === executiveFilters.health)
@@ -1773,7 +1833,7 @@
 
     function getDashboardReports() {
       return reports.filter(report =>
-        (!dashboardFilters.week || report.week === dashboardFilters.week) &&
+        (!dashboardFilters.week || isSameBusinessWeek(report.week, dashboardFilters.week)) &&
         (dashboardFilters.productType === "all" || report.product_type === dashboardFilters.productType) &&
         (dashboardFilters.role === "all" || report.role === dashboardFilters.role) &&
         (dashboardFilters.health === "all" || report.health === dashboardFilters.health)
@@ -1849,7 +1909,7 @@
         );
 
       const periodLabel = executiveFilters.week
-        ? `reporting week ${executiveFilters.week}`
+        ? `reporting week ${workweekLabel(executiveFilters.week)}`
         : "all reporting weeks";
       document.getElementById("executiveSubtitle").textContent = latest
         ? `Showing ${periodLabel} - latest reporting week: ${latest} - ${total} active product and UI/UX updates. Click status cards, then project cards for detail.`
@@ -2151,6 +2211,118 @@
       `;
     }
 
+    const exportColumns = [
+      ["product", "Product, feature, or workstream"],
+      ["owner", "Owner"],
+      ["product_type", "Type of product"],
+      ["role", "Role"],
+      ["week", "Reporting week"],
+      ["start_date", "Start date"],
+      ["due_date", "End date"],
+      ["health", "Health"],
+      ["progress", "Progress"],
+      ["stage", "Stage"],
+      ["summary", "Summary"],
+      ["win", "Win"],
+      ["blocker", "Blocker or risk"],
+      ["next", "Next action"],
+      ["impact", "Risk impact"],
+      ["time", "Time to solve"],
+      ["priority", "Priority"]
+    ];
+
+    function exportFilename(extension) {
+      const date = new Date().toISOString().slice(0, 10);
+      return `source-status-reports-${date}.${extension}`;
+    }
+
+    function exportValue(report, key) {
+      if (key === "health") return labels[report.health] || report.health || "";
+      if (key === "product_type") return report.product_type || "Legacy";
+      return report[key] ?? "";
+    }
+
+    function csvEscape(value) {
+      const text = String(value ?? "");
+      return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    }
+
+    function downloadBlob(filename, content, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportReportsCsv() {
+      const rows = getReportList();
+      const header = exportColumns.map(([, label]) => csvEscape(label)).join(",");
+      const body = rows.map(report => exportColumns.map(([key]) => csvEscape(exportValue(report, key))).join(",")).join("\n");
+      downloadBlob(exportFilename("csv"), [header, body].filter(Boolean).join("\n"), "text/csv;charset=utf-8");
+    }
+
+    function exportReportsExcel() {
+      const rows = getReportList();
+      const table = `
+        <table>
+          <thead><tr>${exportColumns.map(([, label]) => `<th>${escapeHtml(label)}</th>`).join("")}</tr></thead>
+          <tbody>
+            ${rows.map(report => `<tr>${exportColumns.map(([key]) => `<td>${escapeHtml(exportValue(report, key))}</td>`).join("")}</tr>`).join("")}
+          </tbody>
+        </table>
+      `;
+      const workbook = `<!doctype html><html><head><meta charset="utf-8"></head><body>${table}</body></html>`;
+      downloadBlob(exportFilename("xls"), workbook, "application/vnd.ms-excel;charset=utf-8");
+    }
+
+    function exportReportsPdf() {
+      const rows = getReportList();
+      const table = `
+        <table>
+          <thead><tr>${exportColumns.map(([, label]) => `<th>${escapeHtml(label)}</th>`).join("")}</tr></thead>
+          <tbody>
+            ${rows.map(report => `<tr>${exportColumns.map(([key]) => `<td>${escapeHtml(exportValue(report, key))}</td>`).join("")}</tr>`).join("")}
+          </tbody>
+        </table>
+      `;
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) {
+        alert("Please allow pop-ups to export PDF.");
+        return;
+      }
+      printWindow.document.write(`
+        <!doctype html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Source Status Reports</title>
+            <style>
+              body { font-family: Arial, sans-serif; color: #17212b; padding: 24px; }
+              h1 { font-size: 22px; margin: 0 0 6px; }
+              p { color: #64717d; margin: 0 0 18px; }
+              table { border-collapse: collapse; width: 100%; font-size: 10px; }
+              th, td { border: 1px solid #d8e0e5; padding: 6px; text-align: left; vertical-align: top; }
+              th { background: #eef3f4; }
+              @media print { body { padding: 0; } }
+            </style>
+          </head>
+          <body>
+            <h1>Source Status Reports</h1>
+            <p>${rows.length} filtered report${rows.length === 1 ? "" : "s"} exported from Product & UI/UX Pulse.</p>
+            ${table}
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    }
+
     function populateReportFilters() {
       fillSelect("reportOwnerFilter", reports.map(r => r.owner).filter(Boolean), "All owners", reportFilters.owner);
       fillSelect("reportTypeFilter", reports.map(r => r.product_type || "Legacy").filter(Boolean), "All product types", reportFilters.productType);
@@ -2295,7 +2467,8 @@
       const latest = weeks[weeks.length - 1];
       const syncStatus = document.getElementById("dashboardSubtitle").dataset.syncStatus || "Local browser storage";
       const filteredCount = getDashboardReports().length;
-      document.getElementById("dashboardSubtitle").textContent = latest ? `Latest reporting week: ${latest} - ${filteredCount} of ${reports.length} product and UI/UX updates - ${syncStatus}.` : `Live rollup from submitted product and UI/UX reports - ${syncStatus}.`;
+      const selectedWorkweek = dashboardFilters.week ? `Selected workweek: ${workweekLabel(dashboardFilters.week)} - ` : "";
+      document.getElementById("dashboardSubtitle").textContent = latest ? `${selectedWorkweek}Latest reporting week: ${latest} - ${filteredCount} of ${reports.length} product and UI/UX updates - ${syncStatus}.` : `Live rollup from submitted product and UI/UX reports - ${syncStatus}.`;
       renderMetrics();
       renderExecutiveDashboard();
       renderHealth();
@@ -2451,6 +2624,10 @@
       reportFilters.role = event.target.value;
       renderReports();
     });
+
+    document.getElementById("exportCsvBtn").addEventListener("click", exportReportsCsv);
+    document.getElementById("exportExcelBtn").addEventListener("click", exportReportsExcel);
+    document.getElementById("exportPdfBtn").addEventListener("click", exportReportsPdf);
 
     document.querySelector('input[name="week"]').valueAsDate = new Date();
     document.getElementById("dashboardWeekFilter").valueAsDate = new Date();
