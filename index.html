@@ -828,6 +828,10 @@
             <select id="dashboardTypeFilter"></select>
           </label>
           <label>
+            Owner
+            <select id="dashboardOwnerFilter"></select>
+          </label>
+          <label>
             Role / Portfolio view
             <select id="dashboardRoleFilter">
               <option value="all">Product Manager + UI/UX</option>
@@ -1392,6 +1396,7 @@
     const dashboardFilters = {
       week: "",
       productType: "all",
+      owner: "all",
       role: "all",
       health: "all"
     };
@@ -1810,6 +1815,24 @@
       return { start, end };
     }
 
+    function isMonday(value) {
+      const date = parseDate(value);
+      return Boolean(date && !Number.isNaN(date.getTime()) && date.getDay() === 1);
+    }
+
+    function isWeekend(value) {
+      const date = parseDate(value);
+      return Boolean(date && !Number.isNaN(date.getTime()) && (date.getDay() === 0 || date.getDay() === 6));
+    }
+
+    function mondayForDate(value = new Date()) {
+      const target = value instanceof Date ? new Date(value) : parseDate(value);
+      if (!target || Number.isNaN(target.getTime())) return "";
+      const day = (target.getDay() + 6) % 7;
+      target.setDate(target.getDate() - day);
+      return formatDate(target);
+    }
+
     function isSameBusinessWeek(value, anchor) {
       const date = parseDate(value);
       const range = workweekRange(anchor);
@@ -1822,9 +1845,24 @@
       return range ? `${formatDate(range.start)} to ${formatDate(range.end)}` : "all reporting weeks";
     }
 
+    function reportingPeriodLabel(anchor) {
+      if (!anchor) return "all reporting dates";
+      return isMonday(anchor)
+        ? `reporting week ${workweekLabel(anchor)}`
+        : `reporting date ${anchor}`;
+    }
+
+    function matchesReportingDate(value, anchor) {
+      if (!anchor) return true;
+      if (isWeekend(anchor)) return false;
+      return isMonday(anchor)
+        ? isSameBusinessWeek(value, anchor)
+        : isSameDay(value, anchor);
+    }
+
     function matchesExecutivePeriod(report) {
       return (
-        (!executiveFilters.week || isSameBusinessWeek(report.week, executiveFilters.week)) &&
+        matchesReportingDate(report.week, executiveFilters.week) &&
         (executiveFilters.productType === "all" || report.product_type === executiveFilters.productType) &&
         (executiveFilters.role === "all" || report.role === executiveFilters.role) &&
         (executiveFilters.health === "all" || report.health === executiveFilters.health)
@@ -1833,8 +1871,9 @@
 
     function getDashboardReports() {
       return reports.filter(report =>
-        (!dashboardFilters.week || isSameBusinessWeek(report.week, dashboardFilters.week)) &&
+        matchesReportingDate(report.week, dashboardFilters.week) &&
         (dashboardFilters.productType === "all" || report.product_type === dashboardFilters.productType) &&
+        (dashboardFilters.owner === "all" || report.owner === dashboardFilters.owner) &&
         (dashboardFilters.role === "all" || report.role === dashboardFilters.role) &&
         (dashboardFilters.health === "all" || report.health === dashboardFilters.health)
       );
@@ -1844,7 +1883,7 @@
       return reports.filter(report =>
         (reportFilters.owner === "all" || report.owner === reportFilters.owner) &&
         (reportFilters.productType === "all" || report.product_type === reportFilters.productType) &&
-        (!reportFilters.week || report.week === reportFilters.week) &&
+        matchesReportingDate(report.week, reportFilters.week) &&
         (reportFilters.health === "all" || report.health === reportFilters.health) &&
         (reportFilters.role === "all" || report.role === reportFilters.role)
       );
@@ -1861,6 +1900,7 @@
     function renderMetrics() {
       const source = getDashboardReports();
       fillSelect("dashboardTypeFilter", reports.map(r => r.product_type || "Legacy").filter(Boolean), "All product types", dashboardFilters.productType);
+      fillSelect("dashboardOwnerFilter", reports.map(r => r.owner).filter(Boolean), "All owners", dashboardFilters.owner);
       const pm = roleStats("Product Manager", source);
       const ux = roleStats("UI/UX", source);
       const total = source.length;
@@ -1909,8 +1949,8 @@
         );
 
       const periodLabel = executiveFilters.week
-        ? `reporting week ${workweekLabel(executiveFilters.week)}`
-        : "all reporting weeks";
+        ? reportingPeriodLabel(executiveFilters.week)
+        : "all reporting dates";
       document.getElementById("executiveSubtitle").textContent = latest
         ? `Showing ${periodLabel} - latest reporting week: ${latest} - ${total} active product and UI/UX updates. Click status cards, then project cards for detail.`
         : `No reports match these filters. Try changing Reporting week, Type of product, Role / Portfolio view, or Delivery health.`;
@@ -2335,6 +2375,7 @@
       select.innerHTML = [`<option value="all">${allLabel}</option>`, ...unique.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)].join("");
       select.value = nextValue;
       if (id === "dashboardTypeFilter") dashboardFilters.productType = nextValue;
+      if (id === "dashboardOwnerFilter") dashboardFilters.owner = nextValue;
       if (id === "executiveTypeFilter") executiveFilters.productType = nextValue;
       if (id === "reportOwnerFilter") reportFilters.owner = nextValue;
       if (id === "reportTypeFilter") reportFilters.productType = nextValue;
@@ -2393,6 +2434,7 @@
           </div>
         </form>
       `;
+      initReportingWeekInputs(detail);
       document.getElementById("cancelEditReport").addEventListener("click", () => {
         selectedReportId = null;
         renderReports();
@@ -2452,6 +2494,9 @@
 
     function readReportForm(form, id = crypto.randomUUID()) {
       const data = Object.fromEntries(new FormData(form).entries());
+      if (isWeekend(data.week)) {
+        throw new Error("Reporting week cannot be Saturday or Sunday.");
+      }
       return {
         ...data,
         id,
@@ -2467,8 +2512,8 @@
       const latest = weeks[weeks.length - 1];
       const syncStatus = document.getElementById("dashboardSubtitle").dataset.syncStatus || "Local browser storage";
       const filteredCount = getDashboardReports().length;
-      const selectedWorkweek = dashboardFilters.week ? `Selected workweek: ${workweekLabel(dashboardFilters.week)} - ` : "";
-      document.getElementById("dashboardSubtitle").textContent = latest ? `${selectedWorkweek}Latest reporting week: ${latest} - ${filteredCount} of ${reports.length} product and UI/UX updates - ${syncStatus}.` : `Live rollup from submitted product and UI/UX reports - ${syncStatus}.`;
+      const selectedPeriod = dashboardFilters.week ? `Selected ${reportingPeriodLabel(dashboardFilters.week)} - ` : "";
+      document.getElementById("dashboardSubtitle").textContent = latest ? `${selectedPeriod}Latest reporting date: ${latest} - ${filteredCount} of ${reports.length} product and UI/UX updates - ${syncStatus}.` : `Live rollup from submitted product and UI/UX reports - ${syncStatus}.`;
       renderMetrics();
       renderExecutiveDashboard();
       renderHealth();
@@ -2488,6 +2533,39 @@
         .replace(/'/g, "&#039;");
     }
 
+    function setWeekdayDateValue(input, value) {
+      input.value = value || "";
+      input.dataset.lastValidValue = input.value;
+      input.setCustomValidity("");
+    }
+
+    function handleWeekdayDateChange(input, onValidChange) {
+      if (isWeekend(input.value)) {
+        const fallback = input.dataset.lastValidValue || mondayForDate(input.value) || mondayForDate();
+        input.setCustomValidity("Reporting date must be Monday through Friday.");
+        input.reportValidity();
+        setWeekdayDateValue(input, fallback);
+        return;
+      }
+      input.setCustomValidity("");
+      input.dataset.lastValidValue = input.value;
+      onValidChange(input.value);
+    }
+
+    function initWeekdayDateInput(input, onValidChange, defaultValue = "") {
+      setWeekdayDateValue(input, defaultValue);
+      input.addEventListener("change", () => handleWeekdayDateChange(input, onValidChange));
+    }
+
+    function initReportingWeekInputs(root = document) {
+      root.querySelectorAll('input[name="week"]').forEach(input => {
+        if (input.dataset.weekdayGuard === "true") return;
+        input.dataset.weekdayGuard = "true";
+        input.dataset.lastValidValue = input.value;
+        input.addEventListener("change", () => handleWeekdayDateChange(input, () => {}));
+      });
+    }
+
     document.querySelectorAll("[data-view]").forEach(tab => {
       tab.addEventListener("click", async () => {
         switchView(tab.dataset.view);
@@ -2505,21 +2583,21 @@
     document.getElementById("statusForm").addEventListener("submit", async event => {
       event.preventDefault();
       const form = event.currentTarget;
-      const report = readReportForm(form);
       const saveBtn = document.getElementById("saveReportBtn");
       saveBtn.disabled = true;
       saveBtn.textContent = "Saving...";
       try {
+        const report = readReportForm(form);
         await createReport(report);
         form.reset();
-        form.week.valueAsDate = new Date();
+        setWeekdayDateValue(form.week, mondayForDate());
         saveBtn.textContent = "Saved";
         setTimeout(() => { saveBtn.textContent = "Save Report"; }, 1400);
         switchView("dashboard");
       } catch (error) {
         console.error(error);
         saveBtn.textContent = "Save Report";
-        alert("Could not save this report. Check Supabase configuration or connection.");
+        alert(error.message.includes("Saturday or Sunday") ? error.message : "Could not save this report. Check Supabase configuration or connection.");
       } finally {
         saveBtn.disabled = false;
       }
@@ -2533,19 +2611,14 @@
       renderDetail();
     });
 
-    document.getElementById("dashboardWeekFilter").addEventListener("change", event => {
-      dashboardFilters.week = event.target.value;
-      renderAll();
-    });
-
     document.getElementById("dashboardTypeFilter").addEventListener("change", event => {
       dashboardFilters.productType = event.target.value;
       renderAll();
     });
 
-    document.getElementById("executiveWeekFilter").addEventListener("change", event => {
-      executiveFilters.week = event.target.value;
-      renderExecutiveDashboard();
+    document.getElementById("dashboardOwnerFilter").addEventListener("change", event => {
+      dashboardFilters.owner = event.target.value;
+      renderAll();
     });
 
     document.getElementById("executiveTypeFilter").addEventListener("change", event => {
@@ -2610,11 +2683,6 @@
       renderReports();
     });
 
-    document.getElementById("reportWeekFilter").addEventListener("change", event => {
-      reportFilters.week = event.target.value;
-      renderReports();
-    });
-
     document.getElementById("reportHealthFilter").addEventListener("change", event => {
       reportFilters.health = event.target.value;
       renderReports();
@@ -2629,11 +2697,23 @@
     document.getElementById("exportExcelBtn").addEventListener("click", exportReportsExcel);
     document.getElementById("exportPdfBtn").addEventListener("click", exportReportsPdf);
 
-    document.querySelector('input[name="week"]').valueAsDate = new Date();
-    document.getElementById("dashboardWeekFilter").valueAsDate = new Date();
+    const defaultReportingMonday = mondayForDate();
+    initWeekdayDateInput(document.getElementById("dashboardWeekFilter"), value => {
+      dashboardFilters.week = value;
+      renderAll();
+    }, defaultReportingMonday);
     dashboardFilters.week = document.getElementById("dashboardWeekFilter").value;
-    document.getElementById("executiveWeekFilter").valueAsDate = new Date();
+    initWeekdayDateInput(document.getElementById("executiveWeekFilter"), value => {
+      executiveFilters.week = value;
+      renderExecutiveDashboard();
+    }, defaultReportingMonday);
     executiveFilters.week = document.getElementById("executiveWeekFilter").value;
+    initWeekdayDateInput(document.getElementById("reportWeekFilter"), value => {
+      reportFilters.week = value;
+      renderReports();
+    }, "");
+    setWeekdayDateValue(document.querySelector('input[name="week"]'), defaultReportingMonday);
+    initReportingWeekInputs();
     fetchReports();
     setInterval(() => {
       if (document.visibilityState === "visible") refreshSharedDashboards();
