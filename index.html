@@ -1494,13 +1494,16 @@
     const config = window.SUPABASE_CONFIG || {};
     const hasSupabaseConfig = Boolean(config.url && config.anonKey);
     const supabaseTable = config.table || "status_reports";
-    const supabaseBaseUrl = hasSupabaseConfig ? `${config.url.replace(/\/$/, "")}/rest/v1/${supabaseTable}` : "";
+    const actionLogTable = config.actionLogTable || "user_action_logs";
+    const supabaseRestUrl = hasSupabaseConfig ? `${config.url.replace(/\/$/, "")}/rest/v1` : "";
+    const supabaseBaseUrl = hasSupabaseConfig ? `${supabaseRestUrl}/${supabaseTable}` : "";
     let reports = [];
     let selectedReportId = null;
     let selectedPortfolioHealthId = null;
     let selectedExecutiveHealth = "red";
     let selectedExecutiveProjectId = null;
     let useLegacySupabasePayload = false;
+    let actionLoggingDisabled = false;
     const dashboardFilters = {
       week: "",
       productType: "all",
@@ -1740,7 +1743,7 @@
       subtitle.dataset.syncStatus = text;
     }
 
-    async function supabaseRequest(path = "", options = {}) {
+    async function supabaseTableRequest(table, path = "", options = {}) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), options.timeoutMs || 8000);
       const headers = {
@@ -1750,7 +1753,7 @@
         ...(options.headers || {})
       };
       if (options.prefer !== "") headers.Prefer = options.prefer || "return=representation";
-      const response = await fetch(`${supabaseBaseUrl}${path}`, {
+      const response = await fetch(`${supabaseRestUrl}/${table}${path}`, {
         method: options.method || "GET",
         headers,
         body: options.body ? JSON.stringify(options.body) : undefined,
@@ -1761,6 +1764,61 @@
       }
       if (response.status === 204) return null;
       return response.json();
+    }
+
+    async function supabaseRequest(path = "", options = {}) {
+      return supabaseTableRequest(supabaseTable, path, options);
+    }
+
+    function getSessionId() {
+      const key = "pulse_dashboard_session_id";
+      let sessionId = sessionStorage.getItem(key);
+      if (!sessionId) {
+        sessionId = crypto.randomUUID();
+        sessionStorage.setItem(key, sessionId);
+      }
+      return sessionId;
+    }
+
+    function reportLogFields(report) {
+      return report ? {
+        report_id: report.id || null,
+        product: report.product || null,
+        owner: report.owner || null
+      } : {};
+    }
+
+    function logUserAction(action, details = {}, target = {}) {
+      if (!hasSupabaseConfig || actionLoggingDisabled) return;
+      const payload = {
+        session_id: getSessionId(),
+        action,
+        view: getActiveView(),
+        target_type: target.target_type || target.type || null,
+        target_id: target.target_id || target.id || null,
+        report_id: target.report_id || null,
+        product: target.product || null,
+        owner: target.owner || null,
+        details,
+        page_url: window.location.href,
+        user_agent: navigator.userAgent
+      };
+      supabaseTableRequest(actionLogTable, "", {
+        method: "POST",
+        body: payload,
+        prefer: "return=minimal",
+        timeoutMs: 5000
+      }).catch(error => {
+        console.warn("User action logging unavailable:", error);
+        actionLoggingDisabled = true;
+      });
+    }
+
+    function logFilterChange(area, filter, value) {
+      logUserAction("filter_changed", { area, filter, value }, {
+        target_type: "filter",
+        target_id: `${area}.${filter}`
+      });
     }
 
     async function fetchReports() {
@@ -1833,6 +1891,12 @@
       reports = [createdReport, ...reports];
       selectedReportId = created.id;
       renderAll();
+      logUserAction("report_created", {
+        health: createdReport.health,
+        week: createdReport.week,
+        role: createdReport.role,
+        product_type: createdReport.product_type
+      }, { target_type: "report", target_id: createdReport.id, ...reportLogFields(createdReport) });
     }
 
     async function updateReport(report) {
@@ -1881,9 +1945,16 @@
       selectedReportId = updatedReport.id;
       setSyncStatus(useLegacySupabasePayload ? "Saved with Supabase legacy schema" : "Saved to Supabase");
       renderAll();
+      logUserAction("report_updated", {
+        health: updatedReport.health,
+        week: updatedReport.week,
+        role: updatedReport.role,
+        product_type: updatedReport.product_type
+      }, { target_type: "report", target_id: updatedReport.id, ...reportLogFields(updatedReport) });
     }
 
     async function deleteReportById(id) {
+      const deletedReport = reports.find(r => r.id === id);
       if (!hasSupabaseConfig) {
         reports = reports.filter(r => r.id !== id);
         selectedReportId = reports[0]?.id || null;
@@ -1900,11 +1971,16 @@
       reports = reports.filter(r => r.id !== id);
       selectedReportId = reports[0]?.id || null;
       renderAll();
+      logUserAction("report_deleted", {
+        week: deletedReport?.week || null,
+        health: deletedReport?.health || null
+      }, { target_type: "report", target_id: id, ...reportLogFields(deletedReport) });
     }
 
     function switchView(id) {
       document.querySelectorAll(".view").forEach(view => view.classList.toggle("active", view.id === id));
       document.querySelectorAll(".tab").forEach(tab => tab.classList.toggle("active", tab.dataset.view === id));
+      logUserAction("view_opened", { view: id }, { target_type: "view", target_id: id });
     }
 
     function getActiveView() {
@@ -2463,6 +2539,7 @@
       const header = exportColumns.map(([, label]) => csvEscape(label)).join(",");
       const body = rows.map(report => exportColumns.map(([key]) => csvEscape(exportValue(report, key))).join(",")).join("\n");
       downloadBlob(exportFilename("csv"), [header, body].filter(Boolean).join("\n"), "text/csv;charset=utf-8");
+      logUserAction("reports_exported", { format: "csv", row_count: rows.length, filters: { ...reportFilters } }, { target_type: "export", target_id: "csv" });
     }
 
     function exportReportsExcel() {
@@ -2477,6 +2554,7 @@
       `;
       const workbook = `<!doctype html><html><head><meta charset="utf-8"></head><body>${table}</body></html>`;
       downloadBlob(exportFilename("xls"), workbook, "application/vnd.ms-excel;charset=utf-8");
+      logUserAction("reports_exported", { format: "excel", row_count: rows.length, filters: { ...reportFilters } }, { target_type: "export", target_id: "excel" });
     }
 
     function exportReportsPdf() {
@@ -2520,6 +2598,7 @@
       printWindow.document.close();
       printWindow.focus();
       printWindow.print();
+      logUserAction("reports_exported", { format: "pdf", row_count: rows.length, filters: { ...reportFilters } }, { target_type: "export", target_id: "pdf" });
     }
 
     function populateReportFilters() {
@@ -2862,32 +2941,39 @@
       const card = event.target.closest("[data-report-card]");
       if (!card) return;
       selectedReportId = card.dataset.reportCard;
+      const report = reports.find(r => r.id === selectedReportId);
+      logUserAction("report_selected", { source: "source_reports" }, { target_type: "report", target_id: selectedReportId, ...reportLogFields(report) });
       renderReports();
       renderDetail();
     });
 
     document.getElementById("dashboardTypeFilter").addEventListener("change", event => {
       dashboardFilters.productType = event.target.value;
+      logFilterChange("dashboard", "product_type", event.target.value);
       renderAll();
     });
 
     document.getElementById("dashboardOwnerFilter").addEventListener("change", event => {
       dashboardFilters.owner = event.target.value;
+      logFilterChange("dashboard", "owner", event.target.value);
       renderAll();
     });
 
     document.getElementById("executiveTypeFilter").addEventListener("change", event => {
       executiveFilters.productType = event.target.value;
+      logFilterChange("executive", "product_type", event.target.value);
       renderExecutiveDashboard();
     });
 
     document.getElementById("executiveRoleFilter").addEventListener("change", event => {
       executiveFilters.role = event.target.value;
+      logFilterChange("executive", "role", event.target.value);
       renderExecutiveDashboard();
     });
 
     document.getElementById("executiveHealthFilter").addEventListener("change", event => {
       executiveFilters.health = event.target.value;
+      logFilterChange("executive", "health", event.target.value);
       renderExecutiveDashboard();
     });
 
@@ -2896,6 +2982,7 @@
       if (!card) return;
       selectedExecutiveHealth = card.dataset.executiveHealth;
       selectedExecutiveProjectId = null;
+      logUserAction("executive_health_selected", { health: selectedExecutiveHealth }, { target_type: "health", target_id: selectedExecutiveHealth });
       renderExecutiveDashboard();
     });
 
@@ -2903,16 +2990,20 @@
       const project = event.target.closest("[data-executive-project]");
       if (!project) return;
       selectedExecutiveProjectId = project.dataset.executiveProject;
+      const report = reports.find(r => r.id === selectedExecutiveProjectId);
+      logUserAction("executive_project_selected", { health: selectedExecutiveHealth }, { target_type: "report", target_id: selectedExecutiveProjectId, ...reportLogFields(report) });
       renderExecutiveDashboard();
     });
 
     document.getElementById("dashboardRoleFilter").addEventListener("change", event => {
       dashboardFilters.role = event.target.value;
+      logFilterChange("dashboard", "role", event.target.value);
       renderAll();
     });
 
     document.getElementById("dashboardHealthFilter").addEventListener("change", event => {
       dashboardFilters.health = event.target.value;
+      logFilterChange("dashboard", "health", event.target.value);
       renderAll();
     });
 
@@ -2920,31 +3011,38 @@
       const card = event.target.closest("[data-health-report]");
       if (!card) return;
       selectedPortfolioHealthId = card.dataset.healthReport;
+      const report = reports.find(r => r.id === selectedPortfolioHealthId);
+      logUserAction("portfolio_health_card_selected", {}, { target_type: "report", target_id: selectedPortfolioHealthId, ...reportLogFields(report) });
       renderHealth();
     });
 
     document.getElementById("healthGroupBy").addEventListener("change", event => {
       portfolioHealthFilters.groupBy = event.target.value;
+      logFilterChange("dashboard", "portfolio_health_group_by", event.target.value);
       renderHealth();
     });
 
     document.getElementById("reportOwnerFilter").addEventListener("change", event => {
       reportFilters.owner = event.target.value;
+      logFilterChange("source_reports", "owner", event.target.value);
       renderReports();
     });
 
     document.getElementById("reportTypeFilter").addEventListener("change", event => {
       reportFilters.productType = event.target.value;
+      logFilterChange("source_reports", "product_type", event.target.value);
       renderReports();
     });
 
     document.getElementById("reportHealthFilter").addEventListener("change", event => {
       reportFilters.health = event.target.value;
+      logFilterChange("source_reports", "health", event.target.value);
       renderReports();
     });
 
     document.getElementById("reportRoleFilter").addEventListener("change", event => {
       reportFilters.role = event.target.value;
+      logFilterChange("source_reports", "role", event.target.value);
       renderReports();
     });
 
@@ -2955,16 +3053,19 @@
     const defaultReportingMonday = mondayForDate();
     initWeekPicker(document.getElementById("dashboardWeekFilter"), document.getElementById("dashboardWeekPicker"), value => {
       dashboardFilters.week = value;
+      logFilterChange("dashboard", "reporting_week", reportingFieldLabel(value));
       renderAll();
     }, defaultReportingMonday);
     dashboardFilters.week = document.getElementById("dashboardWeekFilter").value;
     initWeekPicker(document.getElementById("executiveWeekFilter"), document.getElementById("executiveWeekPicker"), value => {
       executiveFilters.week = value;
+      logFilterChange("executive", "reporting_week", reportingFieldLabel(value));
       renderExecutiveDashboard();
     }, defaultReportingMonday);
     executiveFilters.week = document.getElementById("executiveWeekFilter").value;
     initWeekPicker(document.getElementById("reportWeekFilter"), document.getElementById("reportWeekPicker"), value => {
       reportFilters.week = value;
+      logFilterChange("source_reports", "reporting_week", reportingFieldLabel(value));
       renderReports();
     }, "");
     setWeekdayDateValue(document.querySelector('input[name="week"]'), defaultReportingMonday);
