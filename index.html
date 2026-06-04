@@ -168,13 +168,118 @@
 
     .filter-bar {
       display: grid;
-      grid-template-columns: repeat(4, minmax(150px, 1fr));
+      grid-template-columns: repeat(5, minmax(150px, 1fr));
       gap: 12px;
       margin-bottom: 16px;
     }
 
     .filter-bar label {
       font-size: 12px;
+    }
+
+    .week-field {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .week-picker-btn {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--ink);
+      padding: 10px 12px;
+      text-align: left;
+      font: inherit;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .week-picker {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      z-index: 20;
+      width: 316px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .week-picker[hidden] { display: none; }
+
+    .week-picker-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .week-picker-title {
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    .week-nav {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+      font-weight: 800;
+      padding: 5px 9px;
+    }
+
+    .week-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+    }
+
+    .week-day-name {
+      color: var(--muted);
+      text-align: center;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .week-day {
+      min-height: 34px;
+      border: 1px solid transparent;
+      border-radius: 9px;
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    .week-day.outside-month {
+      color: #94a3b8;
+    }
+
+    .week-day.weekend {
+      color: #cbd5e1;
+      cursor: not-allowed;
+      background: #f8fafc;
+    }
+
+    .week-day.in-selected-week {
+      background: #dbeafe;
+      border-color: #bfdbfe;
+      color: #1d4ed8;
+    }
+
+    .week-day.selected {
+      background: var(--ink);
+      border-color: var(--ink);
+      color: #fff;
     }
 
     .report-filter-bar {
@@ -819,9 +924,10 @@
         </div>
 
         <div class="panel filter-bar">
-          <label>
+          <label class="week-field">
             Reporting week
-            <input id="dashboardWeekFilter" type="date" />
+            <button class="week-picker-btn" id="dashboardWeekFilter" type="button" aria-haspopup="dialog" aria-expanded="false"></button>
+            <div class="week-picker" id="dashboardWeekPicker" hidden></div>
           </label>
           <label>
             Type of product
@@ -903,9 +1009,10 @@
         </div>
 
         <div class="panel filter-bar">
-          <label>
+          <label class="week-field">
             Reporting week
-            <input id="executiveWeekFilter" type="date" />
+            <button class="week-picker-btn" id="executiveWeekFilter" type="button" aria-haspopup="dialog" aria-expanded="false"></button>
+            <div class="week-picker" id="executiveWeekPicker" hidden></div>
           </label>
           <label>
             Type of product
@@ -1139,9 +1246,10 @@
                 Type of product
                 <select id="reportTypeFilter"></select>
               </label>
-              <label>
+              <label class="week-field">
                 Reporting week
-                <input id="reportWeekFilter" type="date" />
+                <button class="week-picker-btn" id="reportWeekFilter" type="button" aria-haspopup="dialog" aria-expanded="false"></button>
+                <div class="week-picker" id="reportWeekPicker" hidden></div>
               </label>
               <label>
                 Health
@@ -1895,6 +2003,14 @@
         : `reporting date ${anchor}`;
     }
 
+    function reportingFieldLabel(anchor) {
+      if (!anchor) return "All reporting dates";
+      const range = workweekRange(anchor);
+      return isMonday(anchor) && range
+        ? `${formatDate(range.start)} - ${formatDate(range.end)}`
+        : anchor;
+    }
+
     function matchesReportingDate(value, anchor) {
       if (!anchor) return true;
       if (isWeekend(anchor)) return false;
@@ -2580,6 +2696,10 @@
       input.value = value || "";
       input.dataset.lastValidValue = input.value;
       input.setCustomValidity("");
+      if (input.classList.contains("week-picker-btn")) {
+        input.textContent = reportingFieldLabel(input.value);
+        input.setAttribute("aria-label", `Reporting week ${reportingFieldLabel(input.value)}`);
+      }
     }
 
     function handleWeekdayDateChange(input, onValidChange) {
@@ -2608,6 +2728,98 @@
         input.addEventListener("change", () => handleWeekdayDateChange(input, () => {}));
       });
     }
+
+    function addDays(date, days) {
+      const next = new Date(date);
+      next.setDate(next.getDate() + days);
+      return next;
+    }
+
+    function monthTitle(date) {
+      return date.toLocaleString("en-US", { month: "long", year: "numeric" });
+    }
+
+    function renderWeekPicker(button, picker, onValidChange) {
+      const selected = parseDate(button.value) || new Date();
+      const monthCursor = picker.dataset.month ? parseDate(`${picker.dataset.month}-01`) : selected;
+      const monthStart = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1);
+      const gridStart = addDays(monthStart, -monthStart.getDay());
+      const selectedRange = isMonday(button.value) ? workweekRange(button.value) : null;
+      const days = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+      let html = `
+        <div class="week-picker-header">
+          <button class="week-nav" type="button" data-week-nav="-1" aria-label="Previous month">&lt;</button>
+          <span class="week-picker-title">${monthTitle(monthStart)}</span>
+          <button class="week-nav" type="button" data-week-nav="1" aria-label="Next month">&gt;</button>
+        </div>
+        <div class="week-grid">
+          ${days.map(day => `<span class="week-day-name">${day}</span>`).join("")}
+      `;
+      for (let index = 0; index < 42; index += 1) {
+        const date = addDays(gridStart, index);
+        const value = formatDate(date);
+        const weekend = date.getDay() === 0 || date.getDay() === 6;
+        const outsideMonth = date.getMonth() !== monthStart.getMonth();
+        const inSelectedWeek = selectedRange && date >= selectedRange.start && date <= selectedRange.end;
+        const selectedDay = value === button.value;
+        html += `
+          <button
+            class="week-day ${weekend ? "weekend" : ""} ${outsideMonth ? "outside-month" : ""} ${inSelectedWeek ? "in-selected-week" : ""} ${selectedDay ? "selected" : ""}"
+            type="button"
+            data-week-day="${value}"
+            ${weekend ? "disabled aria-disabled=\"true\"" : ""}
+          >${date.getDate()}</button>
+        `;
+      }
+      picker.innerHTML = `${html}</div>`;
+
+      picker.querySelectorAll("[data-week-nav]").forEach(nav => {
+        nav.addEventListener("click", () => {
+          const nextMonth = new Date(monthStart);
+          nextMonth.setMonth(nextMonth.getMonth() + Number(nav.dataset.weekNav));
+          picker.dataset.month = formatDate(nextMonth).slice(0, 7);
+          renderWeekPicker(button, picker, onValidChange);
+        });
+      });
+
+      picker.querySelectorAll("[data-week-day]").forEach(day => {
+        day.addEventListener("click", () => {
+          setWeekdayDateValue(button, day.dataset.weekDay);
+          picker.hidden = true;
+          button.setAttribute("aria-expanded", "false");
+          onValidChange(button.value);
+        });
+      });
+    }
+
+    function initWeekPicker(button, picker, onValidChange, defaultValue = "") {
+      setWeekdayDateValue(button, defaultValue);
+      picker.dataset.month = (button.value || formatDate(new Date())).slice(0, 7);
+      button.addEventListener("click", event => {
+        event.stopPropagation();
+        const opening = picker.hidden;
+        document.querySelectorAll(".week-picker").forEach(popover => {
+          if (popover !== picker) popover.hidden = true;
+        });
+        document.querySelectorAll(".week-picker-btn").forEach(btn => {
+          if (btn !== button) btn.setAttribute("aria-expanded", "false");
+        });
+        picker.hidden = !opening;
+        button.setAttribute("aria-expanded", String(opening));
+        if (opening) {
+          picker.dataset.month = (button.value || formatDate(new Date())).slice(0, 7);
+          renderWeekPicker(button, picker, onValidChange);
+        }
+      });
+      picker.addEventListener("click", event => event.stopPropagation());
+    }
+
+    document.addEventListener("click", () => {
+      document.querySelectorAll(".week-picker").forEach(picker => { picker.hidden = true; });
+      document.querySelectorAll(".week-picker-btn").forEach(button => {
+        button.setAttribute("aria-expanded", "false");
+      });
+    });
 
     document.querySelectorAll("[data-view]").forEach(tab => {
       tab.addEventListener("click", async () => {
@@ -2741,17 +2953,17 @@
     document.getElementById("exportPdfBtn").addEventListener("click", exportReportsPdf);
 
     const defaultReportingMonday = mondayForDate();
-    initWeekdayDateInput(document.getElementById("dashboardWeekFilter"), value => {
+    initWeekPicker(document.getElementById("dashboardWeekFilter"), document.getElementById("dashboardWeekPicker"), value => {
       dashboardFilters.week = value;
       renderAll();
     }, defaultReportingMonday);
     dashboardFilters.week = document.getElementById("dashboardWeekFilter").value;
-    initWeekdayDateInput(document.getElementById("executiveWeekFilter"), value => {
+    initWeekPicker(document.getElementById("executiveWeekFilter"), document.getElementById("executiveWeekPicker"), value => {
       executiveFilters.week = value;
       renderExecutiveDashboard();
     }, defaultReportingMonday);
     executiveFilters.week = document.getElementById("executiveWeekFilter").value;
-    initWeekdayDateInput(document.getElementById("reportWeekFilter"), value => {
+    initWeekPicker(document.getElementById("reportWeekFilter"), document.getElementById("reportWeekPicker"), value => {
       reportFilters.week = value;
       renderReports();
     }, "");
