@@ -1607,7 +1607,7 @@
     function saveFieldOverride(report) {
       if (!report?.id) return;
       const overrides = loadFieldOverrides();
-      overrides[report.id] = {
+      const value = {
         feature_workstream: report.feature_workstream || "",
         participants: report.participants || "",
         product_type: report.product_type || "Legacy",
@@ -1615,6 +1615,9 @@
         start_date: report.start_date || "",
         due_date: report.due_date || ""
       };
+      overrides[report.id] = value;
+      overrides[`identity:${reportIdentityKey(report)}`] = value;
+      overrides[`legacy:${reportLegacyIdentityKey(report)}`] = value;
       localStorage.setItem(FIELD_OVERRIDES_KEY, JSON.stringify(overrides));
     }
 
@@ -1627,8 +1630,12 @@
 
     function applyFieldOverride(report) {
       const overrides = loadFieldOverrides();
-      return report?.id && overrides[report.id]
-        ? { ...report, ...overrides[report.id] }
+      if (!report) return report;
+      const byId = report.id ? overrides[report.id] : null;
+      const byIdentity = overrides[`identity:${reportIdentityKey(report)}`];
+      const byLegacyIdentity = overrides[`legacy:${reportLegacyIdentityKey(report)}`];
+      return byId || byIdentity || byLegacyIdentity
+        ? { ...report, ...(byLegacyIdentity || {}), ...(byIdentity || {}), ...(byId || {}) }
         : report;
     }
 
@@ -1887,6 +1894,15 @@
       ].join("|");
     }
 
+    function reportLegacyIdentityKey(report) {
+      return [
+        report.product || "",
+        ownerKey(report.owner || ""),
+        report.week || "",
+        canonicalText(report.summary || "")
+      ].join("|");
+    }
+
     function dedupeReports(list) {
       const seen = new Set();
       const sorted = [...list].sort((a, b) =>
@@ -2023,6 +2039,7 @@
       }
 
       let data;
+      let usedReplaceFallback = false;
       try {
         data = await supabaseWrite(`?id=eq.${encodeURIComponent(report.id)}&select=*`, {
           method: "PATCH",
@@ -2041,12 +2058,14 @@
           method: "POST",
           body: report
         });
+        usedReplaceFallback = true;
       }
       const updated = Array.isArray(data) ? data[0] : data;
       if (!updated) throw new Error("Supabase did not return the updated report.");
+      const stableId = usedReplaceFallback ? (updated.id || report.id) : report.id;
       const updatedReport = normalizeReport({
         ...updated,
-        id: report.id,
+        id: stableId,
         product: report.product,
         feature_workstream: report.feature_workstream,
         owner: report.owner,
