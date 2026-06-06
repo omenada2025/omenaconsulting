@@ -1849,6 +1849,26 @@
         : "Product not separated";
     }
 
+    function reportIdentityKey(report) {
+      return [
+        report.product || "",
+        report.feature_workstream || "",
+        report.owner || "",
+        report.week || "",
+        report.summary || ""
+      ].join("|");
+    }
+
+    function dedupeReports(list) {
+      const seen = new Set();
+      return list.filter(report => {
+        const key = reportIdentityKey(report);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
     function logUserAction(action, details = {}, target = {}) {
       if (!hasSupabaseConfig || actionLoggingDisabled) return;
       const payload = {
@@ -1995,7 +2015,21 @@
       if (!updated) throw new Error("Supabase did not return the updated report.");
       const updatedReport = normalizeReport({
         ...updated,
+        id: report.id,
+        product: report.product,
         feature_workstream: report.feature_workstream,
+        owner: report.owner,
+        summary: report.summary,
+        win: report.win,
+        blocker: report.blocker,
+        next: report.next,
+        health: report.health,
+        progress: report.progress,
+        stage: report.stage,
+        priority: report.priority,
+        impact: report.impact,
+        time: report.time,
+        week: report.week,
         participants: report.participants,
         product_type: report.product_type,
         role: report.role,
@@ -2003,10 +2037,11 @@
         due_date: report.due_date
       });
       saveFieldOverride(updatedReport);
-      reports = reports.map(existing => existing.id === report.id ? updatedReport : existing);
-      if (!reports.some(existing => existing.id === updatedReport.id)) {
-        reports = [updatedReport, ...reports.filter(existing => existing.id !== report.id)];
-      }
+      reports = dedupeReports([updatedReport, ...reports.filter(existing =>
+        existing.id !== report.id &&
+        existing.id !== updated.id &&
+        reportIdentityKey(existing) !== reportIdentityKey(updatedReport)
+      )]);
       selectedReportId = updatedReport.id;
       setSyncStatus(useLegacySupabasePayload ? "Saved with Supabase legacy schema" : "Saved to Supabase");
       renderAll();
@@ -2506,7 +2541,7 @@
     function renderReports() {
       populateReportFilters();
       const list = document.getElementById("reportList");
-      const filtered = getReportList();
+      const filtered = dedupeReports(getReportList());
       if (!filtered.some(report => report.id === selectedReportId)) {
         selectedReportId = null;
         renderDetail();
