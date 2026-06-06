@@ -1702,6 +1702,8 @@
         win: row.win || "",
         blocker: row.blocker || "",
         next: row.next || "",
+        created_at: row.created_at || "",
+        updated_at: row.updated_at || "",
       });
     }
 
@@ -1849,19 +1851,48 @@
         : "Product not separated";
     }
 
+    function cleanText(value = "") {
+      return String(value || "").trim().replace(/\s+/g, " ");
+    }
+
+    function ownerKey(value = "") {
+      return cleanText(value).toLocaleLowerCase();
+    }
+
+    function ownerDisplay(value = "") {
+      return cleanText(value) || "Unassigned";
+    }
+
+    function canonicalText(value = "") {
+      return cleanText(value).toLocaleLowerCase();
+    }
+
+    function uniqueOwners(source = reports) {
+      const owners = new Map();
+      source.forEach(report => {
+        const display = ownerDisplay(report.owner);
+        const key = ownerKey(display);
+        if (!owners.has(key)) owners.set(key, display);
+      });
+      return [...owners.values()].sort((a, b) => a.localeCompare(b));
+    }
+
     function reportIdentityKey(report) {
       return [
         report.product || "",
         report.feature_workstream || "",
-        report.owner || "",
+        ownerKey(report.owner || ""),
         report.week || "",
-        report.summary || ""
+        canonicalText(report.summary || "")
       ].join("|");
     }
 
     function dedupeReports(list) {
       const seen = new Set();
-      return list.filter(report => {
+      const sorted = [...list].sort((a, b) =>
+        Date.parse(b.updated_at || b.created_at || 0) - Date.parse(a.updated_at || a.created_at || 0)
+      );
+      return sorted.filter(report => {
         const key = reportIdentityKey(report);
         if (seen.has(key)) return false;
         seen.add(key);
@@ -2215,7 +2246,7 @@
       return reports.filter(report =>
         matchesReportingDate(report.week, dashboardFilters.week) &&
         (dashboardFilters.productType === "all" || report.product_type === dashboardFilters.productType) &&
-        (dashboardFilters.owner === "all" || report.owner === dashboardFilters.owner) &&
+        (dashboardFilters.owner === "all" || ownerKey(report.owner) === ownerKey(dashboardFilters.owner)) &&
         (dashboardFilters.role === "all" || report.role === dashboardFilters.role) &&
         (dashboardFilters.health === "all" || report.health === dashboardFilters.health)
       );
@@ -2223,7 +2254,7 @@
 
     function getReportList() {
       return reports.filter(report =>
-        (reportFilters.owner === "all" || report.owner === reportFilters.owner) &&
+        (reportFilters.owner === "all" || ownerKey(report.owner) === ownerKey(reportFilters.owner)) &&
         (reportFilters.productType === "all" || report.product_type === reportFilters.productType) &&
         matchesReportingDate(report.week, reportFilters.week) &&
         (reportFilters.health === "all" || report.health === reportFilters.health) &&
@@ -2250,7 +2281,7 @@
     function renderMetrics() {
       const source = getDashboardReports();
       fillSelect("dashboardTypeFilter", PRODUCT_TYPE_OPTIONS, "All product types", dashboardFilters.productType);
-      fillSelect("dashboardOwnerFilter", reports.map(r => r.owner).filter(Boolean), "All owners", dashboardFilters.owner);
+      fillSelect("dashboardOwnerFilter", uniqueOwners(), "All owners", dashboardFilters.owner);
       const pm = roleStats("Product Manager", source);
       const ux = roleStats("UI/UX", source);
       const total = source.length;
@@ -2347,12 +2378,13 @@
       `).join("") : `<div class="empty">No critical risks need executive attention.</div>`;
 
       const owners = [...source.reduce((acc, report) => {
-        const owner = report.owner || "Unassigned";
-        if (!acc.has(owner)) acc.set(owner, []);
-        acc.get(owner).push(report);
+        const owner = ownerDisplay(report.owner);
+        const key = ownerKey(owner);
+        if (!acc.has(key)) acc.set(key, { owner, reports: [] });
+        acc.get(key).reports.push(report);
         return acc;
-      }, new Map()).entries()].sort((a, b) => a[0].localeCompare(b[0]));
-      document.getElementById("executiveOwners").innerHTML = owners.length ? owners.slice(0, 6).map(([owner, ownerReports]) => {
+      }, new Map()).values()].sort((a, b) => a.owner.localeCompare(b.owner));
+      document.getElementById("executiveOwners").innerHTML = owners.length ? owners.slice(0, 6).map(({ owner, reports: ownerReports }) => {
         const ownerAvg = Math.round(ownerReports.reduce((sum, report) => sum + Number(report.progress || 0), 0) / ownerReports.length);
         const ownerRisk = ownerReports.filter(report => report.health === "red" || report.priority === "Critical").length;
         const tone = ownerRisk ? "red" : ownerAvg < 75 ? "amber" : "green";
@@ -2463,7 +2495,7 @@
       const groupLabels = {
         date: report => reportingWeekGroupLabel(report.week),
         project: report => report.product || "Unnamed product",
-        owner: report => report.owner || "Unassigned"
+        owner: report => ownerDisplay(report.owner)
       };
       const groups = sorted.reduce((acc, report) => {
         const key = groupLabels[portfolioHealthFilters.groupBy](report);
@@ -2552,13 +2584,14 @@
       }
 
       const groups = filtered.reduce((acc, report) => {
-        const owner = report.owner || "Unassigned";
-        if (!acc.has(owner)) acc.set(owner, []);
-        acc.get(owner).push(report);
+        const owner = ownerDisplay(report.owner);
+        const key = ownerKey(owner);
+        if (!acc.has(key)) acc.set(key, { owner, reports: [] });
+        acc.get(key).reports.push(report);
         return acc;
       }, new Map());
 
-      list.innerHTML = [...groups.entries()].map(([owner, ownerReports]) => `
+      list.innerHTML = [...groups.values()].sort((a, b) => a.owner.localeCompare(b.owner)).map(({ owner, reports: ownerReports }) => `
         <section class="owner-group">
           <div class="owner-heading">
             <h3>${escapeHtml(owner)}</h3>
@@ -2721,14 +2754,22 @@
     }
 
     function populateReportFilters() {
-      fillSelect("reportOwnerFilter", reports.map(r => r.owner).filter(Boolean), "All owners", reportFilters.owner);
+      fillSelect("reportOwnerFilter", uniqueOwners(), "All owners", reportFilters.owner);
       fillSelect("reportTypeFilter", PRODUCT_TYPE_OPTIONS, "All product types", reportFilters.productType);
     }
 
     function fillSelect(id, values, allLabel, current) {
       const select = document.getElementById(id);
-      const unique = [...new Set(values)].sort((a, b) => a.localeCompare(b));
-      const nextValue = current && (current === "all" || unique.includes(current)) ? current : "all";
+      const uniqueMap = new Map();
+      values.forEach(value => {
+        const display = cleanText(value);
+        if (!display) return;
+        const key = display.toLocaleLowerCase();
+        if (!uniqueMap.has(key)) uniqueMap.set(key, display);
+      });
+      const unique = [...uniqueMap.values()].sort((a, b) => a.localeCompare(b));
+      const currentKey = current === "all" ? "all" : cleanText(current).toLocaleLowerCase();
+      const nextValue = current && (current === "all" || uniqueMap.has(currentKey)) ? (current === "all" ? "all" : uniqueMap.get(currentKey)) : "all";
       select.innerHTML = [`<option value="all">${allLabel}</option>`, ...unique.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)].join("");
       select.value = nextValue;
       if (id === "dashboardTypeFilter") dashboardFilters.productType = nextValue;
