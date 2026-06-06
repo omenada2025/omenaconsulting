@@ -1158,9 +1158,11 @@
                   <option>UI/UX</option>
                 </select>
               </label>
-              <label>
+              <label class="week-field">
                 Reporting week
-                <input name="week" type="date" required />
+                <button class="week-picker-btn" id="statusWeekFilter" type="button" aria-haspopup="dialog" aria-expanded="false"></button>
+                <input name="week" type="hidden" required />
+                <div class="week-picker" id="statusWeekPicker" hidden></div>
               </label>
               <label>
                 Start date
@@ -2874,7 +2876,7 @@
     function setWeekdayDateValue(input, value) {
       input.value = value || "";
       input.dataset.lastValidValue = input.value;
-      input.setCustomValidity("");
+      if (input.setCustomValidity) input.setCustomValidity("");
       if (input.classList.contains("week-picker-btn")) {
         input.textContent = reportingFieldLabel(input.value);
         input.setAttribute("aria-label", `Reporting week ${reportingFieldLabel(input.value)}`);
@@ -2901,6 +2903,7 @@
 
     function initReportingWeekInputs(root = document) {
       root.querySelectorAll('input[name="week"]').forEach(input => {
+        if (input.type === "hidden") return;
         if (input.dataset.weekdayGuard === "true") return;
         input.dataset.weekdayGuard = "true";
         input.dataset.lastValidValue = input.value;
@@ -2918,7 +2921,7 @@
       return date.toLocaleString("en-US", { month: "long", year: "numeric" });
     }
 
-    function renderWeekPicker(button, picker, onValidChange) {
+    function renderWeekPicker(button, picker, onValidChange, hiddenInput = null) {
       const selected = parseDate(button.value) || new Date();
       const monthCursor = picker.dataset.month ? parseDate(`${picker.dataset.month}-01`) : selected;
       const monthStart = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1);
@@ -2957,13 +2960,14 @@
           const nextMonth = new Date(monthStart);
           nextMonth.setMonth(nextMonth.getMonth() + Number(nav.dataset.weekNav));
           picker.dataset.month = formatDate(nextMonth).slice(0, 7);
-          renderWeekPicker(button, picker, onValidChange);
+          renderWeekPicker(button, picker, onValidChange, hiddenInput);
         });
       });
 
       picker.querySelectorAll("[data-week-day]").forEach(day => {
         day.addEventListener("click", () => {
           setWeekdayDateValue(button, day.dataset.weekDay);
+          if (hiddenInput) setWeekdayDateValue(hiddenInput, button.value);
           picker.hidden = true;
           button.setAttribute("aria-expanded", "false");
           onValidChange(button.value);
@@ -2971,8 +2975,9 @@
       });
     }
 
-    function initWeekPicker(button, picker, onValidChange, defaultValue = "") {
+    function initWeekPicker(button, picker, onValidChange, defaultValue = "", hiddenInput = null) {
       setWeekdayDateValue(button, defaultValue);
+      if (hiddenInput) setWeekdayDateValue(hiddenInput, button.value);
       picker.dataset.month = (button.value || formatDate(new Date())).slice(0, 7);
       button.addEventListener("click", event => {
         event.stopPropagation();
@@ -2987,7 +2992,7 @@
         button.setAttribute("aria-expanded", String(opening));
         if (opening) {
           picker.dataset.month = (button.value || formatDate(new Date())).slice(0, 7);
-          renderWeekPicker(button, picker, onValidChange);
+          renderWeekPicker(button, picker, onValidChange, hiddenInput);
         }
       });
       picker.addEventListener("click", event => event.stopPropagation());
@@ -3024,6 +3029,7 @@
         const report = readReportForm(form);
         await createReport(report);
         form.reset();
+        setWeekdayDateValue(document.getElementById("statusWeekFilter"), mondayForDate());
         setWeekdayDateValue(form.week, mondayForDate());
         saveBtn.textContent = "Saved";
         setTimeout(() => { saveBtn.textContent = "Save Report"; }, 1400);
@@ -3152,6 +3158,9 @@
 
     populateProductSelect(document.querySelector('#statusForm select[name="product"]'));
     const defaultReportingMonday = mondayForDate();
+    initWeekPicker(document.getElementById("statusWeekFilter"), document.getElementById("statusWeekPicker"), value => {
+      document.querySelector('#statusForm input[name="week"]').value = value;
+    }, defaultReportingMonday, document.querySelector('#statusForm input[name="week"]'));
     initWeekPicker(document.getElementById("dashboardWeekFilter"), document.getElementById("dashboardWeekPicker"), value => {
       dashboardFilters.week = value;
       logFilterChange("dashboard", "reporting_week", reportingFieldLabel(value));
@@ -3169,7 +3178,6 @@
       logFilterChange("source_reports", "reporting_week", reportingFieldLabel(value));
       renderReports();
     }, "");
-    setWeekdayDateValue(document.querySelector('input[name="week"]'), defaultReportingMonday);
     initReportingWeekInputs();
     fetchReports();
     setInterval(() => {
