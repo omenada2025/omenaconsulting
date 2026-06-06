@@ -1116,12 +1116,20 @@
           <form id="statusForm">
             <div class="form-grid">
               <label>
-                Product, feature, or workstream
-                <input name="product" required placeholder="e.g., Unified Design System" />
+                Product
+                <select name="product" required></select>
+              </label>
+              <label>
+                Feature / workstream
+                <input name="feature_workstream" required placeholder="e.g., Onboarding flow" />
               </label>
               <label>
                 Owner
                 <input name="owner" placeholder="e.g., Saurabh" />
+              </label>
+              <label>
+                Participants (optional)
+                <input name="participants" placeholder="e.g., PM, designer, developer" />
               </label>
               <label>
                 Type of product
@@ -1517,6 +1525,13 @@
     let useLegacySupabasePayload = false;
     let actionLoggingDisabled = false;
     const PRODUCT_TYPE_OPTIONS = ["Legacy", "New product"];
+    const PRODUCT_OPTIONS = [
+      "AeroPass", "Ameritek Ventures", "Augmum", "DAAS", "DeskFlex", "DittoMask", "Ecker Capital", "Epazz",
+      "ESM Software", "FlexFridge", "Galaxy Batteries", "Interactive System", "InterlinkOne", "Jadian",
+      "K9sky", "Now Solutions", "NightSun", "PacePlus", "Passleys", "PhantomXmotors", "Provitrac",
+      "PsPortals", "QReate & Track", "Spider Vision", "Strantin", "StreamPay", "SystemView", "TillerStack",
+      "Twinpeaksweb", "Webbeeo", "WorkAware", "ZenaDrone", "ZenaPay", "ZenaTech", "Zigvoice", "Zinergy"
+    ];
     const dashboardFilters = {
       week: "",
       productType: "all",
@@ -1578,6 +1593,8 @@
       if (!report?.id) return;
       const overrides = loadFieldOverrides();
       overrides[report.id] = {
+        feature_workstream: report.feature_workstream || "",
+        participants: report.participants || "",
         product_type: report.product_type || "Legacy",
         role: report.role || inferRole(report),
         start_date: report.start_date || "",
@@ -1652,7 +1669,9 @@
       return applyFieldOverride({
         id: row.id,
         product: normalized.product,
+        feature_workstream: row.feature_workstream || row.featureWorkstream || row.feature || row.workstream || "",
         owner: normalized.owner,
+        participants: row.participants || "",
         product_type: row.product_type || row.productType || "Legacy",
         role: normalized.role || inferRole(normalized),
         week: row.week || "",
@@ -1692,6 +1711,8 @@
         ...base,
         product_type: report.product_type || "Legacy",
         role: report.role || inferRole(report),
+        feature_workstream: report.feature_workstream || null,
+        participants: report.participants || null,
         start_date: report.start_date || null,
         due_date: report.due_date || null,
       };
@@ -1743,7 +1764,7 @@
     }
 
     function inferRole(report) {
-      const text = `${report.owner || ""} ${report.product || ""} ${report.stage || ""}`.toLowerCase();
+      const text = `${report.owner || ""} ${report.participants || ""} ${report.product || ""} ${report.feature_workstream || ""} ${report.stage || ""}`.toLowerCase();
       const uiuxOwners = ["saurabh", "riya", "jocasta"];
       const uiuxTerms = ["ui/ux", "uiux", "design", "figma", "wireframe", "prototype", "visual"];
       return uiuxOwners.some(name => text.includes(name)) || uiuxTerms.some(term => text.includes(term))
@@ -1797,8 +1818,20 @@
       return report ? {
         report_id: report.id || null,
         product: report.product || null,
-        owner: report.owner || null
+        owner: report.owner || null,
+        feature_workstream: report.feature_workstream || null,
+        participants: report.participants || null
       } : {};
+    }
+
+    function reportTitle(report) {
+      return report?.feature_workstream || report?.product || "Unnamed workstream";
+    }
+
+    function reportProductLine(report) {
+      return report?.feature_workstream
+        ? `Product ${report.product || "Unassigned"}`
+        : "Product not separated";
     }
 
     function logUserAction(action, details = {}, target = {}) {
@@ -1895,6 +1928,8 @@
       if (!created) throw new Error("Supabase did not return the created report.");
       const createdReport = normalizeReport({
         ...created,
+        feature_workstream: report.feature_workstream,
+        participants: report.participants,
         product_type: report.product_type,
         role: report.role,
         start_date: report.start_date,
@@ -1945,6 +1980,8 @@
       if (!updated) throw new Error("Supabase did not return the updated report.");
       const updatedReport = normalizeReport({
         ...updated,
+        feature_workstream: report.feature_workstream,
+        participants: report.participants,
         product_type: report.product_type,
         role: report.role,
         start_date: report.start_date,
@@ -2248,7 +2285,7 @@
       document.getElementById("executiveAttention").innerHTML = critical.length ? critical.slice(0, 6).map(report => `
         <div class="exec-row featured">
           <div>
-            <strong>${escapeHtml(report.product)}</strong>
+            <strong>${escapeHtml(reportTitle(report))}</strong>
             <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.blocker || report.summary)}</p>
           </div>
           <span class="chip ${healthClass(report)}">${labels[report.health] || report.health}</span>
@@ -2286,7 +2323,7 @@
       document.getElementById("executiveActions").innerHTML = actions.length ? actions.map(report => `
         <div class="exec-row">
           <div>
-            <strong>${escapeHtml(report.product)}</strong>
+            <strong>${escapeHtml(reportTitle(report))}</strong>
             <p class="muted small">${escapeHtml(report.next)}</p>
           </div>
           <span class="chip ${healthClass(report)}">${escapeHtml(report.priority || "Normal")}</span>
@@ -2320,8 +2357,8 @@
       target.innerHTML = projectRows.length ? projectRows.map(report => `
         <button class="exec-row interactive ${report.id === selectedExecutiveProjectId ? "selected" : ""}" type="button" data-executive-project="${escapeHtml(report.id)}">
           <div>
-            <strong>${escapeHtml(report.product)}</strong>
-            <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.product_type || "Legacy")} - ${escapeHtml(report.role)} - Reporting week ${escapeHtml(report.week || "No date")}</p>
+            <strong>${escapeHtml(reportTitle(report))}</strong>
+            <p class="muted small">${escapeHtml(reportProductLine(report))} - ${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.product_type || "Legacy")} - ${escapeHtml(report.role)} - Reporting week ${escapeHtml(report.week || "No date")}</p>
             <p class="muted small">${escapeHtml(report.summary || "No summary captured.")}</p>
           </div>
           <span class="chip ${healthClass(report)}">${labels[report.health] || report.health}</span>
@@ -2340,8 +2377,8 @@
         <div class="health-detail executive-inline-detail">
         <header>
           <div>
-            <h3>${escapeHtml(report.product)}</h3>
-            <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.product_type || "Legacy")} - ${escapeHtml(report.week || "No reporting week")}</p>
+            <h3>${escapeHtml(reportTitle(report))}</h3>
+            <p class="muted small">${escapeHtml(reportProductLine(report))} - ${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.product_type || "Legacy")} - ${escapeHtml(report.week || "No reporting week")}</p>
           </div>
           <span class="chip ${healthClass(report)}">${labels[report.health] || report.health}</span>
         </header>
@@ -2390,8 +2427,8 @@
           ${groupReports.map(r => `
         <button class="status-row interactive ${r.id === selectedPortfolioHealthId ? "selected" : ""}" type="button" data-health-report="${escapeHtml(r.id)}">
           <div>
-            <strong>${escapeHtml(r.product)}</strong>
-            <p class="muted small">${escapeHtml(r.owner || "Unassigned")} - ${escapeHtml(r.role)} - ${escapeHtml(r.stage)} - Reported ${escapeHtml(r.week || "No date")}${r.due_date ? ` - Due ${escapeHtml(r.due_date)}` : ""}</p>
+            <strong>${escapeHtml(reportTitle(r))}</strong>
+            <p class="muted small">${escapeHtml(reportProductLine(r))} - ${escapeHtml(r.owner || "Unassigned")} - ${escapeHtml(r.role)} - ${escapeHtml(r.stage)} - Reported ${escapeHtml(r.week || "No date")}${r.due_date ? ` - Due ${escapeHtml(r.due_date)}` : ""}</p>
             <p class="muted small">${escapeHtml(r.summary)}</p>
             <div class="progress"><div class="bar ${healthClass(r)}" style="width:${Number(r.progress || 0)}%"></div></div>
           </div>
@@ -2424,7 +2461,7 @@
         point.className = `risk-point ${healthClass(r)}`;
         point.style.left = `${x}%`;
         point.style.top = `${y}%`;
-        point.innerHTML = `<strong>${escapeHtml(r.product)}</strong>${escapeHtml(r.blocker)}`;
+        point.innerHTML = `<strong>${escapeHtml(reportTitle(r))}</strong>${escapeHtml(r.blocker)}`;
         matrix.appendChild(point);
       });
     }
@@ -2435,7 +2472,7 @@
         <div class="timeline-item">
           <div class="node">${i + 1}</div>
           <div>
-            <strong>${escapeHtml(r.product)}</strong>
+            <strong>${escapeHtml(reportTitle(r))}</strong>
             <p class="muted small">${escapeHtml(r[key])}</p>
           </div>
         </div>
@@ -2472,8 +2509,8 @@
             <button class="report-card interactive ${r.id === selectedReportId ? "selected" : ""}" type="button" data-report-card="${escapeHtml(r.id)}">
               <header>
                 <div>
-                  <strong>${escapeHtml(r.product)}</strong>
-                  <p class="muted small">${escapeHtml(r.product_type || "Legacy")} - ${escapeHtml(r.role)} - Reporting week ${escapeHtml(r.week)}${r.start_date ? ` - Start ${escapeHtml(r.start_date)}` : ""}${r.due_date ? ` - End ${escapeHtml(r.due_date)}` : ""}</p>
+                  <strong>${escapeHtml(reportTitle(r))}</strong>
+                  <p class="muted small">${escapeHtml(reportProductLine(r))} - ${escapeHtml(r.product_type || "Legacy")} - ${escapeHtml(r.role)} - Reporting week ${escapeHtml(r.week)}${r.start_date ? ` - Start ${escapeHtml(r.start_date)}` : ""}${r.due_date ? ` - End ${escapeHtml(r.due_date)}` : ""}</p>
                 </div>
                 <span class="chip ${healthClass(r)}">${labels[r.health] || r.health}</span>
               </header>
@@ -2507,8 +2544,10 @@
     }
 
     const exportColumns = [
-      ["product", "Product, feature, or workstream"],
+      ["product", "Product"],
+      ["feature_workstream", "Feature / workstream"],
       ["owner", "Owner"],
+      ["participants", "Participants"],
       ["product_type", "Type of product"],
       ["role", "Role"],
       ["week", "Reporting week"],
@@ -2640,6 +2679,22 @@
       return nextValue;
     }
 
+    function productOptionsMarkup(current = "") {
+      const values = PRODUCT_OPTIONS.includes(current) || !current
+        ? PRODUCT_OPTIONS
+        : [current, ...PRODUCT_OPTIONS];
+      return [
+        `<option value="" ${current ? "" : "selected"} disabled>Select product</option>`,
+        ...values.map(product => `<option value="${escapeHtml(product)}" ${product === current ? "selected" : ""}>${escapeHtml(product)}</option>`)
+      ].join("");
+    }
+
+    function populateProductSelect(select, current = "") {
+      if (!select) return;
+      select.innerHTML = productOptionsMarkup(current || select.value);
+      if (current) select.value = current;
+    }
+
     function showReportMessage(message, tone = "success") {
       const target = document.getElementById("reportFormMessage");
       if (!target) return;
@@ -2667,8 +2722,10 @@
         <form class="detail-form" id="editReportForm">
           <div class="inline-message success" id="reportFormMessage" hidden></div>
           <div class="form-grid">
-            ${editField("Product, feature, or workstream", "product", report.product, "text", true)}
+            <label>Product<select name="product" required>${productOptionsMarkup(report.product)}</select></label>
+            ${editField("Feature / workstream", "feature_workstream", report.feature_workstream || "", "text", true)}
             ${editField("Owner", "owner", report.owner)}
+            ${editField("Participants (optional)", "participants", report.participants || "")}
             <label>Type of product<select name="product_type"><option ${report.product_type === "Legacy" ? "selected" : ""}>Legacy</option><option ${report.product_type === "New product" ? "selected" : ""}>New product</option></select></label>
             <label>Role<select name="role"><option ${report.role === "Product Manager" ? "selected" : ""}>Product Manager</option><option ${report.role === "UI/UX" ? "selected" : ""}>UI/UX</option></select></label>
             ${editField("Reporting week", "week", report.week, "date", true)}
@@ -3070,6 +3127,7 @@
     document.getElementById("exportExcelBtn").addEventListener("click", exportReportsExcel);
     document.getElementById("exportPdfBtn").addEventListener("click", exportReportsPdf);
 
+    populateProductSelect(document.querySelector('#statusForm select[name="product"]'));
     const defaultReportingMonday = mondayForDate();
     initWeekPicker(document.getElementById("dashboardWeekFilter"), document.getElementById("dashboardWeekPicker"), value => {
       dashboardFilters.week = value;
