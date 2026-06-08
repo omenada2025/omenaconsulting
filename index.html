@@ -2067,6 +2067,54 @@
       }, { target_type: "report", target_id: createdReport.id, ...reportLogFields(createdReport) });
     }
 
+    async function fetchReportById(id) {
+      if (!id) return null;
+      const rows = await supabaseRequest(`?id=eq.${encodeURIComponent(id)}&select=*&limit=1`, { prefer: "" });
+      return Array.isArray(rows) && rows.length ? rows[0] : null;
+    }
+
+    async function patchReportAndFetch(report) {
+      await supabaseWrite(`?id=eq.${encodeURIComponent(report.id)}`, {
+        method: "PATCH",
+        body: report,
+        prefer: "return=minimal"
+      });
+      const updated = await fetchReportById(report.id);
+      return updated ? [updated] : [];
+    }
+
+    function sameValue(left, right) {
+      return String(left ?? "") === String(right ?? "");
+    }
+
+    function reportPersistedMatches(row, report) {
+      if (!row || !report) return false;
+      const legacySummary = splitLegacySummary(row.summary || "");
+      const legacyMeta = legacySummary.meta || {};
+      const comparisons = [
+        [row.product, report.product],
+        [row.owner, report.owner],
+        [row.week, report.week],
+        [row.health, report.health],
+        [row.stage, report.stage],
+        [row.priority, report.priority],
+        [Number(row.progress || 0), Number(report.progress || 0)],
+        [Number(row.impact || 1), Number(report.impact || 1)],
+        [Number(row.time || 1), Number(report.time || 1)],
+        [legacySummary.summary, report.summary],
+        [row.win || "", report.win || ""],
+        [row.blocker || "", report.blocker || ""],
+        [row.next || "", report.next || ""],
+        [row.feature_workstream || legacyMeta.feature_workstream || "", report.feature_workstream || ""],
+        [row.participants || legacyMeta.participants || "", report.participants || ""],
+        [row.product_type || legacyMeta.product_type || "Legacy", report.product_type || "Legacy"],
+        [row.role || legacyMeta.role || inferRole(report), report.role || inferRole(report)],
+        [row.start_date || legacyMeta.start_date || "", report.start_date || ""],
+        [row.due_date || legacyMeta.due_date || "", report.due_date || ""]
+      ];
+      return comparisons.every(([left, right]) => sameValue(left, right));
+    }
+
     async function updateReport(report) {
       if (!hasSupabaseConfig) {
         reports = reports.map(existing => existing.id === report.id ? report : existing);
@@ -2084,7 +2132,13 @@
           body: report
         });
         if (!Array.isArray(data) || data.length === 0) {
-          throw new Error("Supabase update returned no rows. Falling back to replace.");
+          data = await patchReportAndFetch(report);
+        }
+        if (!Array.isArray(data) || data.length === 0) {
+          throw new Error("Supabase update could not find this report. Falling back to replace.");
+        }
+        if (!reportPersistedMatches(data[0], report)) {
+          throw new Error("Supabase update did not persist values. Falling back to replace.");
         }
       } catch (error) {
         console.warn("Retrying update via delete and insert:", error);
@@ -3327,9 +3381,6 @@
     }, "");
     initReportingWeekInputs();
     fetchReports();
-    setInterval(() => {
-      if (document.visibilityState === "visible") refreshSharedDashboards();
-    }, 30000);
   </script>
 </body>
 </html>
