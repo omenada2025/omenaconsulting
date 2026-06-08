@@ -1683,6 +1683,19 @@
       localStorage.setItem(FIELD_OVERRIDES_KEY, JSON.stringify(overrides));
     }
 
+    function mergeFieldOverride(base, override) {
+      if (!override) return base;
+      const next = { ...base };
+      Object.entries(override).forEach(([key, value]) => {
+        const hasSavedValue = next[key] !== undefined && next[key] !== null && String(next[key]).trim() !== "";
+        const hasOverrideValue = value !== undefined && value !== null && String(value).trim() !== "";
+        if (hasOverrideValue || !hasSavedValue) {
+          next[key] = value;
+        }
+      });
+      return next;
+    }
+
     function applyFieldOverride(report) {
       const overrides = loadFieldOverrides();
       if (!report) return report;
@@ -1690,7 +1703,7 @@
       const byIdentity = overrides[`identity:${reportIdentityKey(report)}`];
       const byLegacyIdentity = overrides[`legacy:${reportLegacyIdentityKey(report)}`];
       return byId || byIdentity || byLegacyIdentity
-        ? { ...report, ...(byLegacyIdentity || {}), ...(byIdentity || {}), ...(byId || {}) }
+        ? [byLegacyIdentity, byIdentity, byId].reduce((current, override) => mergeFieldOverride(current, override), report)
         : report;
     }
 
@@ -1773,6 +1786,10 @@
       return `${cleanSummary}\n\n[PULSE_META:${encodeLegacyMeta(report)}]`;
     }
 
+    function firstValue(...values) {
+      return values.find(value => value !== undefined && value !== null && String(value).trim() !== "") || "";
+    }
+
     function normalizeReport(row) {
       const legacySummary = splitLegacySummary(row.summary || "");
       const legacyMeta = legacySummary.meta;
@@ -1791,8 +1808,8 @@
         product_type: row.product_type || row.productType || legacyMeta.product_type || "Legacy",
         role: normalized.role || inferRole(normalized),
         week: row.week || "",
-        start_date: row.start_date || row.startDate || legacyMeta.start_date || "",
-        due_date: row.due_date || legacyMeta.due_date || "",
+        start_date: firstValue(row.start_date, row.startDate, legacyMeta.start_date, legacyMeta.startDate),
+        due_date: firstValue(row.due_date, row.dueDate, row.end_date, row.endDate, legacyMeta.due_date, legacyMeta.dueDate, legacyMeta.end_date, legacyMeta.endDate),
         health: row.health || "amber",
         progress: Number(row.progress || 0),
         stage: normalized.stage,
@@ -2460,19 +2477,24 @@
     function endDateWasPostponed(report) {
       const history = Array.isArray(report.history) ? report.history : [];
       return history.some(entry => (entry.changes || []).some(change => {
-        if (change.field !== "due_date") return false;
+        if (!["due_date", "end_date", "endDate", "dueDate"].includes(change.field)) return false;
         const before = parseDate(change.before);
         const after = parseDate(change.after);
         return before && after && after > before;
       }));
     }
 
+    function reportEndDate(report) {
+      return firstValue(report?.due_date, report?.dueDate, report?.end_date, report?.endDate);
+    }
+
     function endDateStatus(report) {
-      if (!report?.due_date) return null;
+      const dueDate = reportEndDate(report);
+      if (!dueDate) return null;
       if (endDateWasPostponed(report)) {
         return { tone: "orange", label: "Postponed" };
       }
-      const days = daysUntilDate(report.due_date);
+      const days = daysUntilDate(dueDate);
       if (days === null) return null;
       if (days < 0) return { tone: "red", label: "Delayed" };
       if (days <= 5) return { tone: "amber", label: "Due soon" };
@@ -2480,9 +2502,10 @@
     }
 
     function endDateMarkup(report, prefix = "End") {
-      if (!report?.due_date) return "";
+      const dueDate = reportEndDate(report);
+      if (!dueDate) return "";
       const status = endDateStatus(report);
-      return `${escapeHtml(prefix)} ${escapeHtml(report.due_date)}${status ? ` <span class="end-date-status"><span class="chip ${status.tone}">${escapeHtml(status.label)}</span></span>` : ""}`;
+      return `${escapeHtml(prefix)} ${escapeHtml(dueDate)}${status ? ` <span class="end-date-status"><span class="chip ${status.tone}">${escapeHtml(status.label)}</span></span>` : ""}`;
     }
 
     function matchesReportingDate(value, anchor) {
@@ -2706,7 +2729,7 @@
           <div>
             <span class="product-label">${escapeHtml(report.product || "No product")}</span>
             <strong>${escapeHtml(reportTitle(report))}</strong>
-            <p class="muted small">${escapeHtml(reportProductLine(report))} - ${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.product_type || "Legacy")} - ${escapeHtml(report.role)} - Reporting week ${escapeHtml(report.week || "No date")}${report.due_date ? ` - ${endDateMarkup(report)}` : ""}</p>
+            <p class="muted small">${escapeHtml(reportProductLine(report))} - ${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.product_type || "Legacy")} - ${escapeHtml(report.role)} - Reporting week ${escapeHtml(report.week || "No date")}${reportEndDate(report) ? ` - ${endDateMarkup(report)}` : ""}</p>
             <p class="muted small">${escapeHtml(report.summary || "No summary captured.")}</p>
           </div>
           <span class="chip ${healthClass(report)}">${labels[report.health] || report.health}</span>
@@ -2727,7 +2750,7 @@
           <div>
             <span class="product-label">${escapeHtml(report.product || "No product")}</span>
             <h3>${escapeHtml(reportTitle(report))}</h3>
-            <p class="muted small">${escapeHtml(reportProductLine(report))} - ${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.product_type || "Legacy")} - ${escapeHtml(report.week || "No reporting week")}${report.due_date ? ` - ${endDateMarkup(report)}` : ""}</p>
+            <p class="muted small">${escapeHtml(reportProductLine(report))} - ${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.product_type || "Legacy")} - ${escapeHtml(report.week || "No reporting week")}${reportEndDate(report) ? ` - ${endDateMarkup(report)}` : ""}</p>
           </div>
           <span class="chip ${healthClass(report)}">${labels[report.health] || report.health}</span>
         </header>
@@ -2778,7 +2801,7 @@
           <div>
             <span class="product-label">${escapeHtml(r.product || "No product")}</span>
             <strong>${escapeHtml(reportTitle(r))}</strong>
-            <p class="muted small">${escapeHtml(reportProductLine(r))} - ${escapeHtml(r.owner || "Unassigned")} - ${escapeHtml(r.role)} - ${escapeHtml(r.stage)} - Reported ${escapeHtml(r.week || "No date")}${r.due_date ? ` - ${endDateMarkup(r, "Due")}` : ""}</p>
+            <p class="muted small">${escapeHtml(reportProductLine(r))} - ${escapeHtml(r.owner || "Unassigned")} - ${escapeHtml(r.role)} - ${escapeHtml(r.stage)} - Reported ${escapeHtml(r.week || "No date")}${reportEndDate(r) ? ` - ${endDateMarkup(r, "Due")}` : ""}</p>
             <p class="muted small">${escapeHtml(r.summary)}</p>
             <div class="progress"><div class="bar ${healthClass(r)}" style="width:${Number(r.progress || 0)}%"></div></div>
           </div>
@@ -2863,7 +2886,7 @@
                 <div>
                   <span class="product-label">${escapeHtml(r.product || "No product")}</span>
                   <strong>${escapeHtml(reportTitle(r))}</strong>
-                  <p class="muted small">${escapeHtml(reportProductLine(r))} - ${escapeHtml(r.product_type || "Legacy")} - ${escapeHtml(r.role)} - Reporting week ${escapeHtml(r.week)}${r.start_date ? ` - Start ${escapeHtml(r.start_date)}` : ""}${r.due_date ? ` - ${endDateMarkup(r)}` : ""}</p>
+                  <p class="muted small">${escapeHtml(reportProductLine(r))} - ${escapeHtml(r.product_type || "Legacy")} - ${escapeHtml(r.role)} - Reporting week ${escapeHtml(r.week)}${r.start_date ? ` - Start ${escapeHtml(r.start_date)}` : ""}${reportEndDate(r) ? ` - ${endDateMarkup(r)}` : ""}</p>
                 </div>
                 <span class="chip ${healthClass(r)}">${labels[r.health] || r.health}</span>
               </header>
@@ -2882,7 +2905,7 @@
         ["Next action", report.next || "No next action captured yet."],
         ["Stage", report.stage || "No stage captured."],
         ["Progress", `${Number(report.progress || 0)}%`],
-        ["End date", report.due_date ? endDateMarkup(report) : "No end date captured."],
+        ["End date", reportEndDate(report) ? endDateMarkup(report) : "No end date captured."],
         ["Priority", report.priority || "Normal"]
       ];
       return `
@@ -3092,7 +3115,7 @@
             <label>Role<select name="role"><option ${report.role === "Product Manager" ? "selected" : ""}>Product Manager</option><option ${report.role === "UI/UX" ? "selected" : ""}>UI/UX</option></select></label>
             ${editWeekField(report.week)}
             ${editField("Start date", "start_date", report.start_date, "date")}
-            ${editField("End date", "due_date", report.due_date, "date")}
+            ${editEndDateField(report)}
             <label>Health<select name="health"><option value="green" ${report.health === "green" ? "selected" : ""}>On Track</option><option value="amber" ${report.health === "amber" ? "selected" : ""}>In Progress</option><option value="red" ${report.health === "red" ? "selected" : ""}>At Risk</option><option value="gray" ${report.health === "gray" ? "selected" : ""}>Paused</option></select></label>
             ${editField("Progress", "progress", report.progress, "number")}
             ${stageSelect(report.stage)}
@@ -3232,6 +3255,15 @@
           <button class="week-picker-btn" id="editWeekFilter" type="button" aria-haspopup="dialog" aria-expanded="false"></button>
           <input name="week" type="hidden" required value="${escapeHtml(value)}" />
           <div class="week-picker" id="editWeekPicker" hidden></div>
+        </label>
+      `;
+    }
+
+    function editEndDateField(report) {
+      return `
+        <label>End date
+          <input name="due_date" type="date" value="${escapeHtml(reportEndDate(report))}">
+          ${reportEndDate(report) ? `<span class="muted small">${endDateMarkup(report)}</span>` : ""}
         </label>
       `;
     }
