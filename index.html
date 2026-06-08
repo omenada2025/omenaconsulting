@@ -886,8 +886,9 @@
     .history-list {
       display: grid;
       gap: 12px;
-      max-height: 520px;
-      overflow: auto;
+      max-height: 430px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
       padding-right: 4px;
     }
 
@@ -3316,7 +3317,7 @@
           <div class="history-toolbar">
             <div>
               <h3>Report History</h3>
-              <p class="muted small">Every saved change for this report, newest first.</p>
+              <p class="muted small">Every saved change for this report, newest first. ${items.length > 5 ? `${items.length} records - scroll to see more.` : `${items.length} ${items.length === 1 ? "record" : "records"}.`}</p>
             </div>
             <label>Filter by date
               <input id="reportHistoryDate" type="date" value="${escapeHtml(reportHistoryDate)}" />
