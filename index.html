@@ -529,6 +529,20 @@
     .red { color: var(--red); background: var(--red-soft); }
     .blue { color: var(--blue); background: var(--blue-soft); }
     .gray { color: #68737b; background: #eef1f2; }
+    .orange { color: #c76816; background: #fff1df; }
+
+    .end-date-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
+    .end-date-status .chip {
+      font-size: 10px;
+      padding: 3px 7px;
+    }
 
     .status-list {
       display: grid;
@@ -2436,6 +2450,41 @@
       return range ? `${formatDate(range.start)} - ${formatDate(range.end)}` : value;
     }
 
+    function daysUntilDate(value) {
+      const date = parseDate(value);
+      if (!date || Number.isNaN(date.getTime())) return null;
+      const today = parseDate(formatDate(new Date()));
+      return Math.ceil((date - today) / 86400000);
+    }
+
+    function endDateWasPostponed(report) {
+      const history = Array.isArray(report.history) ? report.history : [];
+      return history.some(entry => (entry.changes || []).some(change => {
+        if (change.field !== "due_date") return false;
+        const before = parseDate(change.before);
+        const after = parseDate(change.after);
+        return before && after && after > before;
+      }));
+    }
+
+    function endDateStatus(report) {
+      if (!report?.due_date) return null;
+      if (endDateWasPostponed(report)) {
+        return { tone: "orange", label: "Postponed" };
+      }
+      const days = daysUntilDate(report.due_date);
+      if (days === null) return null;
+      if (days < 0) return { tone: "red", label: "Delayed" };
+      if (days <= 5) return { tone: "amber", label: "Due soon" };
+      return null;
+    }
+
+    function endDateMarkup(report, prefix = "End") {
+      if (!report?.due_date) return "";
+      const status = endDateStatus(report);
+      return `${escapeHtml(prefix)} ${escapeHtml(report.due_date)}${status ? ` <span class="end-date-status"><span class="chip ${status.tone}">${escapeHtml(status.label)}</span></span>` : ""}`;
+    }
+
     function matchesReportingDate(value, anchor) {
       if (!anchor) return true;
       if (isWeekend(anchor)) return false;
@@ -2657,7 +2706,7 @@
           <div>
             <span class="product-label">${escapeHtml(report.product || "No product")}</span>
             <strong>${escapeHtml(reportTitle(report))}</strong>
-            <p class="muted small">${escapeHtml(reportProductLine(report))} - ${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.product_type || "Legacy")} - ${escapeHtml(report.role)} - Reporting week ${escapeHtml(report.week || "No date")}</p>
+            <p class="muted small">${escapeHtml(reportProductLine(report))} - ${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.product_type || "Legacy")} - ${escapeHtml(report.role)} - Reporting week ${escapeHtml(report.week || "No date")}${report.due_date ? ` - ${endDateMarkup(report)}` : ""}</p>
             <p class="muted small">${escapeHtml(report.summary || "No summary captured.")}</p>
           </div>
           <span class="chip ${healthClass(report)}">${labels[report.health] || report.health}</span>
@@ -2678,7 +2727,7 @@
           <div>
             <span class="product-label">${escapeHtml(report.product || "No product")}</span>
             <h3>${escapeHtml(reportTitle(report))}</h3>
-            <p class="muted small">${escapeHtml(reportProductLine(report))} - ${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.product_type || "Legacy")} - ${escapeHtml(report.week || "No reporting week")}</p>
+            <p class="muted small">${escapeHtml(reportProductLine(report))} - ${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.product_type || "Legacy")} - ${escapeHtml(report.week || "No reporting week")}${report.due_date ? ` - ${endDateMarkup(report)}` : ""}</p>
           </div>
           <span class="chip ${healthClass(report)}">${labels[report.health] || report.health}</span>
         </header>
@@ -2729,7 +2778,7 @@
           <div>
             <span class="product-label">${escapeHtml(r.product || "No product")}</span>
             <strong>${escapeHtml(reportTitle(r))}</strong>
-            <p class="muted small">${escapeHtml(reportProductLine(r))} - ${escapeHtml(r.owner || "Unassigned")} - ${escapeHtml(r.role)} - ${escapeHtml(r.stage)} - Reported ${escapeHtml(r.week || "No date")}${r.due_date ? ` - Due ${escapeHtml(r.due_date)}` : ""}</p>
+            <p class="muted small">${escapeHtml(reportProductLine(r))} - ${escapeHtml(r.owner || "Unassigned")} - ${escapeHtml(r.role)} - ${escapeHtml(r.stage)} - Reported ${escapeHtml(r.week || "No date")}${r.due_date ? ` - ${endDateMarkup(r, "Due")}` : ""}</p>
             <p class="muted small">${escapeHtml(r.summary)}</p>
             <div class="progress"><div class="bar ${healthClass(r)}" style="width:${Number(r.progress || 0)}%"></div></div>
           </div>
@@ -2814,7 +2863,7 @@
                 <div>
                   <span class="product-label">${escapeHtml(r.product || "No product")}</span>
                   <strong>${escapeHtml(reportTitle(r))}</strong>
-                  <p class="muted small">${escapeHtml(reportProductLine(r))} - ${escapeHtml(r.product_type || "Legacy")} - ${escapeHtml(r.role)} - Reporting week ${escapeHtml(r.week)}${r.start_date ? ` - Start ${escapeHtml(r.start_date)}` : ""}${r.due_date ? ` - End ${escapeHtml(r.due_date)}` : ""}</p>
+                  <p class="muted small">${escapeHtml(reportProductLine(r))} - ${escapeHtml(r.product_type || "Legacy")} - ${escapeHtml(r.role)} - Reporting week ${escapeHtml(r.week)}${r.start_date ? ` - Start ${escapeHtml(r.start_date)}` : ""}${r.due_date ? ` - ${endDateMarkup(r)}` : ""}</p>
                 </div>
                 <span class="chip ${healthClass(r)}">${labels[r.health] || r.health}</span>
               </header>
@@ -2833,6 +2882,7 @@
         ["Next action", report.next || "No next action captured yet."],
         ["Stage", report.stage || "No stage captured."],
         ["Progress", `${Number(report.progress || 0)}%`],
+        ["End date", report.due_date ? endDateMarkup(report) : "No end date captured."],
         ["Priority", report.priority || "Normal"]
       ];
       return `
@@ -2840,7 +2890,7 @@
           ${rows.map(([label, value]) => `
             <div>
               <strong>${escapeHtml(label)}</strong>
-              <p class="muted small">${escapeHtml(value)}</p>
+              <p class="muted small">${label === "End date" ? value : escapeHtml(value)}</p>
             </div>
           `).join("")}
         </div>
