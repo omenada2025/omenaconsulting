@@ -839,6 +839,45 @@
       border-color: #e8b6c5;
     }
 
+    .history-panel {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      background: #f8fbfc;
+      display: grid;
+      gap: 12px;
+    }
+
+    .history-toolbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: end;
+      flex-wrap: wrap;
+    }
+
+    .history-toolbar label {
+      min-width: 190px;
+    }
+
+    .history-entry {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      background: #fff;
+      display: grid;
+      gap: 8px;
+    }
+
+    .history-change {
+      display: grid;
+      grid-template-columns: minmax(120px, 180px) 1fr;
+      gap: 10px;
+      padding-top: 8px;
+      border-top: 1px solid var(--line);
+      font-size: 12px;
+    }
+
     .confirm-box {
       display: grid;
       gap: 10px;
@@ -1570,6 +1609,8 @@
       health: "all",
       role: "all"
     };
+    let reportHistoryOpen = false;
+    let reportHistoryDate = "";
 
     function loadReports() {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -1690,7 +1731,8 @@
         product_type: report.product_type || "Legacy",
         role: report.role || inferRole(report),
         start_date: report.start_date || "",
-        due_date: report.due_date || ""
+        due_date: report.due_date || "",
+        history: Array.isArray(report.history) ? report.history.slice(-50) : []
       };
       return btoa(unescape(encodeURIComponent(JSON.stringify(meta))));
     }
@@ -1747,6 +1789,7 @@
         win: row.win || "",
         blocker: row.blocker || "",
         next: row.next || "",
+        history: Array.isArray(legacyMeta.history) ? legacyMeta.history : (Array.isArray(row.history) ? row.history : []),
         created_at: row.created_at || "",
         updated_at: row.updated_at || "",
       });
@@ -2115,10 +2158,66 @@
       return comparisons.every(([left, right]) => sameValue(left, right));
     }
 
+    const HISTORY_FIELDS = [
+      ["product", "Product"],
+      ["feature_workstream", "Feature / workstream"],
+      ["owner", "Owner"],
+      ["participants", "Participants"],
+      ["product_type", "Type of product"],
+      ["role", "Role"],
+      ["week", "Reporting week"],
+      ["start_date", "Start date"],
+      ["due_date", "End date"],
+      ["health", "Health"],
+      ["progress", "Progress"],
+      ["stage", "Stage"],
+      ["summary", "Summary"],
+      ["win", "Win"],
+      ["blocker", "Blocker or risk"],
+      ["next", "Next action"],
+      ["impact", "Risk impact"],
+      ["time", "Time to solve"],
+      ["priority", "Priority"]
+    ];
+
+    function historyValue(value) {
+      return String(value ?? "").trim();
+    }
+
+    function buildHistoryEntry(before, after) {
+      if (!before || !after) return null;
+      const changes = HISTORY_FIELDS
+        .map(([key, label]) => ({
+          field: key,
+          label,
+          before: historyValue(before[key]),
+          after: historyValue(after[key])
+        }))
+        .filter(change => change.before !== change.after);
+      if (!changes.length) return null;
+      return {
+        id: crypto.randomUUID(),
+        changed_at: new Date().toISOString(),
+        changed_date: formatDate(new Date()),
+        changes
+      };
+    }
+
+    function withHistoryEntry(after) {
+      const before = reports.find(existing => existing.id === after.id);
+      const previousHistory = Array.isArray(before?.history) ? before.history : [];
+      const entry = buildHistoryEntry(before, after);
+      return {
+        ...after,
+        history: entry ? [...previousHistory, entry].slice(-50) : previousHistory
+      };
+    }
+
     async function updateReport(report) {
+      const reportWithHistory = withHistoryEntry(report);
       if (!hasSupabaseConfig) {
-        reports = reports.map(existing => existing.id === report.id ? report : existing);
-        selectedReportId = report.id;
+        reports = reports.map(existing => existing.id === reportWithHistory.id ? reportWithHistory : existing);
+        selectedReportId = reportWithHistory.id;
         saveReports();
         renderAll();
         return;
@@ -2127,60 +2226,61 @@
       let data;
       let usedReplaceFallback = false;
       try {
-        data = await supabaseWrite(`?id=eq.${encodeURIComponent(report.id)}&select=*`, {
+        data = await supabaseWrite(`?id=eq.${encodeURIComponent(reportWithHistory.id)}&select=*`, {
           method: "PATCH",
-          body: report
+          body: reportWithHistory
         });
         if (!Array.isArray(data) || data.length === 0) {
-          data = await patchReportAndFetch(report);
+          data = await patchReportAndFetch(reportWithHistory);
         }
         if (!Array.isArray(data) || data.length === 0) {
           throw new Error("Supabase update could not find this report. Falling back to replace.");
         }
-        if (!reportPersistedMatches(data[0], report)) {
+        if (!reportPersistedMatches(data[0], reportWithHistory)) {
           throw new Error("Supabase update did not persist values. Falling back to replace.");
         }
       } catch (error) {
         console.warn("Retrying update via delete and insert:", error);
-        await supabaseRequest(`?id=eq.${encodeURIComponent(report.id)}`, {
+        await supabaseRequest(`?id=eq.${encodeURIComponent(reportWithHistory.id)}`, {
           method: "DELETE",
           prefer: "return=minimal"
         });
         data = await supabaseWrite("?select=*", {
           method: "POST",
-          body: report
+          body: reportWithHistory
         });
         usedReplaceFallback = true;
       }
       const updated = Array.isArray(data) ? data[0] : data;
       if (!updated) throw new Error("Supabase did not return the updated report.");
-      const stableId = usedReplaceFallback ? (updated.id || report.id) : report.id;
+      const stableId = usedReplaceFallback ? (updated.id || reportWithHistory.id) : reportWithHistory.id;
       const updatedReport = normalizeReport({
         ...updated,
         id: stableId,
-        product: report.product,
-        feature_workstream: report.feature_workstream,
-        owner: report.owner,
-        summary: report.summary,
-        win: report.win,
-        blocker: report.blocker,
-        next: report.next,
-        health: report.health,
-        progress: report.progress,
-        stage: report.stage,
-        priority: report.priority,
-        impact: report.impact,
-        time: report.time,
-        week: report.week,
-        participants: report.participants,
-        product_type: report.product_type,
-        role: report.role,
-        start_date: report.start_date,
-        due_date: report.due_date
+        product: reportWithHistory.product,
+        feature_workstream: reportWithHistory.feature_workstream,
+        owner: reportWithHistory.owner,
+        summary: reportWithHistory.summary,
+        win: reportWithHistory.win,
+        blocker: reportWithHistory.blocker,
+        next: reportWithHistory.next,
+        health: reportWithHistory.health,
+        progress: reportWithHistory.progress,
+        stage: reportWithHistory.stage,
+        priority: reportWithHistory.priority,
+        impact: reportWithHistory.impact,
+        time: reportWithHistory.time,
+        week: reportWithHistory.week,
+        participants: reportWithHistory.participants,
+        product_type: reportWithHistory.product_type,
+        role: reportWithHistory.role,
+        start_date: reportWithHistory.start_date,
+        due_date: reportWithHistory.due_date,
+        history: reportWithHistory.history
       });
       saveFieldOverride(updatedReport);
       reports = dedupeReports([updatedReport, ...reports.filter(existing =>
-        existing.id !== report.id &&
+        existing.id !== reportWithHistory.id &&
         existing.id !== updated.id &&
         reportIdentityKey(existing) !== reportIdentityKey(updatedReport)
       )]);
@@ -2955,18 +3055,40 @@
             <label>Priority<select name="priority"><option ${report.priority === "Normal" ? "selected" : ""}>Normal</option><option ${report.priority === "High" ? "selected" : ""}>High</option><option ${report.priority === "Critical" ? "selected" : ""}>Critical</option></select></label>
           </div>
           <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:6px">
+            <button class="btn" type="button" id="reportHistoryBtn">History</button>
             <button class="btn" type="button" id="cancelEditReport">Cancel</button>
             <button class="btn danger" type="button" id="deleteReport">Delete Report</button>
             <button class="btn primary" type="submit" id="updateReportBtn">Save Changes</button>
           </div>
+          <div id="reportHistoryPanel" ${reportHistoryOpen ? "" : "hidden"}>${renderReportHistory(report)}</div>
         </form>
       `;
       const editWeekButton = detail.querySelector("#editWeekFilter");
       const editWeekPicker = detail.querySelector("#editWeekPicker");
       const editWeekInput = detail.querySelector('input[name="week"]');
       initWeekPicker(editWeekButton, editWeekPicker, () => {}, report.week || mondayForDate(), editWeekInput);
+      document.getElementById("reportHistoryBtn").addEventListener("click", () => {
+        reportHistoryOpen = !reportHistoryOpen;
+        renderDetail();
+      });
+      const historyDateInput = document.getElementById("reportHistoryDate");
+      if (historyDateInput) {
+        historyDateInput.addEventListener("change", event => {
+          reportHistoryDate = event.target.value;
+          renderDetail();
+        });
+      }
+      const clearHistoryDate = document.getElementById("clearHistoryDate");
+      if (clearHistoryDate) {
+        clearHistoryDate.addEventListener("click", () => {
+          reportHistoryDate = "";
+          renderDetail();
+        });
+      }
       document.getElementById("cancelEditReport").addEventListener("click", () => {
         selectedReportId = null;
+        reportHistoryOpen = false;
+        reportHistoryDate = "";
         renderReports();
         renderDetail();
       });
@@ -3001,6 +3123,52 @@
           btn.disabled = false;
         }
       });
+    }
+
+    function formatHistoryTimestamp(value) {
+      if (!value) return "Unknown date";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function renderReportHistory(report) {
+      const history = Array.isArray(report.history) ? [...report.history] : [];
+      const filtered = reportHistoryDate
+        ? history.filter(entry => (entry.changed_date || (entry.changed_at || "").slice(0, 10)) === reportHistoryDate)
+        : history;
+      const items = filtered.sort((a, b) => Date.parse(b.changed_at || 0) - Date.parse(a.changed_at || 0));
+      return `
+        <section class="history-panel">
+          <div class="history-toolbar">
+            <div>
+              <h3>Report History</h3>
+              <p class="muted small">Every saved change for this report, newest first.</p>
+            </div>
+            <label>Filter by date
+              <input id="reportHistoryDate" type="date" value="${escapeHtml(reportHistoryDate)}" />
+            </label>
+            <button class="btn" type="button" id="clearHistoryDate">All dates</button>
+          </div>
+          ${items.length ? items.map(entry => `
+            <article class="history-entry">
+              <strong>${escapeHtml(formatHistoryTimestamp(entry.changed_at))}</strong>
+              ${(entry.changes || []).map(change => `
+                <div class="history-change">
+                  <strong>${escapeHtml(change.label || change.field || "Field")}</strong>
+                  <span><span class="muted">From:</span> ${escapeHtml(change.before || "Blank")}<br><span class="muted">To:</span> ${escapeHtml(change.after || "Blank")}</span>
+                </div>
+              `).join("")}
+            </article>
+          `).join("") : `<div class="empty">${history.length ? "No history matches this date." : "No saved changes have been recorded for this report yet."}</div>`}
+        </section>
+      `;
     }
 
     function editField(label, name, value = "", type = "text", required = false) {
@@ -3248,6 +3416,8 @@
       const card = event.target.closest("[data-report-card]");
       if (!card) return;
       selectedReportId = card.dataset.reportCard;
+      reportHistoryOpen = false;
+      reportHistoryDate = "";
       const report = reports.find(r => r.id === selectedReportId);
       logUserAction("report_selected", { source: "source_reports" }, { target_type: "report", target_id: selectedReportId, ...reportLogFields(report) });
       renderReports();
