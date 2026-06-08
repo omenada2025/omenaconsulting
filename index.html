@@ -40,7 +40,33 @@
       background-size: 24px 24px;
     }
 
+    body.login-required .app { display: none; }
+
     button, input, select, textarea { font: inherit; }
+
+    .login-screen {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .login-card {
+      width: min(460px, 100%);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 28px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .login-card form,
+    .login-card label {
+      display: grid;
+      gap: 8px;
+    }
 
     .app {
       min-height: 100vh;
@@ -103,6 +129,16 @@
 
     .profile-box label {
       font-size: 12px;
+    }
+
+    .role-pill {
+      width: max-content;
+      border-radius: 999px;
+      background: var(--blue-soft);
+      color: var(--blue);
+      padding: 5px 9px;
+      font-size: 12px;
+      font-weight: 800;
     }
 
     .tab {
@@ -1011,7 +1047,29 @@
     }
   </style>
 </head>
-<body>
+<body class="login-required">
+  <section class="login-screen" id="loginScreen">
+    <div class="login-card">
+      <div>
+        <div class="mark" style="margin-bottom:12px">PU</div>
+        <h2>Sign in</h2>
+        <p class="muted">Access the Product & UI/UX Pulse dashboard with your assigned role.</p>
+      </div>
+      <form id="loginForm">
+        <label>
+          Username
+          <input name="username" autocomplete="username" required placeholder="admin, roles, or master" />
+        </label>
+        <label>
+          Access code
+          <input name="password" type="password" autocomplete="current-password" required placeholder="Enter access code" />
+        </label>
+        <div class="inline-message danger" id="loginMessage" hidden></div>
+        <button class="btn primary" type="submit">Sign in</button>
+      </form>
+      <p class="muted small">Default demo access: admin/admin2026, roles/roles2026, master/master2026. Use Master admin or Role Manager to change user roles locally.</p>
+    </div>
+  </section>
   <div class="app">
     <aside>
       <div class="brand">
@@ -1026,16 +1084,13 @@
         <button class="tab" data-view="executive">Executive Dashboard</button>
         <button class="tab" data-view="intake" data-master-only>Add Status</button>
         <button class="tab" data-view="reports" data-master-only>Source Reports</button>
+        <button class="tab" data-view="roles" data-role-manager-only>Manage Roles</button>
       </nav>
       <div class="profile-box">
-        <label>
-          Profile
-          <select id="profileSelect">
-            <option value="admin">Admin</option>
-            <option value="master">Master admin</option>
-          </select>
-        </label>
+        <span class="role-pill" id="profileRoleLabel">Not signed in</span>
+        <strong id="profileUserLabel">User</strong>
         <p class="muted small" id="profileHelp">Master admin can manage reports. Admin can view dashboards only.</p>
+        <button class="btn" type="button" id="logoutBtn">Logout</button>
       </div>
     </aside>
 
@@ -1235,6 +1290,22 @@
             </div>
             <div class="exec-list" id="executiveActions"></div>
           </div>
+        </div>
+      </section>
+
+      <section class="view" id="roles" data-role-manager-view>
+        <div class="header">
+          <div>
+            <h2>Manage Roles</h2>
+            <p class="muted">Assign access profiles for this dashboard. Changes are stored in this browser.</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>User Roles</h3>
+          <p class="muted small" style="margin-bottom:12px">Admin sees dashboards only. Role Manager sees dashboards and this page. Master admin can do everything.</p>
+          <div class="report-list" id="roleUserList"></div>
+          <div class="inline-message success" id="roleMessage" hidden></div>
         </div>
       </section>
 
@@ -1654,6 +1725,18 @@
     const supabaseRestUrl = hasSupabaseConfig ? `${config.url.replace(/\/$/, "")}/rest/v1` : "";
     const supabaseBaseUrl = hasSupabaseConfig ? `${supabaseRestUrl}/${supabaseTable}` : "";
     const PROFILE_KEY = "product-uiux-pulse-profile-v1";
+    const USERS_KEY = "product-uiux-pulse-users-v1";
+    const SESSION_KEY = "product-uiux-pulse-session-v1";
+    const DEFAULT_USERS = [
+      { username: "admin", displayName: "Admin User", role: "admin", password: "admin2026" },
+      { username: "roles", displayName: "Role Manager", role: "roles", password: "roles2026" },
+      { username: "master", displayName: "Master Admin", role: "master", password: "master2026" }
+    ];
+    const ROLE_LABELS = {
+      admin: "Admin",
+      roles: "Role Manager",
+      master: "Master admin"
+    };
     let reports = [];
     let selectedReportId = null;
     let selectedPortfolioHealthId = null;
@@ -1661,7 +1744,8 @@
     let selectedExecutiveProjectId = null;
     let useLegacySupabasePayload = false;
     let actionLoggingDisabled = false;
-    let currentProfile = localStorage.getItem(PROFILE_KEY) || "master";
+    let currentUser = null;
+    let currentProfile = "admin";
     const PRODUCT_TYPE_OPTIONS = ["Legacy", "New product"];
     const PRODUCT_OPTIONS = [
       "AeroPass", "Ameritek Ventures", "Augmum", "DAAS", "DeskFlex", "DittoMask", "Ecker Capital", "Epazz",
@@ -2420,46 +2504,161 @@
       }, { target_type: "report", target_id: id, ...reportLogFields(deletedReport) });
     }
 
+    function loadUsers() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(USERS_KEY) || "null");
+        if (Array.isArray(saved) && saved.length) {
+          const merged = DEFAULT_USERS.map(defaultUser => ({
+            ...defaultUser,
+            ...(saved.find(user => user.username === defaultUser.username) || {})
+          }));
+          localStorage.setItem(USERS_KEY, JSON.stringify(merged));
+          return merged;
+        }
+      } catch {}
+      localStorage.setItem(USERS_KEY, JSON.stringify(DEFAULT_USERS));
+      return DEFAULT_USERS;
+    }
+
+    function saveUsers(users) {
+      localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    }
+
+    function setSession(user) {
+      currentUser = {
+        username: user.username,
+        displayName: user.displayName,
+        role: user.role
+      };
+      currentProfile = user.role;
+      localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+      localStorage.setItem(PROFILE_KEY, currentProfile);
+      document.body.classList.remove("login-required");
+      document.getElementById("loginScreen").hidden = true;
+      applyProfileAccess();
+    }
+
+    function restoreSession() {
+      try {
+        const session = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
+        const users = loadUsers();
+        const savedUser = users.find(user => user.username === session?.username);
+        if (savedUser) {
+          setSession(savedUser);
+          return true;
+        }
+      } catch {}
+      document.body.classList.add("login-required");
+      document.getElementById("loginScreen").hidden = false;
+      return false;
+    }
+
+    function logout() {
+      localStorage.removeItem(SESSION_KEY);
+      currentUser = null;
+      currentProfile = "admin";
+      document.body.classList.add("login-required");
+      document.getElementById("loginScreen").hidden = false;
+      switchView("dashboard");
+    }
+
     function isMasterAdmin() {
       return currentProfile === "master";
     }
 
+    function canManageRoles() {
+      return currentProfile === "roles" || isMasterAdmin();
+    }
+
     function canAccessView(id) {
-      return isMasterAdmin() || ["dashboard", "executive"].includes(id);
+      if (isMasterAdmin()) return true;
+      if (canManageRoles()) return ["dashboard", "executive", "roles"].includes(id);
+      return ["dashboard", "executive"].includes(id);
     }
 
     function requireMasterAdmin(action = "manage reports") {
       if (isMasterAdmin()) return true;
-      alert(`Admin profile can only view dashboards. Switch to Master admin to ${action}.`);
+      alert(`${ROLE_LABELS[currentProfile] || "Admin"} profile cannot ${action}. Use Master admin for report management.`);
+      switchView("dashboard");
+      return false;
+    }
+
+    function requireRoleManager(action = "manage roles") {
+      if (canManageRoles()) return true;
+      alert(`Admin profile can only view dashboards. Use Role Manager or Master admin to ${action}.`);
       switchView("dashboard");
       return false;
     }
 
     function applyProfileAccess() {
-      const profileSelect = document.getElementById("profileSelect");
-      if (profileSelect) profileSelect.value = currentProfile;
       document.querySelectorAll("[data-master-only]").forEach(element => {
         element.hidden = !isMasterAdmin();
       });
       document.querySelectorAll("[data-master-view]").forEach(element => {
         element.hidden = !isMasterAdmin();
       });
+      document.querySelectorAll("[data-role-manager-only]").forEach(element => {
+        element.hidden = !canManageRoles();
+      });
+      document.querySelectorAll("[data-role-manager-view]").forEach(element => {
+        element.hidden = !canManageRoles();
+      });
+      const profileRoleLabel = document.getElementById("profileRoleLabel");
+      if (profileRoleLabel) profileRoleLabel.textContent = ROLE_LABELS[currentProfile] || "Admin";
+      const profileUserLabel = document.getElementById("profileUserLabel");
+      if (profileUserLabel) profileUserLabel.textContent = currentUser?.displayName || "Not signed in";
       const profileHelp = document.getElementById("profileHelp");
       if (profileHelp) {
         profileHelp.textContent = isMasterAdmin()
-          ? "Master admin can view dashboards and manage reports."
-          : "Admin can view Dashboard and Executive Dashboard only.";
+          ? "Master admin can view dashboards, manage roles, and manage reports."
+          : canManageRoles()
+            ? "Role Manager can view dashboards and manage roles."
+            : "Admin can view Dashboard and Executive Dashboard only.";
       }
+      renderRoleManagement();
       if (!canAccessView(getActiveView())) {
         switchView("dashboard");
       }
     }
 
-    function setProfile(profile) {
-      currentProfile = profile === "admin" ? "admin" : "master";
-      localStorage.setItem(PROFILE_KEY, currentProfile);
-      applyProfileAccess();
-      logUserAction("profile_changed", { profile: currentProfile }, { target_type: "profile", target_id: currentProfile });
+    function renderRoleManagement() {
+      const target = document.getElementById("roleUserList");
+      if (!target) return;
+      const users = loadUsers();
+      target.innerHTML = users.map(user => `
+        <div class="report-card">
+          <header>
+            <div>
+              <strong>${escapeHtml(user.displayName)}</strong>
+              <p class="muted small">${escapeHtml(user.username)}</p>
+            </div>
+            <span class="chip blue">${escapeHtml(ROLE_LABELS[user.role] || user.role)}</span>
+          </header>
+          <label>Role
+            <select data-role-user="${escapeHtml(user.username)}">
+              <option value="admin" ${user.role === "admin" ? "selected" : ""}>Admin</option>
+              <option value="roles" ${user.role === "roles" ? "selected" : ""}>Role Manager</option>
+              <option value="master" ${user.role === "master" ? "selected" : ""}>Master admin</option>
+            </select>
+          </label>
+        </div>
+      `).join("");
+    }
+
+    function updateUserRole(username, role) {
+      if (!requireRoleManager("manage roles")) return;
+      const users = loadUsers().map(user => user.username === username ? { ...user, role } : user);
+      saveUsers(users);
+      const updatedCurrent = users.find(user => user.username === currentUser?.username);
+      if (updatedCurrent) setSession(updatedCurrent);
+      renderRoleManagement();
+      const message = document.getElementById("roleMessage");
+      if (message) {
+        message.textContent = "Role updated.";
+        message.hidden = false;
+        setTimeout(() => { message.hidden = true; }, 1600);
+      }
+      logUserAction("role_updated", { username, role }, { target_type: "user_role", target_id: username });
     }
 
     function switchView(id) {
@@ -3637,8 +3836,34 @@
       });
     });
 
-    document.getElementById("profileSelect").addEventListener("change", event => {
-      setProfile(event.target.value);
+    document.getElementById("loginForm").addEventListener("submit", event => {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+      const user = loadUsers().find(candidate =>
+        candidate.username.toLowerCase() === String(data.username || "").trim().toLowerCase() &&
+        candidate.password === data.password
+      );
+      const message = document.getElementById("loginMessage");
+      if (!user) {
+        message.textContent = "Invalid username or access code.";
+        message.hidden = false;
+        return;
+      }
+      message.hidden = true;
+      event.currentTarget.reset();
+      setSession(user);
+      logUserAction("login", { role: user.role }, { target_type: "user", target_id: user.username });
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      logUserAction("logout", { role: currentProfile }, { target_type: "user", target_id: currentUser?.username });
+      logout();
+    });
+
+    document.getElementById("roleUserList").addEventListener("change", event => {
+      const select = event.target.closest("[data-role-user]");
+      if (!select) return;
+      updateUserRole(select.dataset.roleUser, select.value);
     });
 
     document.getElementById("statusForm").addEventListener("submit", async event => {
@@ -3805,7 +4030,7 @@
       renderReports();
     }, "");
     initReportingWeekInputs();
-    applyProfileAccess();
+    restoreSession();
     fetchReports();
   </script>
 </body>
