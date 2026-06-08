@@ -1681,31 +1681,69 @@
       return recoveredReportRoles[`${row.product || ""}|${row.owner || ""}|${row.week || ""}`] || "";
     }
 
+    const LEGACY_META_PATTERN = /\n\n\[PULSE_META:([A-Za-z0-9+/=]+)\]\s*$/;
+
+    function encodeLegacyMeta(report) {
+      const meta = {
+        feature_workstream: report.feature_workstream || "",
+        participants: report.participants || "",
+        product_type: report.product_type || "Legacy",
+        role: report.role || inferRole(report),
+        start_date: report.start_date || "",
+        due_date: report.due_date || ""
+      };
+      return btoa(unescape(encodeURIComponent(JSON.stringify(meta))));
+    }
+
+    function decodeLegacyMeta(value = "") {
+      try {
+        return JSON.parse(decodeURIComponent(escape(atob(value))));
+      } catch {
+        return {};
+      }
+    }
+
+    function splitLegacySummary(summary = "") {
+      const match = String(summary || "").match(LEGACY_META_PATTERN);
+      if (!match) return { summary: summary || "", meta: {} };
+      return {
+        summary: String(summary || "").replace(LEGACY_META_PATTERN, "").trimEnd(),
+        meta: decodeLegacyMeta(match[1])
+      };
+    }
+
+    function summaryWithLegacyMeta(report) {
+      const cleanSummary = splitLegacySummary(report.summary || "").summary;
+      return `${cleanSummary}\n\n[PULSE_META:${encodeLegacyMeta(report)}]`;
+    }
+
     function normalizeReport(row) {
+      const legacySummary = splitLegacySummary(row.summary || "");
+      const legacyMeta = legacySummary.meta;
       const normalized = {
         product: row.product || "",
         owner: row.owner || "",
         stage: row.stage || "Discovery",
-        role: row.role || recoveredRole(row)
+        role: row.role || legacyMeta.role || recoveredRole(row)
       };
       return applyFieldOverride({
         id: row.id,
         product: normalized.product,
-        feature_workstream: row.feature_workstream || row.featureWorkstream || row.feature || row.workstream || "",
+        feature_workstream: row.feature_workstream || row.featureWorkstream || row.feature || row.workstream || legacyMeta.feature_workstream || "",
         owner: normalized.owner,
-        participants: row.participants || "",
-        product_type: row.product_type || row.productType || "Legacy",
+        participants: row.participants || legacyMeta.participants || "",
+        product_type: row.product_type || row.productType || legacyMeta.product_type || "Legacy",
         role: normalized.role || inferRole(normalized),
         week: row.week || "",
-        start_date: row.start_date || row.startDate || "",
-        due_date: row.due_date || "",
+        start_date: row.start_date || row.startDate || legacyMeta.start_date || "",
+        due_date: row.due_date || legacyMeta.due_date || "",
         health: row.health || "amber",
         progress: Number(row.progress || 0),
         stage: normalized.stage,
         priority: row.priority || "Normal",
         impact: Number(row.impact || 1),
         time: Number(row.time || 1),
-        summary: row.summary || "",
+        summary: legacySummary.summary,
         win: row.win || "",
         blocker: row.blocker || "",
         next: row.next || "",
@@ -1725,7 +1763,7 @@
         priority: report.priority,
         impact: report.impact,
         time: report.time,
-        summary: report.summary,
+        summary: legacy ? summaryWithLegacyMeta(report) : splitLegacySummary(report.summary || "").summary,
         win: report.win || null,
         blocker: report.blocker || null,
         next: report.next || null,
@@ -1887,7 +1925,7 @@
     function reportIdentityKey(report) {
       return [
         report.product || "",
-        report.feature_workstream || "",
+        report.feature_workstream || report.product || "",
         ownerKey(report.owner || ""),
         report.week || "",
         canonicalText(report.summary || "")
@@ -2848,7 +2886,7 @@
             ${editField("Participants (optional)", "participants", report.participants || "")}
             <label>Type of product<select name="product_type"><option ${report.product_type === "Legacy" ? "selected" : ""}>Legacy</option><option ${report.product_type === "New product" ? "selected" : ""}>New product</option></select></label>
             <label>Role<select name="role"><option ${report.role === "Product Manager" ? "selected" : ""}>Product Manager</option><option ${report.role === "UI/UX" ? "selected" : ""}>UI/UX</option></select></label>
-            ${editField("Reporting week", "week", report.week, "date", true)}
+            ${editWeekField(report.week)}
             ${editField("Start date", "start_date", report.start_date, "date")}
             ${editField("End date", "due_date", report.due_date, "date")}
             <label>Health<select name="health"><option value="green" ${report.health === "green" ? "selected" : ""}>On Track</option><option value="amber" ${report.health === "amber" ? "selected" : ""}>In Progress</option><option value="red" ${report.health === "red" ? "selected" : ""}>At Risk</option><option value="gray" ${report.health === "gray" ? "selected" : ""}>Paused</option></select></label>
@@ -2869,7 +2907,10 @@
           </div>
         </form>
       `;
-      initReportingWeekInputs(detail);
+      const editWeekButton = detail.querySelector("#editWeekFilter");
+      const editWeekPicker = detail.querySelector("#editWeekPicker");
+      const editWeekInput = detail.querySelector('input[name="week"]');
+      initWeekPicker(editWeekButton, editWeekPicker, () => {}, report.week || mondayForDate(), editWeekInput);
       document.getElementById("cancelEditReport").addEventListener("click", () => {
         selectedReportId = null;
         renderReports();
@@ -2910,6 +2951,17 @@
 
     function editField(label, name, value = "", type = "text", required = false) {
       return `<label>${label}<input name="${name}" type="${type}" value="${escapeHtml(value)}" ${required ? "required" : ""}></label>`;
+    }
+
+    function editWeekField(value = "") {
+      return `
+        <label class="week-field">
+          Reporting week
+          <button class="week-picker-btn" id="editWeekFilter" type="button" aria-haspopup="dialog" aria-expanded="false"></button>
+          <input name="week" type="hidden" required value="${escapeHtml(value)}" />
+          <div class="week-picker" id="editWeekPicker" hidden></div>
+        </label>
+      `;
     }
 
     function editArea(label, name, value = "", required = false) {
