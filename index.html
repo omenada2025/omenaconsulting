@@ -91,6 +91,20 @@
       gap: 8px;
     }
 
+    .profile-box {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      padding: 12px;
+      margin-bottom: 18px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .profile-box label {
+      font-size: 12px;
+    }
+
     .tab {
       width: 100%;
       border: 1px solid transparent;
@@ -155,6 +169,7 @@
 
     .view { display: none; }
     .view.active { display: block; }
+    [hidden] { display: none !important; }
 
     .grid {
       display: grid;
@@ -1009,9 +1024,19 @@
       <nav class="tabs" aria-label="Primary">
         <button class="tab active" data-view="dashboard">Dashboard</button>
         <button class="tab" data-view="executive">Executive Dashboard</button>
-        <button class="tab" data-view="intake">Add Status</button>
-        <button class="tab" data-view="reports">Source Reports</button>
+        <button class="tab" data-view="intake" data-master-only>Add Status</button>
+        <button class="tab" data-view="reports" data-master-only>Source Reports</button>
       </nav>
+      <div class="profile-box">
+        <label>
+          Profile
+          <select id="profileSelect">
+            <option value="admin">Admin</option>
+            <option value="master">Master admin</option>
+          </select>
+        </label>
+        <p class="muted small" id="profileHelp">Master admin can manage reports. Admin can view dashboards only.</p>
+      </div>
     </aside>
 
     <main>
@@ -1021,7 +1046,7 @@
             <h2>Product & UI/UX Dashboard</h2>
             <p class="muted" id="dashboardSubtitle">Use filters to review products, then click workstream cards for wins, blockers, and next actions.</p>
           </div>
-          <button class="btn primary" data-jump="intake">Add Product Status</button>
+          <button class="btn primary" data-jump="intake" data-master-only>Add Product Status</button>
         </div>
 
         <div class="panel filter-bar">
@@ -1116,7 +1141,7 @@
             <h2>Executive Dashboard</h2>
             <p class="muted" id="executiveSubtitle">Executive view of product health, risky workstreams, owners, and next actions.</p>
           </div>
-          <button class="btn primary" data-jump="reports">Review Source Reports</button>
+          <button class="btn primary" data-jump="reports" data-master-only>Review Source Reports</button>
         </div>
 
         <div class="panel filter-bar">
@@ -1213,7 +1238,7 @@
         </div>
       </section>
 
-      <section class="view" id="intake">
+      <section class="view" id="intake" data-master-view>
         <div class="header">
           <div>
             <h2>Add Product or UI/UX Status Report</h2>
@@ -1352,7 +1377,7 @@
         </div>
       </section>
 
-      <section class="view" id="reports">
+      <section class="view" id="reports" data-master-view>
         <div class="header">
           <div>
             <h2>Source Status Reports</h2>
@@ -1628,6 +1653,7 @@
     const actionLogTable = config.actionLogTable || "user_action_logs";
     const supabaseRestUrl = hasSupabaseConfig ? `${config.url.replace(/\/$/, "")}/rest/v1` : "";
     const supabaseBaseUrl = hasSupabaseConfig ? `${supabaseRestUrl}/${supabaseTable}` : "";
+    const PROFILE_KEY = "product-uiux-pulse-profile-v1";
     let reports = [];
     let selectedReportId = null;
     let selectedPortfolioHealthId = null;
@@ -1635,6 +1661,7 @@
     let selectedExecutiveProjectId = null;
     let useLegacySupabasePayload = false;
     let actionLoggingDisabled = false;
+    let currentProfile = localStorage.getItem(PROFILE_KEY) || "master";
     const PRODUCT_TYPE_OPTIONS = ["Legacy", "New product"];
     const PRODUCT_OPTIONS = [
       "AeroPass", "Ameritek Ventures", "Augmum", "DAAS", "DeskFlex", "DittoMask", "Ecker Capital", "Epazz",
@@ -2393,7 +2420,52 @@
       }, { target_type: "report", target_id: id, ...reportLogFields(deletedReport) });
     }
 
+    function isMasterAdmin() {
+      return currentProfile === "master";
+    }
+
+    function canAccessView(id) {
+      return isMasterAdmin() || ["dashboard", "executive"].includes(id);
+    }
+
+    function requireMasterAdmin(action = "manage reports") {
+      if (isMasterAdmin()) return true;
+      alert(`Admin profile can only view dashboards. Switch to Master admin to ${action}.`);
+      switchView("dashboard");
+      return false;
+    }
+
+    function applyProfileAccess() {
+      const profileSelect = document.getElementById("profileSelect");
+      if (profileSelect) profileSelect.value = currentProfile;
+      document.querySelectorAll("[data-master-only]").forEach(element => {
+        element.hidden = !isMasterAdmin();
+      });
+      document.querySelectorAll("[data-master-view]").forEach(element => {
+        element.hidden = !isMasterAdmin();
+      });
+      const profileHelp = document.getElementById("profileHelp");
+      if (profileHelp) {
+        profileHelp.textContent = isMasterAdmin()
+          ? "Master admin can view dashboards and manage reports."
+          : "Admin can view Dashboard and Executive Dashboard only.";
+      }
+      if (!canAccessView(getActiveView())) {
+        switchView("dashboard");
+      }
+    }
+
+    function setProfile(profile) {
+      currentProfile = profile === "admin" ? "admin" : "master";
+      localStorage.setItem(PROFILE_KEY, currentProfile);
+      applyProfileAccess();
+      logUserAction("profile_changed", { profile: currentProfile }, { target_type: "profile", target_id: currentProfile });
+    }
+
     function switchView(id) {
+      if (!canAccessView(id)) {
+        id = "dashboard";
+      }
       document.querySelectorAll(".view").forEach(view => view.classList.toggle("active", view.id === id));
       document.querySelectorAll(".tab").forEach(tab => tab.classList.toggle("active", tab.dataset.view === id));
       logUserAction("view_opened", { view: id }, { target_type: "view", target_id: id });
@@ -3565,8 +3637,13 @@
       });
     });
 
+    document.getElementById("profileSelect").addEventListener("change", event => {
+      setProfile(event.target.value);
+    });
+
     document.getElementById("statusForm").addEventListener("submit", async event => {
       event.preventDefault();
+      if (!requireMasterAdmin("add status reports")) return;
       const form = event.currentTarget;
       const saveBtn = document.getElementById("saveReportBtn");
       saveBtn.disabled = true;
@@ -3590,6 +3667,7 @@
     });
 
     document.getElementById("reportList").addEventListener("click", event => {
+      if (!requireMasterAdmin("edit source reports")) return;
       const card = event.target.closest("[data-report-card]");
       if (!card) return;
       selectedReportId = card.dataset.reportCard;
@@ -3727,6 +3805,7 @@
       renderReports();
     }, "");
     initReportingWeekInputs();
+    applyProfileAccess();
     fetchReports();
   </script>
 </body>
