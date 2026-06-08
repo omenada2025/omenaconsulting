@@ -162,7 +162,7 @@
     }
 
     .summary-grid {
-      grid-template-columns: repeat(3, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       margin-bottom: 16px;
     }
 
@@ -364,7 +364,7 @@
     }
 
     .exec-metrics {
-      grid-template-columns: repeat(4, minmax(150px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       margin-bottom: 16px;
     }
 
@@ -883,6 +883,14 @@
       gap: 8px;
     }
 
+    .history-list {
+      display: grid;
+      gap: 12px;
+      max-height: 520px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
     .history-change {
       display: grid;
       grid-template-columns: minmax(120px, 180px) 1fr;
@@ -940,6 +948,20 @@
       grid-template-columns: 32px minmax(0, 1fr);
       gap: 10px;
       align-items: start;
+    }
+
+    .end-date-monitor {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .monitor-list {
+      display: grid;
+      gap: 10px;
+      max-height: 360px;
+      overflow: auto;
+      padding-right: 4px;
     }
 
     .node {
@@ -1037,6 +1059,16 @@
 
         <div class="grid summary-grid" id="metrics"></div>
 
+        <div class="panel end-date-monitor">
+          <div class="panel-title">
+            <div>
+              <h3>End Date Monitor</h3>
+              <p class="muted small">Delayed, due soon, and postponed workstreams across the current filters.</p>
+            </div>
+          </div>
+          <div class="monitor-list" id="dashboardEndDateMonitor"></div>
+        </div>
+
         <div class="grid two-col">
           <div class="panel">
             <h3>Workstream Health</h3>
@@ -1117,6 +1149,16 @@
         </div>
 
         <div class="grid exec-metrics" id="executiveMetrics"></div>
+
+        <div class="panel end-date-monitor">
+          <div class="panel-title">
+            <div>
+              <h3>Delivery Date Watch</h3>
+              <p class="muted small">Executive view of delayed, due soon, and postponed workstreams.</p>
+            </div>
+          </div>
+          <div class="monitor-list" id="executiveEndDateMonitor"></div>
+        </div>
 
         <div class="grid exec-grid">
           <div class="panel">
@@ -2508,6 +2550,52 @@
       return `${escapeHtml(prefix)} ${escapeHtml(dueDate)}${status ? ` <span class="end-date-status"><span class="chip ${status.tone}">${escapeHtml(status.label)}</span></span>` : ""}`;
     }
 
+    function endDateRank(report) {
+      const status = endDateStatus(report);
+      const rank = { red: 0, amber: 1, orange: 2 };
+      const dueDate = reportEndDate(report);
+      return [
+        status ? rank[status.tone] ?? 9 : 9,
+        dueDate || "9999-12-31",
+        reportTitle(report)
+      ].join("|");
+    }
+
+    function getEndDateAlerts(source) {
+      return source
+        .filter(report => reportEndDate(report) && endDateStatus(report))
+        .sort((a, b) => endDateRank(a).localeCompare(endDateRank(b)));
+    }
+
+    function endDateCounts(source) {
+      return getEndDateAlerts(source).reduce((acc, report) => {
+        const status = endDateStatus(report);
+        if (status?.tone === "red") acc.delayed += 1;
+        if (status?.tone === "amber") acc.dueSoon += 1;
+        if (status?.tone === "orange") acc.postponed += 1;
+        return acc;
+      }, { delayed: 0, dueSoon: 0, postponed: 0 });
+    }
+
+    function renderEndDateMonitor(targetId, source, emptyText) {
+      const target = document.getElementById(targetId);
+      if (!target) return;
+      const alerts = getEndDateAlerts(source).slice(0, 8);
+      target.innerHTML = alerts.length ? alerts.map(report => {
+        const status = endDateStatus(report);
+        return `
+          <div class="exec-row featured">
+            <div>
+              <span class="product-label">${escapeHtml(report.product || "No product")}</span>
+              <strong>${escapeHtml(reportTitle(report))}</strong>
+              <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(reportProductLine(report))} - ${endDateMarkup(report)}</p>
+            </div>
+            <span class="chip ${status.tone}">${escapeHtml(status.label)}</span>
+          </div>
+        `;
+      }).join("") : `<div class="empty">${escapeHtml(emptyText)}</div>`;
+    }
+
     function matchesReportingDate(value, anchor) {
       if (!anchor) return true;
       if (isWeekend(anchor)) return false;
@@ -2572,10 +2660,12 @@
       const avg = total ? Math.round(source.reduce((sum, r) => sum + Number(r.progress || 0), 0) / total) : 0;
       const products = uniqueCount(source, "product");
       const riskyProducts = productsNeedingAttention(source);
+      const dateCounts = endDateCounts(source);
       const metrics = [
         ["Products", products, "blue", "With active workstreams", `${pm.total} PM items`, `${ux.total} UI/UX items`],
         ["Workstreams", total, "blue", "Features or workstreams tracked", `${pm.total} PM`, `${ux.total} UI/UX`],
         ["Products at Risk", riskyProducts, riskyProducts ? "red" : "green", `${atRisk} workstreams need attention`, `${pm.atRisk} PM`, `${ux.atRisk} UI/UX`],
+        ["Delayed", dateCounts.delayed, dateCounts.delayed ? "red" : "green", "Past end date", `${dateCounts.dueSoon} due soon`, `${dateCounts.postponed} postponed`],
         ["Avg Progress", `${avg}%`, avg < 50 ? "red" : avg < 75 ? "amber" : "green", "Across filtered reports", `${pm.avg}% PM`, `${ux.avg}% UI/UX`],
       ];
       document.getElementById("metrics").innerHTML = metrics.map(([name, value, tone, note, pmNote, uxNote]) => `
@@ -2586,6 +2676,7 @@
           <div class="metric-split"><span>${pmNote}</span><span>${uxNote}</span></div>
         </div>
       `).join("");
+      renderEndDateMonitor("dashboardEndDateMonitor", source, "No delayed, due soon, or postponed end dates for the current filters.");
     }
 
     function renderExecutiveDashboard() {
@@ -2599,6 +2690,7 @@
       const latest = source.map(report => report.week).filter(Boolean).sort().pop();
       const products = uniqueCount(source, "product");
       const riskyProducts = productsNeedingAttention(source);
+      const dateCounts = endDateCounts(source);
       const critical = source
         .filter(report => report.health === "red" || report.priority === "Critical" || Number(report.impact || 0) >= 3)
         .sort((a, b) =>
@@ -2618,6 +2710,7 @@
         ["Products", products, "blue", "Active product portfolio"],
         ["Workstreams", total, "blue", `${onTrack} healthy delivery`],
         ["Products at Risk", riskyProducts, riskyProducts ? "red" : "green", `${atRisk} risky workstreams`],
+        ["Delayed", dateCounts.delayed, dateCounts.delayed ? "red" : "green", `${dateCounts.dueSoon} due soon / ${dateCounts.postponed} postponed`],
         ["Avg Progress", `${avg}%`, avg < 50 ? "red" : avg < 75 ? "amber" : "green", "Across filtered workstreams"],
       ];
       document.getElementById("executiveMetrics").innerHTML = metricRows.map(([name, value, tone, note]) => `
@@ -2627,6 +2720,7 @@
           <span class="muted small">${note}</span>
         </div>
       `).join("");
+      renderEndDateMonitor("executiveEndDateMonitor", source, "No delivery date alerts need attention.");
 
       const healthRows = [
         ["On Track", onTrack, "green", "green"],
@@ -3229,17 +3323,17 @@
             </label>
             <button class="btn" type="button" id="clearHistoryDate">All dates</button>
           </div>
-          ${items.length ? items.map(entry => `
-            <article class="history-entry">
-              <strong>${escapeHtml(formatHistoryTimestamp(entry.changed_at))}</strong>
-              ${(entry.changes || []).map(change => `
-                <div class="history-change">
-                  <strong>${escapeHtml(change.label || change.field || "Field")}</strong>
-                  <span><span class="muted">From:</span> ${escapeHtml(change.before || "Blank")}<br><span class="muted">To:</span> ${escapeHtml(change.after || "Blank")}</span>
-                </div>
-              `).join("")}
-            </article>
-          `).join("") : `<div class="empty">${history.length ? "No history matches this date." : "No saved changes have been recorded for this report yet."}</div>`}
+          ${items.length ? `<div class="history-list">${items.map(entry => `
+              <article class="history-entry">
+                <strong>${escapeHtml(formatHistoryTimestamp(entry.changed_at))}</strong>
+                ${(entry.changes || []).map(change => `
+                  <div class="history-change">
+                    <strong>${escapeHtml(change.label || change.field || "Field")}</strong>
+                    <span><span class="muted">From:</span> ${escapeHtml(change.before || "Blank")}<br><span class="muted">To:</span> ${escapeHtml(change.after || "Blank")}</span>
+                  </div>
+                `).join("")}
+              </article>
+            `).join("")}</div>` : `<div class="empty">${history.length ? "No history matches this date." : "No saved changes have been recorded for this report yet."}</div>`}
         </section>
       `;
     }
