@@ -2831,6 +2831,7 @@
             <button class="btn primary" type="button" data-copy-invite="${escapeHtml(user.username)}">Copy invite</button>
             <button class="btn soft" type="button" data-email-user="${escapeHtml(user.username)}">Resend email</button>
             <button class="btn" type="button" data-toggle-user="${escapeHtml(user.username)}">${user.active === false ? "Activate" : "Deactivate"}</button>
+            <button class="btn danger" type="button" data-delete-user="${escapeHtml(user.username)}" ${user.username === currentUser?.username ? "disabled" : ""}>Delete user</button>
           </div>
         </div>
       `).join("");
@@ -3162,6 +3163,7 @@
       }
       if (!confirm(`Delete user ${targetUser.displayName || username}?`)) return;
       saveUsers(users.filter(user => user.username !== username));
+      renderUserManagement();
       renderRoleManagement();
       showRoleMessage(`User deleted: ${targetUser.displayName || username}.`);
       logUserAction("user_deleted", {
@@ -4401,6 +4403,11 @@
       const toggleBtn = event.target.closest("[data-toggle-user]");
       if (toggleBtn) {
         await toggleUserActive(toggleBtn.dataset.toggleUser);
+        return;
+      }
+      const deleteBtn = event.target.closest("[data-delete-user]");
+      if (deleteBtn) {
+        deleteManagedUser(deleteBtn.dataset.deleteUser);
       }
     });
 
