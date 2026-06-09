@@ -1083,7 +1083,7 @@
         <button class="tab" data-view="executive">Executive Dashboard</button>
         <button class="tab" data-view="intake" data-master-only>Add Status</button>
         <button class="tab" data-view="reports" data-master-only>Source Reports</button>
-        <button class="tab" data-view="roles" data-role-manager-only>Manage Roles</button>
+        <button class="tab" data-view="roles" data-role-manager-only>Manage Users</button>
       </nav>
       <div class="profile-box">
         <span class="role-pill" id="profileRoleLabel">Not signed in</span>
@@ -1295,8 +1295,8 @@
       <section class="view" id="roles" data-role-manager-view>
         <div class="header">
           <div>
-            <h2>Manage Roles</h2>
-            <p class="muted">Assign access profiles for this dashboard. Changes are stored in this browser.</p>
+            <h2>Manage Users</h2>
+            <p class="muted">Create users, manage access profiles, activate accounts, and resend credentials.</p>
           </div>
         </div>
 
@@ -1334,8 +1334,12 @@
               <button class="btn primary" type="submit">Create User</button>
             </div>
           </form>
-          <h3>User Roles</h3>
-          <p class="muted small" style="margin-bottom:12px">Admin sees dashboards only. Role Manager sees dashboards and this page. Master admin can do everything.</p>
+          <div class="panel-title">
+            <div>
+              <h3>Created Users</h3>
+              <p class="muted small">Admin sees dashboards only. Role Manager sees dashboards and this page. Master admin can do everything.</p>
+            </div>
+          </div>
           <div class="report-list" id="roleUserList"></div>
           <div class="inline-message success" id="roleMessage" hidden></div>
         </div>
@@ -2556,8 +2560,27 @@
       return DEFAULT_USERS;
     }
 
+    function normalizeUsers(users) {
+      const seen = new Set();
+      return users
+        .filter(user => user?.username)
+        .map(user => ({
+          ...user,
+          username: cleanText(user.username).toLowerCase(),
+          displayName: cleanText(user.displayName) || cleanText(user.username).toLowerCase(),
+          role: ["admin", "roles", "master"].includes(user.role) ? user.role : "admin",
+          password: cleanText(user.password) || generateAccessCode(),
+          active: user.active !== false
+        }))
+        .filter(user => {
+          if (seen.has(user.username)) return false;
+          seen.add(user.username);
+          return true;
+        });
+    }
+
     function saveUsers(users) {
-      localStorage.setItem(USERS_KEY, JSON.stringify(users));
+      localStorage.setItem(USERS_KEY, JSON.stringify(normalizeUsers(users)));
     }
 
     function setSession(user) {
@@ -2660,7 +2683,8 @@
     function renderRoleManagement() {
       const target = document.getElementById("roleUserList");
       if (!target) return;
-      const users = loadUsers();
+      const users = normalizeUsers(loadUsers());
+      saveUsers(users);
       target.innerHTML = users.map(user => `
         <div class="report-card">
           <header>
@@ -2670,16 +2694,35 @@
             </div>
             <span class="chip ${user.active === false ? "gray" : "blue"}">${escapeHtml(ROLE_LABELS[user.role] || user.role)}</span>
           </header>
-          <label>Role
-            <select data-role-user="${escapeHtml(user.username)}">
-              <option value="admin" ${user.role === "admin" ? "selected" : ""}>Admin</option>
-              <option value="roles" ${user.role === "roles" ? "selected" : ""}>Role Manager</option>
-              <option value="master" ${user.role === "master" ? "selected" : ""}>Master admin</option>
-            </select>
-          </label>
+          <div class="form-grid">
+            <label>Name
+              <input data-user-field="displayName" data-user="${escapeHtml(user.username)}" value="${escapeHtml(user.displayName)}" />
+            </label>
+            <label>Username / email
+              <input data-user-field="username" data-user="${escapeHtml(user.username)}" value="${escapeHtml(user.username)}" />
+            </label>
+            <label>Access code
+              <input data-user-field="password" data-user="${escapeHtml(user.username)}" value="${escapeHtml(user.password)}" />
+            </label>
+            <label>Role
+              <select data-user-field="role" data-user="${escapeHtml(user.username)}">
+                <option value="admin" ${user.role === "admin" ? "selected" : ""}>Admin</option>
+                <option value="roles" ${user.role === "roles" ? "selected" : ""}>Role Manager</option>
+                <option value="master" ${user.role === "master" ? "selected" : ""}>Master admin</option>
+              </select>
+            </label>
+            <label>Status
+              <select data-user-field="active" data-user="${escapeHtml(user.username)}">
+                <option value="true" ${user.active !== false ? "selected" : ""}>Active</option>
+                <option value="false" ${user.active === false ? "selected" : ""}>Inactive</option>
+              </select>
+            </label>
+          </div>
           <div class="report-actions">
+            <button class="btn primary" type="button" data-save-user="${escapeHtml(user.username)}">Save User</button>
             <button class="btn" type="button" data-email-user="${escapeHtml(user.username)}">Email credentials</button>
             <button class="btn" type="button" data-toggle-user="${escapeHtml(user.username)}">${user.active === false ? "Activate" : "Deactivate"}</button>
+            <button class="btn danger" type="button" data-delete-user="${escapeHtml(user.username)}" ${user.username === currentUser?.username ? "disabled" : ""}>Delete User</button>
           </div>
         </div>
       `).join("");
@@ -2815,6 +2858,90 @@
       renderRoleManagement();
       showRoleMessage("Role updated.");
       logUserAction("role_updated", { username, role }, { target_type: "user_role", target_id: username });
+    }
+
+    function readUserCard(username) {
+      const fields = [...document.querySelectorAll("[data-user-field]")].filter(field => field.dataset.user === username);
+      const value = {};
+      fields.forEach(field => {
+        const key = field.dataset.userField;
+        if (!key) return;
+        value[key] = field.value;
+      });
+      return {
+        username: cleanText(value.username).toLowerCase(),
+        displayName: cleanText(value.displayName),
+        password: cleanText(value.password),
+        role: ["admin", "roles", "master"].includes(value.role) ? value.role : "admin",
+        active: value.active !== "false"
+      };
+    }
+
+    function hasAnotherActiveMaster(users, username) {
+      return users.some(user => user.username !== username && user.role === "master" && user.active !== false);
+    }
+
+    async function saveManagedUser(username) {
+      if (!requireRoleManager("manage users")) return;
+      const edited = readUserCard(username);
+      if (!edited.username || !edited.password) {
+        alert("Username/email and access code are required.");
+        return;
+      }
+      const users = loadUsers();
+      const existing = users.find(user => user.username === username);
+      if (!existing) return;
+      const duplicate = users.some(user => user.username !== username && user.username.toLowerCase() === edited.username);
+      if (duplicate) {
+        alert("This username/email already exists.");
+        return;
+      }
+      if (existing.role === "master" && (edited.role !== "master" || edited.active === false) && !hasAnotherActiveMaster(users, username)) {
+        alert("Keep at least one active Master admin.");
+        return;
+      }
+      const updatedUsers = users.map(user => user.username === username ? {
+        ...user,
+        ...edited,
+        displayName: edited.displayName || edited.username
+      } : user);
+      saveUsers(updatedUsers);
+      const updated = normalizeUsers(updatedUsers).find(user => user.username === edited.username);
+      if (currentUser?.username === username && updated) setSession(updated);
+      renderRoleManagement();
+      showRoleMessage(`User saved: ${updated?.displayName || edited.username}.`);
+      logUserAction("user_updated", {
+        username: edited.username,
+        previous_username: username,
+        role: edited.role,
+        active: edited.active
+      }, { target_type: "user", target_id: edited.username });
+      if (existing.active === false && updated?.active !== false) {
+        await sendCredentialEmail(updated);
+      }
+    }
+
+    function deleteManagedUser(username) {
+      if (!requireRoleManager("delete users")) return;
+      if (username === currentUser?.username) {
+        alert("You cannot delete the user currently signed in.");
+        return;
+      }
+      const users = loadUsers();
+      const targetUser = users.find(user => user.username === username);
+      if (!targetUser) return;
+      if (targetUser.role === "master" && !hasAnotherActiveMaster(users, username)) {
+        alert("Keep at least one active Master admin.");
+        return;
+      }
+      if (!confirm(`Delete user ${targetUser.displayName || username}?`)) return;
+      saveUsers(users.filter(user => user.username !== username));
+      renderRoleManagement();
+      showRoleMessage(`User deleted: ${targetUser.displayName || username}.`);
+      logUserAction("user_deleted", {
+        username,
+        role: targetUser.role
+      }, { target_type: "user", target_id: username });
     }
 
     function switchView(id) {
@@ -4021,18 +4148,17 @@
       logout();
     });
 
-    document.getElementById("roleUserList").addEventListener("change", event => {
-      const select = event.target.closest("[data-role-user]");
-      if (!select) return;
-      updateUserRole(select.dataset.roleUser, select.value);
-    });
-
     document.getElementById("createUserForm").addEventListener("submit", async event => {
       event.preventDefault();
       await createUserFromForm(event.currentTarget);
     });
 
     document.getElementById("roleUserList").addEventListener("click", async event => {
+      const saveBtn = event.target.closest("[data-save-user]");
+      if (saveBtn) {
+        await saveManagedUser(saveBtn.dataset.saveUser);
+        return;
+      }
       const emailBtn = event.target.closest("[data-email-user]");
       if (emailBtn) {
         const user = loadUsers().find(candidate => candidate.username === emailBtn.dataset.emailUser);
@@ -4042,6 +4168,11 @@
       const toggleBtn = event.target.closest("[data-toggle-user]");
       if (toggleBtn) {
         await toggleUserActive(toggleBtn.dataset.toggleUser);
+        return;
+      }
+      const deleteBtn = event.target.closest("[data-delete-user]");
+      if (deleteBtn) {
+        deleteManagedUser(deleteBtn.dataset.deleteUser);
       }
     });
 
