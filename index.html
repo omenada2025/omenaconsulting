@@ -1301,6 +1301,17 @@
         </div>
 
         <div class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>Existing Users</h3>
+              <p class="muted small" id="userDirectorySummary">View every user currently configured for this dashboard.</p>
+            </div>
+          </div>
+          <div class="report-list" id="roleUserList"></div>
+          <div class="inline-message success" id="roleMessage" hidden></div>
+        </div>
+
+        <div class="panel">
           <h3>Create User</h3>
           <form id="createUserForm" class="form-grid" style="margin-bottom:16px">
             <label>
@@ -1334,14 +1345,7 @@
               <button class="btn primary" type="submit">Create User</button>
             </div>
           </form>
-          <div class="panel-title">
-            <div>
-              <h3>Created Users</h3>
-              <p class="muted small">Admin sees dashboards only. Role Manager sees dashboards and this page. Master admin can do everything.</p>
-            </div>
-          </div>
-          <div class="report-list" id="roleUserList"></div>
-          <div class="inline-message success" id="roleMessage" hidden></div>
+          <p class="muted small">Admin sees dashboards only. Role Manager sees dashboards and this page. Master admin can do everything.</p>
         </div>
       </section>
 
@@ -2669,9 +2673,9 @@
       const profileHelp = document.getElementById("profileHelp");
       if (profileHelp) {
         profileHelp.textContent = isMasterAdmin()
-          ? "Master admin can view dashboards, manage roles, and manage reports."
+          ? "Master admin can view dashboards, manage users, and manage reports."
           : canManageRoles()
-            ? "Role Manager can view dashboards and manage roles."
+            ? "Role Manager can view dashboards and manage users."
             : "Admin can view Dashboard and Executive Dashboard only.";
       }
       renderRoleManagement();
@@ -2685,6 +2689,12 @@
       if (!target) return;
       const users = normalizeUsers(loadUsers());
       saveUsers(users);
+      const summary = document.getElementById("userDirectorySummary");
+      if (summary) {
+        const activeCount = users.filter(user => user.active !== false).length;
+        const inactiveCount = users.length - activeCount;
+        summary.textContent = `${users.length} users configured - ${activeCount} active, ${inactiveCount} inactive.`;
+      }
       target.innerHTML = users.map(user => `
         <div class="report-card">
           <header>
