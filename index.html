@@ -2843,6 +2843,7 @@
     }
 
     function credentialEmailEndpoint() {
+      if (config.emailFunctionUrl) return config.emailFunctionUrl;
       if (!hasSupabaseConfig || !config.url || !config.anonKey) return "";
       const functionName = config.emailFunction || "send-credentials";
       return `${config.url.replace(/\/$/, "")}/functions/v1/${functionName}`;
@@ -2858,12 +2859,13 @@
       }
 
       try {
+        const emailKey = config.emailFunctionAnonKey || config.anonKey;
         const response = await fetch(endpoint, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            apikey: config.anonKey,
-            Authorization: `Bearer ${config.anonKey}`
+            apikey: emailKey,
+            Authorization: `Bearer ${emailKey}`
           },
           body: JSON.stringify({
             to: user.username,
