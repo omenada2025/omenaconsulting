@@ -1083,6 +1083,7 @@
         <button class="tab" data-view="executive">Executive Dashboard</button>
         <button class="tab" data-view="intake" data-master-only>Add Status</button>
         <button class="tab" data-view="reports" data-master-only>Source Reports</button>
+        <button class="tab" data-view="users" data-role-manager-only>Users</button>
         <button class="tab" data-view="roles" data-role-manager-only>Manage Roles</button>
       </nav>
       <div class="profile-box">
@@ -1292,11 +1293,11 @@
         </div>
       </section>
 
-      <section class="view" id="roles" data-role-manager-view>
+      <section class="view" id="users" data-role-manager-view>
         <div class="header">
           <div>
-            <h2>Manage Roles</h2>
-            <p class="muted">Create users, activate or deactivate access, assign roles, and resend access codes.</p>
+            <h2>Users</h2>
+            <p class="muted">Create users, activate or deactivate access, and resend access codes.</p>
           </div>
         </div>
 
@@ -1307,8 +1308,8 @@
               <p class="muted small" id="userDirectorySummary">Every user currently configured for this dashboard appears here.</p>
             </div>
           </div>
-          <div class="report-list" id="roleUserList"></div>
-          <div class="inline-message success" id="roleMessage" hidden></div>
+          <div class="report-list" id="userList"></div>
+          <div class="inline-message success" id="userMessage" hidden></div>
         </div>
 
         <div class="panel">
@@ -1346,6 +1347,26 @@
             </div>
           </form>
           <p class="muted small">Admin sees dashboards only. Role Manager sees dashboards and this page. Master admin can do everything.</p>
+        </div>
+      </section>
+
+      <section class="view" id="roles" data-role-manager-view>
+        <div class="header">
+          <div>
+            <h2>Manage Roles</h2>
+            <p class="muted">Assign each existing user to Admin, Role Manager, or Master admin.</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>User Roles</h3>
+              <p class="muted small" id="roleDirectorySummary">Change roles here. User activation is managed on the Users page.</p>
+            </div>
+          </div>
+          <div class="report-list" id="roleUserList"></div>
+          <div class="inline-message success" id="roleMessage" hidden></div>
         </div>
       </section>
 
@@ -2635,7 +2656,7 @@
 
     function canAccessView(id) {
       if (isMasterAdmin()) return true;
-      if (canManageRoles()) return ["dashboard", "executive", "roles"].includes(id);
+      if (canManageRoles()) return ["dashboard", "executive", "users", "roles"].includes(id);
       return ["dashboard", "executive"].includes(id);
     }
 
@@ -2678,14 +2699,15 @@
             ? "Role Manager can view dashboards and manage users."
             : "Admin can view Dashboard and Executive Dashboard only.";
       }
+      renderUserManagement();
       renderRoleManagement();
       if (!canAccessView(getActiveView())) {
         switchView("dashboard");
       }
     }
 
-    function renderRoleManagement() {
-      const target = document.getElementById("roleUserList");
+    function renderUserManagement() {
+      const target = document.getElementById("userList");
       if (!target) return;
       const users = normalizeUsers(loadUsers());
       saveUsers(users);
@@ -2709,22 +2731,48 @@
             </div>
             <span class="chip ${user.active === false ? "gray" : "blue"}">${escapeHtml(ROLE_LABELS[user.role] || user.role)}</span>
           </header>
-          <div class="form-grid">
-            <label>Role
-              <select data-role-user="${escapeHtml(user.username)}">
-                <option value="admin" ${user.role === "admin" ? "selected" : ""}>Admin</option>
-                <option value="roles" ${user.role === "roles" ? "selected" : ""}>Role Manager</option>
-                <option value="master" ${user.role === "master" ? "selected" : ""}>Master admin</option>
-              </select>
-            </label>
-            <div>
-              <span class="chip ${user.active === false ? "gray" : "green"}">${user.active === false ? "Inactive" : "Active"}</span>
-            </div>
-          </div>
+          <p><span class="chip ${user.active === false ? "gray" : "green"}">${user.active === false ? "Inactive" : "Active"}</span></p>
           <div class="report-actions">
             <button class="btn" type="button" data-email-user="${escapeHtml(user.username)}">Resend code</button>
             <button class="btn" type="button" data-toggle-user="${escapeHtml(user.username)}">${user.active === false ? "Activate" : "Deactivate"}</button>
           </div>
+        </div>
+      `).join("");
+    }
+
+    function renderRoleManagement() {
+      const target = document.getElementById("roleUserList");
+      if (!target) return;
+      const users = normalizeUsers(loadUsers());
+      saveUsers(users);
+      const summary = document.getElementById("roleDirectorySummary");
+      if (summary) {
+        const roleCounts = users.reduce((counts, user) => {
+          counts[user.role] = (counts[user.role] || 0) + 1;
+          return counts;
+        }, {});
+        summary.textContent = `${roleCounts.admin || 0} Admin, ${roleCounts.roles || 0} Role Manager, ${roleCounts.master || 0} Master admin.`;
+      }
+      if (!users.length) {
+        target.innerHTML = `<div class="empty">No users available. Create users on the Users page first.</div>`;
+        return;
+      }
+      target.innerHTML = users.map(user => `
+        <div class="report-card user-card">
+          <header>
+            <div>
+              <strong>${escapeHtml(user.displayName)}</strong>
+              <p class="muted small">${escapeHtml(user.username)} - ${user.active === false ? "Inactive" : "Active"}</p>
+            </div>
+            <span class="chip ${user.active === false ? "gray" : "blue"}">${escapeHtml(ROLE_LABELS[user.role] || user.role)}</span>
+          </header>
+          <label>Role
+            <select data-role-user="${escapeHtml(user.username)}">
+              <option value="admin" ${user.role === "admin" ? "selected" : ""}>Admin</option>
+              <option value="roles" ${user.role === "roles" ? "selected" : ""}>Role Manager</option>
+              <option value="master" ${user.role === "master" ? "selected" : ""}>Master admin</option>
+            </select>
+          </label>
         </div>
       `).join("");
     }
@@ -2753,6 +2801,7 @@
       users.push(user);
       saveUsers(users);
       form.reset();
+      renderUserManagement();
       renderRoleManagement();
       showRoleMessage(`User created: ${user.displayName}.`);
       if (user.active) {
@@ -2762,11 +2811,13 @@
     }
 
     function showRoleMessage(text) {
-      const message = document.getElementById("roleMessage");
-      if (!message) return;
-      message.textContent = text;
-      message.hidden = false;
-      setTimeout(() => { message.hidden = true; }, 2400);
+      ["userMessage", "roleMessage"].forEach(id => {
+        const message = document.getElementById(id);
+        if (!message) return;
+        message.textContent = text;
+        message.hidden = false;
+        setTimeout(() => { message.hidden = true; }, 2400);
+      });
     }
 
     function credentialEmailUrl(user) {
@@ -2849,6 +2900,7 @@
       const users = currentUsers.map(user => user.username === username ? { ...user, active: user.active === false } : user);
       saveUsers(users);
       const updated = users.find(user => user.username === username);
+      renderUserManagement();
       renderRoleManagement();
       showRoleMessage(`${updated.displayName} is now ${updated.active === false ? "inactive" : "active"}.`);
       if (updated.active) {
@@ -2871,6 +2923,7 @@
       saveUsers(users);
       const updatedCurrent = users.find(user => user.username === currentUser?.username);
       if (updatedCurrent) setSession(updatedCurrent);
+      renderUserManagement();
       renderRoleManagement();
       showRoleMessage("Role updated.");
       logUserAction("role_updated", { username, role }, { target_type: "user_role", target_id: username });
@@ -4175,7 +4228,7 @@
       updateUserRole(select.dataset.roleUser, select.value);
     });
 
-    document.getElementById("roleUserList").addEventListener("click", async event => {
+    document.getElementById("userList").addEventListener("click", async event => {
       const emailBtn = event.target.closest("[data-email-user]");
       if (emailBtn) {
         const user = loadUsers().find(candidate => candidate.username === emailBtn.dataset.emailUser);
