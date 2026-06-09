@@ -2728,6 +2728,7 @@
               <strong>${escapeHtml(user.displayName)}</strong>
               <p class="muted small">${escapeHtml(user.username)}</p>
               <p class="muted small">Access code: ${escapeHtml(user.password)}</p>
+              <p class="muted small">${user.lastCredentialEmailAt ? `Last email sent: ${escapeHtml(formatDateTime(user.lastCredentialEmailAt))}` : "Credentials email not sent yet."}</p>
             </div>
             <span class="chip ${user.active === false ? "gray" : "blue"}">${escapeHtml(ROLE_LABELS[user.role] || user.role)}</span>
           </header>
@@ -2816,8 +2817,31 @@
         if (!message) return;
         message.textContent = text;
         message.hidden = false;
-        setTimeout(() => { message.hidden = true; }, 2400);
+        setTimeout(() => { message.hidden = true; }, 9000);
       });
+    }
+
+    function formatDateTime(value) {
+      if (!value) return "";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleString(undefined, {
+        month: "short",
+        day: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function markCredentialEmailSent(username, sentAt = new Date().toISOString()) {
+      const users = loadUsers().map(user => user.username === username ? {
+        ...user,
+        lastCredentialEmailAt: sentAt
+      } : user);
+      saveUsers(users);
+      renderUserManagement();
+      renderRoleManagement();
     }
 
     function credentialEmailUrl(user) {
@@ -2885,7 +2909,9 @@
           throw new Error(detail || `HTTP ${response.status}`);
         }
 
-        showRoleMessage(`Credentials email sent to ${user.username}.`);
+        const result = await response.json().catch(() => ({}));
+        markCredentialEmailSent(user.username, result.sent_at);
+        showRoleMessage(`Credentials email accepted by SendGrid for ${user.username}. Check Inbox, Spam, or SendGrid Activity.`);
       } catch (error) {
         console.warn("Credential email failed; opening fallback draft.", error);
         openCredentialEmail(user);

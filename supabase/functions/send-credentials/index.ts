@@ -129,7 +129,12 @@ Deno.serve(async (request) => {
       return jsonResponse({ error: "SendGrid rejected the email request", detail }, response.status);
     }
 
-    return jsonResponse({ ok: true });
+    return jsonResponse({
+      ok: true,
+      to: requiredPayload.to,
+      status: response.status,
+      sent_at: new Date().toISOString(),
+    });
   } catch (error) {
     return jsonResponse({ error: error instanceof Error ? error.message : "Unknown error" }, 500);
   }
