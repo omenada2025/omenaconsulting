@@ -1083,7 +1083,7 @@
         <button class="tab" data-view="executive">Executive Dashboard</button>
         <button class="tab" data-view="intake" data-master-only>Add Status</button>
         <button class="tab" data-view="reports" data-master-only>Source Reports</button>
-        <button class="tab" data-view="roles" data-role-manager-only>Manage Users</button>
+        <button class="tab" data-view="roles" data-role-manager-only>Manage Roles</button>
       </nav>
       <div class="profile-box">
         <span class="role-pill" id="profileRoleLabel">Not signed in</span>
@@ -1295,8 +1295,8 @@
       <section class="view" id="roles" data-role-manager-view>
         <div class="header">
           <div>
-            <h2>Manage Users</h2>
-            <p class="muted">Create users, manage access profiles, activate accounts, and resend credentials.</p>
+            <h2>Manage Roles</h2>
+            <p class="muted">Create users, activate or deactivate access, assign roles, and resend access codes.</p>
           </div>
         </div>
 
@@ -1304,7 +1304,7 @@
           <div class="panel-title">
             <div>
               <h3>Existing Users</h3>
-              <p class="muted small" id="userDirectorySummary">View every user currently configured for this dashboard.</p>
+              <p class="muted small" id="userDirectorySummary">Every user currently configured for this dashboard appears here.</p>
             </div>
           </div>
           <div class="report-list" id="roleUserList"></div>
@@ -2695,44 +2695,35 @@
         const inactiveCount = users.length - activeCount;
         summary.textContent = `${users.length} users configured - ${activeCount} active, ${inactiveCount} inactive.`;
       }
+      if (!users.length) {
+        target.innerHTML = `<div class="empty">No users have been created yet. Use the Create User form below to add the first user.</div>`;
+        return;
+      }
       target.innerHTML = users.map(user => `
-        <div class="report-card">
+        <div class="report-card user-card">
           <header>
             <div>
               <strong>${escapeHtml(user.displayName)}</strong>
-              <p class="muted small">${escapeHtml(user.username)} - ${user.active === false ? "Inactive" : "Active"}</p>
+              <p class="muted small">${escapeHtml(user.username)}</p>
+              <p class="muted small">Access code: ${escapeHtml(user.password)}</p>
             </div>
             <span class="chip ${user.active === false ? "gray" : "blue"}">${escapeHtml(ROLE_LABELS[user.role] || user.role)}</span>
           </header>
           <div class="form-grid">
-            <label>Name
-              <input data-user-field="displayName" data-user="${escapeHtml(user.username)}" value="${escapeHtml(user.displayName)}" />
-            </label>
-            <label>Username / email
-              <input data-user-field="username" data-user="${escapeHtml(user.username)}" value="${escapeHtml(user.username)}" />
-            </label>
-            <label>Access code
-              <input data-user-field="password" data-user="${escapeHtml(user.username)}" value="${escapeHtml(user.password)}" />
-            </label>
             <label>Role
-              <select data-user-field="role" data-user="${escapeHtml(user.username)}">
+              <select data-role-user="${escapeHtml(user.username)}">
                 <option value="admin" ${user.role === "admin" ? "selected" : ""}>Admin</option>
                 <option value="roles" ${user.role === "roles" ? "selected" : ""}>Role Manager</option>
                 <option value="master" ${user.role === "master" ? "selected" : ""}>Master admin</option>
               </select>
             </label>
-            <label>Status
-              <select data-user-field="active" data-user="${escapeHtml(user.username)}">
-                <option value="true" ${user.active !== false ? "selected" : ""}>Active</option>
-                <option value="false" ${user.active === false ? "selected" : ""}>Inactive</option>
-              </select>
-            </label>
+            <div>
+              <span class="chip ${user.active === false ? "gray" : "green"}">${user.active === false ? "Inactive" : "Active"}</span>
+            </div>
           </div>
           <div class="report-actions">
-            <button class="btn primary" type="button" data-save-user="${escapeHtml(user.username)}">Save User</button>
-            <button class="btn" type="button" data-email-user="${escapeHtml(user.username)}">Email credentials</button>
+            <button class="btn" type="button" data-email-user="${escapeHtml(user.username)}">Resend code</button>
             <button class="btn" type="button" data-toggle-user="${escapeHtml(user.username)}">${user.active === false ? "Activate" : "Deactivate"}</button>
-            <button class="btn danger" type="button" data-delete-user="${escapeHtml(user.username)}" ${user.username === currentUser?.username ? "disabled" : ""}>Delete User</button>
           </div>
         </div>
       `).join("");
@@ -2848,7 +2839,14 @@
 
     async function toggleUserActive(username) {
       if (!requireRoleManager("activate or deactivate users")) return;
-      const users = loadUsers().map(user => user.username === username ? { ...user, active: user.active === false } : user);
+      const currentUsers = loadUsers();
+      const targetUser = currentUsers.find(user => user.username === username);
+      if (!targetUser) return;
+      if (targetUser.role === "master" && targetUser.active !== false && !hasAnotherActiveMaster(currentUsers, username)) {
+        alert("Keep at least one active Master admin.");
+        return;
+      }
+      const users = currentUsers.map(user => user.username === username ? { ...user, active: user.active === false } : user);
       saveUsers(users);
       const updated = users.find(user => user.username === username);
       renderRoleManagement();
@@ -2861,7 +2859,15 @@
 
     function updateUserRole(username, role) {
       if (!requireRoleManager("manage roles")) return;
-      const users = loadUsers().map(user => user.username === username ? { ...user, role } : user);
+      const currentUsers = loadUsers();
+      const targetUser = currentUsers.find(user => user.username === username);
+      if (!targetUser) return;
+      if (targetUser.role === "master" && role !== "master" && !hasAnotherActiveMaster(currentUsers, username)) {
+        alert("Keep at least one active Master admin.");
+        renderRoleManagement();
+        return;
+      }
+      const users = currentUsers.map(user => user.username === username ? { ...user, role } : user);
       saveUsers(users);
       const updatedCurrent = users.find(user => user.username === currentUser?.username);
       if (updatedCurrent) setSession(updatedCurrent);
@@ -4163,12 +4169,13 @@
       await createUserFromForm(event.currentTarget);
     });
 
+    document.getElementById("roleUserList").addEventListener("change", event => {
+      const select = event.target.closest("[data-role-user]");
+      if (!select) return;
+      updateUserRole(select.dataset.roleUser, select.value);
+    });
+
     document.getElementById("roleUserList").addEventListener("click", async event => {
-      const saveBtn = event.target.closest("[data-save-user]");
-      if (saveBtn) {
-        await saveManagedUser(saveBtn.dataset.saveUser);
-        return;
-      }
       const emailBtn = event.target.closest("[data-email-user]");
       if (emailBtn) {
         const user = loadUsers().find(candidate => candidate.username === emailBtn.dataset.emailUser);
@@ -4178,11 +4185,6 @@
       const toggleBtn = event.target.closest("[data-toggle-user]");
       if (toggleBtn) {
         await toggleUserActive(toggleBtn.dataset.toggleUser);
-        return;
-      }
-      const deleteBtn = event.target.closest("[data-delete-user]");
-      if (deleteBtn) {
-        deleteManagedUser(deleteBtn.dataset.deleteUser);
       }
     });
 
