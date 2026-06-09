@@ -195,6 +195,12 @@
       border-color: #e8b6c5;
     }
 
+    .btn.soft {
+      background: var(--blue-soft);
+      color: var(--blue);
+      border-color: #cfe4f1;
+    }
+
     .header {
       display: flex;
       align-items: flex-start;
@@ -412,6 +418,26 @@
 
     .panel-title h3 {
       margin-bottom: 3px;
+    }
+
+    .guide-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .guide-card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      padding: 14px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .guide-card strong {
+      font-size: 14px;
     }
 
     .exec-metrics {
@@ -978,8 +1004,36 @@
     .report-actions {
       display: flex;
       justify-content: flex-end;
+      flex-wrap: wrap;
       gap: 8px;
       margin-top: 12px;
+    }
+
+    .user-card {
+      display: grid;
+      gap: 12px;
+    }
+
+    .user-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    .credential-box {
+      border: 1px dashed #cbd6df;
+      background: #f8fbfd;
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: grid;
+      gap: 4px;
+      font-size: 13px;
+    }
+
+    .role-card label {
+      margin-top: 8px;
     }
 
     .small {
@@ -1297,24 +1351,33 @@
         <div class="header">
           <div>
             <h2>Users</h2>
-            <p class="muted">Create users, activate or deactivate access, and resend access codes.</p>
+            <p class="muted">Create access, share credentials, and control who can sign in.</p>
+          </div>
+        </div>
+
+        <div class="guide-grid">
+          <div class="guide-card">
+            <strong>1. Create user</strong>
+            <p class="muted small">Add name, email, role, and active status.</p>
+          </div>
+          <div class="guide-card">
+            <strong>2. Share access</strong>
+            <p class="muted small">Email is attempted automatically. Use Copy invite if email lands in spam.</p>
+          </div>
+          <div class="guide-card">
+            <strong>3. Manage access</strong>
+            <p class="muted small">Activate or deactivate users without deleting their credentials.</p>
           </div>
         </div>
 
         <div class="panel">
           <div class="panel-title">
             <div>
-              <h3>Existing Users</h3>
-              <p class="muted small" id="userDirectorySummary">Every user currently configured for this dashboard appears here.</p>
+              <h3>Create User</h3>
+              <p class="muted small">Access code is generated automatically if left blank.</p>
             </div>
           </div>
-          <div class="report-list" id="userList"></div>
-          <div class="inline-message success" id="userMessage" hidden></div>
-        </div>
-
-        <div class="panel">
-          <h3>Create User</h3>
-          <form id="createUserForm" class="form-grid" style="margin-bottom:16px">
+          <form id="createUserForm" class="form-grid">
             <label>
               Name
               <input name="displayName" required placeholder="e.g., Sam" />
@@ -1324,11 +1387,11 @@
               <input name="username" required placeholder="name@company.com" />
             </label>
             <label>
-              Role
+              Initial role
               <select name="role">
-                <option value="admin">Admin</option>
-                <option value="roles">Role Manager</option>
-                <option value="master">Master admin</option>
+                <option value="admin">Admin - dashboard view only</option>
+                <option value="roles">Role Manager - users and roles</option>
+                <option value="master">Master admin - full access</option>
               </select>
             </label>
             <label>
@@ -1338,15 +1401,25 @@
             <label>
               Status
               <select name="active">
-                <option value="true">Active</option>
-                <option value="false">Inactive</option>
+                <option value="true">Active now</option>
+                <option value="false">Create inactive</option>
               </select>
             </label>
             <div style="display:flex; align-items:end">
-              <button class="btn primary" type="submit">Create User</button>
+              <button class="btn primary" type="submit">Create & Send Access</button>
             </div>
           </form>
-          <p class="muted small">Admin sees dashboards only. Role Manager sees dashboards and this page. Master admin can do everything.</p>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>Existing Users</h3>
+              <p class="muted small" id="userDirectorySummary">Review access status and share credentials.</p>
+            </div>
+          </div>
+          <div class="report-list" id="userList"></div>
+          <div class="inline-message success" id="userMessage" hidden></div>
         </div>
       </section>
 
@@ -1355,6 +1428,21 @@
           <div>
             <h2>Manage Roles</h2>
             <p class="muted">Assign each existing user to Admin, Role Manager, or Master admin.</p>
+          </div>
+        </div>
+
+        <div class="guide-grid">
+          <div class="guide-card">
+            <strong>Admin</strong>
+            <p class="muted small">Can view Dashboard and Executive Dashboard only.</p>
+          </div>
+          <div class="guide-card">
+            <strong>Role Manager</strong>
+            <p class="muted small">Can view dashboards, create users, and assign roles.</p>
+          </div>
+          <div class="guide-card">
+            <strong>Master admin</strong>
+            <p class="muted small">Can manage users, roles, reports, and status data.</p>
           </div>
         </div>
 
@@ -2727,15 +2815,21 @@
             <div>
               <strong>${escapeHtml(user.displayName)}</strong>
               <p class="muted small">${escapeHtml(user.username)}</p>
-              <p class="muted small">Access code: ${escapeHtml(user.password)}</p>
-              <p class="muted small">${user.lastCredentialEmailAt ? `Last email sent: ${escapeHtml(formatDateTime(user.lastCredentialEmailAt))}` : "Credentials email not sent yet."}</p>
+              <div class="user-meta">
+                <span class="chip ${user.active === false ? "gray" : "green"}">${user.active === false ? "Inactive" : "Active"}</span>
+                <span class="chip blue">${escapeHtml(ROLE_LABELS[user.role] || user.role)}</span>
+              </div>
             </div>
-            <span class="chip ${user.active === false ? "gray" : "blue"}">${escapeHtml(ROLE_LABELS[user.role] || user.role)}</span>
+            <span class="chip ${user.lastCredentialEmailAt ? "green" : "gray"}">${user.lastCredentialEmailAt ? "Invite sent" : "Invite pending"}</span>
           </header>
-          <p><span class="chip ${user.active === false ? "gray" : "green"}">${user.active === false ? "Inactive" : "Active"}</span></p>
+          <div class="credential-box">
+            <strong>Credential snapshot</strong>
+            <span>Access code: ${escapeHtml(user.password)}</span>
+            <span>${user.lastCredentialEmailAt ? `Last email accepted by SendGrid: ${escapeHtml(formatDateTime(user.lastCredentialEmailAt))}` : "Email has not been accepted by SendGrid yet."}</span>
+          </div>
           <div class="report-actions">
-            <button class="btn" type="button" data-email-user="${escapeHtml(user.username)}">Resend code</button>
-            <button class="btn" type="button" data-copy-invite="${escapeHtml(user.username)}">Copy invite</button>
+            <button class="btn primary" type="button" data-copy-invite="${escapeHtml(user.username)}">Copy invite</button>
+            <button class="btn soft" type="button" data-email-user="${escapeHtml(user.username)}">Resend email</button>
             <button class="btn" type="button" data-toggle-user="${escapeHtml(user.username)}">${user.active === false ? "Activate" : "Deactivate"}</button>
           </div>
         </div>
@@ -2760,7 +2854,7 @@
         return;
       }
       target.innerHTML = users.map(user => `
-        <div class="report-card user-card">
+        <div class="report-card user-card role-card">
           <header>
             <div>
               <strong>${escapeHtml(user.displayName)}</strong>
@@ -2770,9 +2864,9 @@
           </header>
           <label>Role
             <select data-role-user="${escapeHtml(user.username)}">
-              <option value="admin" ${user.role === "admin" ? "selected" : ""}>Admin</option>
-              <option value="roles" ${user.role === "roles" ? "selected" : ""}>Role Manager</option>
-              <option value="master" ${user.role === "master" ? "selected" : ""}>Master admin</option>
+              <option value="admin" ${user.role === "admin" ? "selected" : ""}>Admin - dashboards only</option>
+              <option value="roles" ${user.role === "roles" ? "selected" : ""}>Role Manager - users and roles</option>
+              <option value="master" ${user.role === "master" ? "selected" : ""}>Master admin - full access</option>
             </select>
           </label>
         </div>
@@ -2805,9 +2899,11 @@
       form.reset();
       renderUserManagement();
       renderRoleManagement();
-      showRoleMessage(`User created: ${user.displayName}.`);
+      showRoleMessage(`User created: ${user.displayName}. Sending access email now...`);
       if (user.active) {
         await sendCredentialEmail(user);
+      } else {
+        showRoleMessage(`User created inactive: ${user.displayName}. Activate when access should begin.`);
       }
       logUserAction("user_created", { username: user.username, role: user.role, active: user.active }, { target_type: "user", target_id: user.username });
     }
