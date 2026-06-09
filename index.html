@@ -2735,6 +2735,7 @@
           <p><span class="chip ${user.active === false ? "gray" : "green"}">${user.active === false ? "Inactive" : "Active"}</span></p>
           <div class="report-actions">
             <button class="btn" type="button" data-email-user="${escapeHtml(user.username)}">Resend code</button>
+            <button class="btn" type="button" data-copy-invite="${escapeHtml(user.username)}">Copy invite</button>
             <button class="btn" type="button" data-toggle-user="${escapeHtml(user.username)}">${user.active === false ? "Activate" : "Deactivate"}</button>
           </div>
         </div>
@@ -2864,6 +2865,34 @@
     function openCredentialEmail(user) {
       if (!user?.username) return;
       window.location.href = credentialEmailUrl(user);
+    }
+
+    function credentialInviteText(user) {
+      return [
+        `Hello ${user.displayName || user.username},`,
+        "",
+        "Your Product & UI/UX Pulse dashboard access has been created.",
+        "",
+        `Login: ${window.location.href.split("#")[0]}`,
+        `Username/email: ${user.username}`,
+        `Access code: ${user.password}`,
+        `Role: ${ROLE_LABELS[user.role] || user.role}`,
+        "",
+        "Please sign in and keep these credentials secure."
+      ].join("\n");
+    }
+
+    async function copyCredentialInvite(user) {
+      if (!user?.username) return;
+      const text = credentialInviteText(user);
+      try {
+        if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
+        await navigator.clipboard.writeText(text);
+        showRoleMessage(`Invite copied for ${user.username}. You can paste it in Teams, Gmail, or chat.`);
+      } catch (error) {
+        console.warn("Copy invite failed.", error);
+        window.prompt("Copy this invite:", text);
+      }
     }
 
     function credentialEmailEndpoint() {
@@ -4265,6 +4294,12 @@
       if (emailBtn) {
         const user = loadUsers().find(candidate => candidate.username === emailBtn.dataset.emailUser);
         await sendCredentialEmail(user);
+        return;
+      }
+      const copyBtn = event.target.closest("[data-copy-invite]");
+      if (copyBtn) {
+        const user = loadUsers().find(candidate => candidate.username === copyBtn.dataset.copyInvite);
+        await copyCredentialInvite(user);
         return;
       }
       const toggleBtn = event.target.closest("[data-toggle-user]");
