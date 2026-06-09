@@ -29,6 +29,20 @@ For local testing, create `supabase/.env` using `supabase/.env.example` as a tem
 supabase functions deploy send-credentials --project-ref qjxdfqtzcrsopprcmicr
 ```
 
+Or use the included helper script after setting the two required local environment variables:
+
+```powershell
+$env:SENDGRID_API_KEY="SG.your-sendgrid-api-key"
+$env:SENDGRID_FROM_EMAIL="verified-sender@yourdomain.com"
+.\scripts\deploy-sendgrid-supabase.ps1
+```
+
+Check whether the function is deployed:
+
+```powershell
+.\scripts\check-email-function.ps1
+```
+
 ## App Behavior
 
 When a Role Manager or Master Admin creates or activates a user, the app calls:
