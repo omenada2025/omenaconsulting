@@ -1067,7 +1067,6 @@
         <div class="inline-message danger" id="loginMessage" hidden></div>
         <button class="btn primary" type="submit">Sign in</button>
       </form>
-      <p class="muted small">Default demo access: admin/admin2026, roles/roles2026, master/master2026. Use Master admin or Role Manager to change user roles locally.</p>
     </div>
   </section>
   <div class="app">
@@ -1330,7 +1329,7 @@
               </label>
               <label>
                 Owner
-                <input name="owner" placeholder="e.g., Saurabh" />
+                <input name="owner" placeholder="e.g., Sam" />
               </label>
               <label>
                 Participants (optional)
@@ -1613,9 +1612,9 @@
         next: "Reconfirm priority and restart criteria."
       },
       {
-        id: crypto.randomUUID(), product: "TSentra", owner: "Swatti / Saurabh", week: "2026-05-26",
+        id: crypto.randomUUID(), product: "TSentra", owner: "Swatti / Sam", week: "2026-05-26",
         health: "amber", progress: 72, stage: "Design Review", priority: "High", impact: 2, time: 2,
-        summary: "TSentra is in testing. Most QA issues are fixed, design updates were reviewed with Saurabh, and an updated APK was shared with Saurabh, Anja, Ella, and Cita for feedback.",
+        summary: "TSentra is in testing. Most QA issues are fixed, design updates were reviewed with Sam, and an updated APK was shared with Sam, Anja, Ella, and Cita for feedback.",
         win: "Branding and logo are complete, and the updated APK is now in the stakeholder feedback loop with marketing, sales, and content included.",
         blocker: "Design updates still need to be discussed with developers on Friday before the flow can be fully closed.",
         next: "Review feedback, align with devs on Friday, and finalize remaining UI/UX updates."
@@ -1634,7 +1633,7 @@
         summary: "ZenaTMS is almost ready, with small changes remaining before review.",
         win: "The app is close to review-ready and targeted to be ready by Friday.",
         blocker: "Logo is not yet available, and dev ownership still needs to be confirmed.",
-        next: "Share with Saurabh, Daniela, and Sajjad for review, then work with the assigned dev team."
+        next: "Share with Sam, Daniela, and Sajjad for review, then work with the assigned dev team."
       },
       {
         id: crypto.randomUUID(), product: "ZenaWealth", owner: "Swatti", week: "2026-05-26",
@@ -1645,7 +1644,7 @@
         next: "Finish document summary and draft the first prompt/design direction tomorrow."
       },
       {
-        id: crypto.randomUUID(), product: "Unified Design System", owner: "Saurabh / Riya / Jocasta", week: "2026-05-26",
+        id: crypto.randomUUID(), product: "Unified Design System", owner: "Sam / Riya / Jocasta", week: "2026-05-26",
         health: "amber", progress: 66, stage: "Prototype", priority: "High", impact: 2, time: 2,
         summary: "The team is improving product consistency through a markdown-based design system and organizing the Figma design system into a more interactive structure.",
         win: "Testing a solid .md design-system file with Claude appears to work and could help make products look and feel more consistent.",
@@ -1875,8 +1874,8 @@
       "Pace+|Jocasta / Faran|2026-05-26": "UI/UX",
       "Provitrac|Faran / Jocasta|2026-05-26": "UI/UX",
       "Surveyor's System|Nadishani|2026-05-26": "Product Manager",
-      "TSentra|Swatti / Saurabh|2026-05-26": "UI/UX",
-      "Unified Design System|Saurabh / Riya / Jocasta|2026-05-26": "UI/UX",
+      "TSentra|Swatti / Sam|2026-05-26": "UI/UX",
+      "Unified Design System|Sam / Riya / Jocasta|2026-05-26": "UI/UX",
       "Worksware UI/UX Documentation|Riya / Deepa|2026-05-26": "UI/UX",
       "Zena Call Center AI|Nadishani|2026-05-26": "Product Manager",
       "ZenaTMS|Swatti|2026-05-26": "UI/UX",
@@ -1890,7 +1889,7 @@
       "Pace+|Faran|2026-06-01": "UI/UX",
       "Pace+|Jocasta|2026-06-01": "UI/UX",
       "PS Portals|Krishina|2026-06-01": "Product Manager",
-      "Tsentra|Saurabh|2026-06-01": "UI/UX",
+      "Tsentra|Sam|2026-06-01": "UI/UX",
       "WMS|Deepa|2026-06-01": "Product Manager",
       "WorkAware|Deepa|2026-06-01": "Product Manager",
       "Workaware UIUX|Riya|2026-06-01": "UI/UX",
@@ -2055,7 +2054,7 @@
 
     function inferRole(report) {
       const text = `${report.owner || ""} ${report.participants || ""} ${report.product || ""} ${report.feature_workstream || ""} ${report.stage || ""}`.toLowerCase();
-      const uiuxOwners = ["saurabh", "riya", "jocasta"];
+      const uiuxOwners = ["sam", "riya", "jocasta"];
       const uiuxTerms = ["ui/ux", "uiux", "design", "figma", "wireframe", "prototype", "visual"];
       return uiuxOwners.some(name => text.includes(name)) || uiuxTerms.some(term => text.includes(term))
         ? "UI/UX"
