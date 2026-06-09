@@ -26,22 +26,34 @@ function Require-Env($Name) {
   return $value
 }
 
+function Invoke-CheckedCommand {
+  param(
+    [Parameter(Mandatory = $true)][string]$FilePath,
+    [Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments
+  )
+
+  & $FilePath @Arguments
+  if ($LASTEXITCODE -ne 0) {
+    throw "Command failed with exit code ${LASTEXITCODE}: $FilePath $($Arguments -join ' ')"
+  }
+}
+
 $supabase = Require-Command "supabase"
 
 $sendgridKey = Require-Env "SENDGRID_API_KEY"
 $fromEmail = Require-Env "SENDGRID_FROM_EMAIL"
 
 Write-Host "Linking Supabase project $ProjectRef..."
-& $supabase link --project-ref $ProjectRef
+Invoke-CheckedCommand $supabase link --project-ref $ProjectRef
 
 Write-Host "Setting SendGrid secrets..."
-& $supabase secrets set "SENDGRID_API_KEY=$sendgridKey"
-& $supabase secrets set "SENDGRID_FROM_EMAIL=$fromEmail"
-& $supabase secrets set "SENDGRID_FROM_NAME=$FromName"
-& $supabase secrets set "SENDGRID_ALLOWED_ORIGIN=$AllowedOrigin"
+Invoke-CheckedCommand $supabase secrets set "SENDGRID_API_KEY=$sendgridKey"
+Invoke-CheckedCommand $supabase secrets set "SENDGRID_FROM_EMAIL=$fromEmail"
+Invoke-CheckedCommand $supabase secrets set "SENDGRID_FROM_NAME=$FromName"
+Invoke-CheckedCommand $supabase secrets set "SENDGRID_ALLOWED_ORIGIN=$AllowedOrigin"
 
 Write-Host "Deploying send-credentials Edge Function..."
-& $supabase functions deploy send-credentials --project-ref $ProjectRef
+Invoke-CheckedCommand $supabase functions deploy send-credentials --project-ref $ProjectRef
 
 Write-Host "Checking deployed endpoint..."
 $endpoint = "https://$ProjectRef.supabase.co/functions/v1/send-credentials"
