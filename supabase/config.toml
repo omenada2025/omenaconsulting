@@ -1,0 +1,4 @@
+project_id = "qjxdfqtzcrsopprcmicr"
+
+[functions.send-credentials]
+verify_jwt = true

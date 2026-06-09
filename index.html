@@ -2689,7 +2689,7 @@
       return `PU-${Math.random().toString(36).slice(2, 6).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
     }
 
-    function createUserFromForm(form) {
+    async function createUserFromForm(form) {
       if (!requireRoleManager("create users")) return;
       const data = Object.fromEntries(new FormData(form).entries());
       const username = cleanText(data.username).toLowerCase();
@@ -2710,9 +2710,9 @@
       saveUsers(users);
       form.reset();
       renderRoleManagement();
-      showRoleMessage(`User created: ${user.displayName}. Use Email credentials to send the invite.`);
+      showRoleMessage(`User created: ${user.displayName}.`);
       if (user.active) {
-        openCredentialEmail(user);
+        await sendCredentialEmail(user);
       }
       logUserAction("user_created", { username: user.username, role: user.role, active: user.active }, { target_type: "user", target_id: user.username });
     }
@@ -2747,7 +2747,53 @@
       window.location.href = credentialEmailUrl(user);
     }
 
-    function toggleUserActive(username) {
+    function credentialEmailEndpoint() {
+      if (!hasSupabaseConfig || !config.url || !config.anonKey) return "";
+      const functionName = config.emailFunction || "send-credentials";
+      return `${config.url.replace(/\/$/, "")}/functions/v1/${functionName}`;
+    }
+
+    async function sendCredentialEmail(user) {
+      if (!user?.username) return;
+      const endpoint = credentialEmailEndpoint();
+      if (!endpoint) {
+        openCredentialEmail(user);
+        showRoleMessage("Email function is not configured. Opened an email draft instead.");
+        return;
+      }
+
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: config.anonKey,
+            Authorization: `Bearer ${config.anonKey}`
+          },
+          body: JSON.stringify({
+            to: user.username,
+            displayName: user.displayName || user.username,
+            username: user.username,
+            password: user.password,
+            role: ROLE_LABELS[user.role] || user.role,
+            loginUrl: window.location.href.split("#")[0]
+          })
+        });
+
+        if (!response.ok) {
+          const detail = await response.text();
+          throw new Error(detail || `HTTP ${response.status}`);
+        }
+
+        showRoleMessage(`Credentials email sent to ${user.username}.`);
+      } catch (error) {
+        console.warn("Credential email failed; opening fallback draft.", error);
+        openCredentialEmail(user);
+        showRoleMessage("Automatic email failed. Opened an email draft instead.");
+      }
+    }
+
+    async function toggleUserActive(username) {
       if (!requireRoleManager("activate or deactivate users")) return;
       const users = loadUsers().map(user => user.username === username ? { ...user, active: user.active === false } : user);
       saveUsers(users);
@@ -2755,7 +2801,7 @@
       renderRoleManagement();
       showRoleMessage(`${updated.displayName} is now ${updated.active === false ? "inactive" : "active"}.`);
       if (updated.active) {
-        openCredentialEmail(updated);
+        await sendCredentialEmail(updated);
       }
       logUserAction("user_activation_changed", { username, active: updated.active }, { target_type: "user", target_id: username });
     }
@@ -3981,21 +4027,21 @@
       updateUserRole(select.dataset.roleUser, select.value);
     });
 
-    document.getElementById("createUserForm").addEventListener("submit", event => {
+    document.getElementById("createUserForm").addEventListener("submit", async event => {
       event.preventDefault();
-      createUserFromForm(event.currentTarget);
+      await createUserFromForm(event.currentTarget);
     });
 
-    document.getElementById("roleUserList").addEventListener("click", event => {
+    document.getElementById("roleUserList").addEventListener("click", async event => {
       const emailBtn = event.target.closest("[data-email-user]");
       if (emailBtn) {
         const user = loadUsers().find(candidate => candidate.username === emailBtn.dataset.emailUser);
-        openCredentialEmail(user);
+        await sendCredentialEmail(user);
         return;
       }
       const toggleBtn = event.target.closest("[data-toggle-user]");
       if (toggleBtn) {
-        toggleUserActive(toggleBtn.dataset.toggleUser);
+        await toggleUserActive(toggleBtn.dataset.toggleUser);
       }
     });
 

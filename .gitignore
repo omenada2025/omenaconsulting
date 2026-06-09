@@ -1,0 +1,4 @@
+server-*.log
+server-*.err.log
+supabase/.env
+supabase/.env.local
