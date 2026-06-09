@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <meta name="dashboard-build" content="2026-06-04-no-reload-button" />
+  <meta name="dashboard-build" content="2026-06-09-ui-ux-refresh" />
   <title>Product & UI/UX Pulse Dashboard</title>
   <style>
     :root {
@@ -24,7 +24,10 @@
       --red-soft: #f8e5eb;
       --blue: #4e7896;
       --blue-soft: #e5eff4;
+      --purple: #6656a8;
+      --purple-soft: #eeeafa;
       --shadow: 0 14px 35px rgba(31, 42, 51, 0.1);
+      --shadow-soft: 0 8px 24px rgba(31, 42, 51, 0.07);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
@@ -84,7 +87,11 @@
       backdrop-filter: blur(12px);
     }
 
-    main { padding: 28px; }
+    main {
+      padding: 28px;
+      max-width: 1720px;
+      width: 100%;
+    }
 
     .brand {
       display: flex;
@@ -112,9 +119,34 @@
 
     .muted { color: var(--muted); }
 
+    .page-kicker {
+      display: inline-flex;
+      width: max-content;
+      margin-bottom: 8px;
+      border-radius: 999px;
+      background: var(--purple-soft);
+      color: var(--purple);
+      padding: 5px 9px;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
     .tabs {
       display: grid;
-      gap: 8px;
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+
+    .nav-section {
+      margin: 16px 0 6px;
+      padding: 0 12px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
     }
 
     .profile-box {
@@ -146,13 +178,18 @@
       border: 1px solid transparent;
       background: transparent;
       color: var(--ink);
-      border-radius: 8px;
+      border-radius: 10px;
       padding: 11px 12px;
       text-align: left;
       cursor: pointer;
       display: flex;
       gap: 10px;
       align-items: center;
+      font-weight: 650;
+    }
+
+    .tab:hover {
+      background: rgba(23, 33, 43, 0.06);
     }
 
     .tab.active {
@@ -174,7 +211,7 @@
       border: 1px solid var(--line);
       background: #fff;
       color: var(--ink);
-      border-radius: 8px;
+      border-radius: 10px;
       padding: 10px 12px;
       cursor: pointer;
       display: inline-flex;
@@ -182,6 +219,14 @@
       justify-content: center;
       gap: 8px;
       min-height: 40px;
+      font-weight: 750;
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }
+
+    .btn:hover {
+      border-color: #b9c7d1;
+      box-shadow: var(--shadow-soft);
+      transform: translateY(-1px);
     }
 
     .btn.primary {
@@ -207,6 +252,17 @@
       justify-content: space-between;
       gap: 16px;
       margin-bottom: 22px;
+      padding: 18px;
+      border: 1px solid rgba(216, 224, 229, .75);
+      border-radius: 18px;
+      background: rgba(255,255,255,.78);
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(10px);
+    }
+
+    .header .muted {
+      max-width: 82ch;
+      line-height: 1.45;
     }
 
     .view { display: none; }
@@ -228,6 +284,10 @@
       grid-template-columns: repeat(5, minmax(150px, 1fr));
       gap: 12px;
       margin-bottom: 16px;
+      position: sticky;
+      top: 12px;
+      z-index: 10;
+      box-shadow: var(--shadow-soft);
     }
 
     .filter-bar label {
@@ -434,7 +494,12 @@
       padding: 14px;
       display: grid;
       gap: 6px;
+      box-shadow: var(--shadow-soft);
     }
+
+    .guide-card.theme-blue { border-color: #cfe4f1; background: linear-gradient(180deg, #fff, var(--blue-soft)); }
+    .guide-card.theme-green { border-color: #c8e4d4; background: linear-gradient(180deg, #fff, var(--green-soft)); }
+    .guide-card.theme-amber { border-color: #f4d895; background: linear-gradient(180deg, #fff, var(--amber-soft)); }
 
     .guide-card strong {
       font-size: 14px;
@@ -566,7 +631,7 @@
     .panel {
       background: rgba(255, 255, 255, 0.9);
       border: 1px solid var(--line);
-      border-radius: 8px;
+      border-radius: 16px;
       box-shadow: var(--shadow);
       padding: 18px;
     }
@@ -705,7 +770,7 @@
       align-items: center;
       padding: 12px;
       border: 1px solid var(--line);
-      border-radius: 8px;
+      border-radius: 12px;
       background: #fff;
     }
 
@@ -808,11 +873,16 @@
     input, select, textarea {
       width: 100%;
       border: 1px solid var(--line);
-      border-radius: 8px;
+      border-radius: 10px;
       background: #fff;
       color: var(--ink);
       padding: 10px 11px;
       outline: none;
+    }
+
+    input:focus, select:focus, textarea:focus, .week-picker-btn:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(78, 120, 150, .15);
     }
 
     textarea {
@@ -824,6 +894,35 @@
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
+    }
+
+    .form-section {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #f8fbfc;
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .form-section-title {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .form-section-title h3 {
+      margin-bottom: 3px;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      align-items: center;
     }
 
     .full { grid-column: 1 / -1; }
@@ -858,9 +957,10 @@
 
     .report-card {
       border: 1px solid var(--line);
-      border-radius: 8px;
+      border-radius: 14px;
       background: #fff;
       padding: 14px;
+      box-shadow: 0 8px 18px rgba(31, 42, 51, 0.04);
     }
 
     .report-card.interactive {
@@ -1084,11 +1184,18 @@
 
     .empty {
       border: 1px dashed var(--line);
-      border-radius: 8px;
+      border-radius: 14px;
       padding: 30px;
       text-align: center;
       color: var(--muted);
       background: rgba(255,255,255,.72);
+    }
+
+    .empty strong {
+      display: block;
+      color: var(--ink);
+      font-size: 15px;
+      margin-bottom: 5px;
     }
 
     @media (max-width: 980px) {
@@ -1133,10 +1240,13 @@
         </div>
       </div>
       <nav class="tabs" aria-label="Primary">
+        <div class="nav-section">Review</div>
         <button class="tab active" data-view="dashboard">Dashboard</button>
         <button class="tab" data-view="executive">Executive Dashboard</button>
-        <button class="tab" data-view="intake" data-master-only>Add Status</button>
         <button class="tab" data-view="reports" data-master-only>Source Reports</button>
+        <div class="nav-section" data-master-only>Update</div>
+        <button class="tab" data-view="intake" data-master-only>Add Status</button>
+        <div class="nav-section" data-role-manager-only>Access</div>
         <button class="tab" data-view="users" data-role-manager-only>Users</button>
         <button class="tab" data-view="roles" data-role-manager-only>Manage Roles</button>
       </nav>
@@ -1152,10 +1262,26 @@
       <section class="view active" id="dashboard">
         <div class="header">
           <div>
+            <span class="page-kicker">Portfolio command center</span>
             <h2>Product & UI/UX Dashboard</h2>
-            <p class="muted" id="dashboardSubtitle">Use filters to review products, then click workstream cards for wins, blockers, and next actions.</p>
+            <p class="muted" id="dashboardSubtitle">Review the active product portfolio, filter by week, product type, owner, role, and health, then click workstream cards to open wins, blockers, and next actions in context.</p>
           </div>
           <button class="btn primary" data-jump="intake" data-master-only>Add Product Status</button>
+        </div>
+
+        <div class="guide-grid">
+          <div class="guide-card theme-blue">
+            <strong>1. Filter the portfolio</strong>
+            <p class="muted small">Reporting week uses Monday to Friday when Monday is selected.</p>
+          </div>
+          <div class="guide-card theme-green">
+            <strong>2. Review health</strong>
+            <p class="muted small">Cards summarize products, workstreams, risks, dates, and progress.</p>
+          </div>
+          <div class="guide-card theme-amber">
+            <strong>3. Open details</strong>
+            <p class="muted small">Click a workstream to see Wins, Blockers, and Next Action directly below it.</p>
+          </div>
         </div>
 
         <div class="panel filter-bar">
@@ -1247,10 +1373,26 @@
       <section class="view executive-stage" id="executive">
         <div class="header">
           <div>
+            <span class="page-kicker">Leadership view</span>
             <h2>Executive Dashboard</h2>
-            <p class="muted" id="executiveSubtitle">Executive view of product health, risky workstreams, owners, and next actions.</p>
+            <p class="muted" id="executiveSubtitle">A focused view for portfolio health, risky workstreams, owner follow-up, delivery dates, and the next actions that need leadership attention.</p>
           </div>
           <button class="btn primary" data-jump="reports" data-master-only>Review Source Reports</button>
+        </div>
+
+        <div class="guide-grid">
+          <div class="guide-card theme-blue">
+            <strong>Health first</strong>
+            <p class="muted small">Start with the Workstream Health Summary to focus the portfolio list.</p>
+          </div>
+          <div class="guide-card theme-amber">
+            <strong>Attention list</strong>
+            <p class="muted small">Critical, delayed, and high-impact items are promoted for quick review.</p>
+          </div>
+          <div class="guide-card theme-green">
+            <strong>Decision ready</strong>
+            <p class="muted small">Next Actions and Owner Performance are prepared for follow-up meetings.</p>
+          </div>
         </div>
 
         <div class="panel filter-bar">
@@ -1311,7 +1453,7 @@
               </div>
             </div>
             <div class="executive-health-projects" id="executiveHealthProjects">
-              <div class="empty">Select a delivery health status to show matching workstreams.</div>
+              <div class="empty"><strong>Select a status</strong>Select a delivery health status to show matching workstreams.</div>
             </div>
           </div>
           <div class="panel">
@@ -1350,6 +1492,7 @@
       <section class="view" id="users" data-role-manager-view>
         <div class="header">
           <div>
+            <span class="page-kicker">Access management</span>
             <h2>Users</h2>
             <p class="muted">Create access, share credentials, and control who can sign in.</p>
           </div>
@@ -1426,6 +1569,7 @@
       <section class="view" id="roles" data-role-manager-view>
         <div class="header">
           <div>
+            <span class="page-kicker">Permissions</span>
             <h2>Manage Roles</h2>
             <p class="muted">Assign each existing user to Admin, Role Manager, or Master admin.</p>
           </div>
@@ -1461,135 +1605,179 @@
       <section class="view" id="intake" data-master-view>
         <div class="header">
           <div>
+            <span class="page-kicker">Weekly intake</span>
             <h2>Add Product or UI/UX Status Report</h2>
-            <p class="muted">Capture one product, delivery, or design update. The dashboard recalculates automatically.</p>
+            <p class="muted">Capture one feature or workstream update for a product. After saving, dashboards, report history, date alerts, and exports update automatically.</p>
+          </div>
+        </div>
+
+        <div class="guide-grid">
+          <div class="guide-card theme-blue">
+            <strong>Product + workstream</strong>
+            <p class="muted small">Choose the product first, then describe the feature or workstream being reported.</p>
+          </div>
+          <div class="guide-card theme-green">
+            <strong>Week behavior</strong>
+            <p class="muted small">Selecting Monday represents the full Monday-Friday reporting week.</p>
+          </div>
+          <div class="guide-card theme-amber">
+            <strong>Actionable update</strong>
+            <p class="muted small">Wins, blockers, and next action make the dashboard useful for decisions.</p>
           </div>
         </div>
 
         <div class="panel">
           <form id="statusForm">
-            <div class="form-grid">
-              <label>
-                Product
-                <select name="product" required></select>
-              </label>
-              <label>
-                Feature / workstream
-                <input name="feature_workstream" required placeholder="e.g., Onboarding flow" />
-              </label>
-              <label>
-                Owner
-                <input name="owner" placeholder="e.g., Sam" />
-              </label>
-              <label>
-                Participants (optional)
-                <input name="participants" placeholder="e.g., PM, designer, developer" />
-              </label>
-              <label>
-                Type of product
-                <select name="product_type">
-                  <option>Legacy</option>
-                  <option>New product</option>
-                </select>
-              </label>
-              <label>
-                Role
-                <select name="role">
-                  <option>Product Manager</option>
-                  <option>UI/UX</option>
-                </select>
-              </label>
-              <label class="week-field">
-                Reporting week
-                <button class="week-picker-btn" id="statusWeekFilter" type="button" aria-haspopup="dialog" aria-expanded="false"></button>
-                <input name="week" type="hidden" required />
-                <div class="week-picker" id="statusWeekPicker" hidden></div>
-              </label>
-              <label>
-                Start date
-                <input name="start_date" type="date" />
-              </label>
-              <label>
-                End date
-                <input name="due_date" type="date" />
-              </label>
-              <label>
-                Health
-                <select name="health">
-                  <option value="green">On Track</option>
-                  <option value="amber">In Progress</option>
-                  <option value="red">At Risk</option>
-                  <option value="gray">Paused</option>
-                </select>
-              </label>
-              <label>
-                Progress
-                <input name="progress" type="number" min="0" max="100" value="60" />
-              </label>
-              <label>
-                Stage
-                <select name="stage">
-                  <option>Discovery</option>
-                  <option>Work in Progress</option>
-                  <option>Research</option>
-                  <option>Documentation</option>
-                  <option>Demo</option>
-                  <option>Testing</option>
-                  <option>QA</option>
-                  <option>Environment</option>
-                  <option>Wireframes</option>
-                  <option>Visual Design</option>
-                  <option>Prototype</option>
-                  <option>Design Review</option>
-                  <option>Dev Handoff</option>
-                  <option>QA Review</option>
-                  <option>Release</option>
-                  <option>Paused</option>
-                  <option>Completed</option>
-                </select>
-              </label>
-              <label class="full">
-                Summary
-                <textarea name="summary" required placeholder="What changed this week?"></textarea>
-              </label>
-              <label>
-                Win
-                <textarea name="win" placeholder="What progress should leadership notice?"></textarea>
-              </label>
-              <label>
-                Blocker or risk
-                <textarea name="blocker" placeholder="What is blocking delivery, design, review, feedback, or handoff?"></textarea>
-              </label>
-              <label>
-                Next action
-                <textarea name="next" placeholder="What is the next delivery, design, review, or handoff step?"></textarea>
-              </label>
-              <label>
-                Risk impact
-                <select name="impact">
-                  <option value="1">Low</option>
-                  <option value="2">Medium</option>
-                  <option value="3">High</option>
-                </select>
-              </label>
-              <label>
-                Time to solve
-                <select name="time">
-                  <option value="1">Short</option>
-                  <option value="2">Medium</option>
-                  <option value="3">Long</option>
-                </select>
-              </label>
-              <label>
-                Priority
-                <select name="priority">
-                  <option>Normal</option>
-                  <option>High</option>
-                  <option>Critical</option>
-                </select>
-              </label>
+            <div class="form-section">
+              <div class="form-section-title">
+                <div>
+                  <h3>1. Product context</h3>
+                  <p class="muted small">Define what is being reported and who owns the follow-up.</p>
+                </div>
+              </div>
+              <div class="form-grid">
+                <label>
+                  Product
+                  <select name="product" required></select>
+                </label>
+                <label>
+                  Feature / workstream
+                  <input name="feature_workstream" required placeholder="e.g., Onboarding flow" />
+                </label>
+                <label>
+                  Owner
+                  <input name="owner" placeholder="e.g., Sam" />
+                </label>
+                <label>
+                  Participants (optional)
+                  <input name="participants" placeholder="e.g., PM, designer, developer" />
+                </label>
+                <label>
+                  Type of product
+                  <select name="product_type">
+                    <option>Legacy</option>
+                    <option>New product</option>
+                  </select>
+                </label>
+                <label>
+                  Role
+                  <select name="role">
+                    <option>Product Manager</option>
+                    <option>UI/UX</option>
+                  </select>
+                </label>
+              </div>
             </div>
-            <div style="display:flex; gap:10px; justify-content:flex-end">
+            <div class="form-section">
+              <div class="form-section-title">
+                <div>
+                  <h3>2. Timing and delivery health</h3>
+                  <p class="muted small">Use end date to power delayed, due soon, and postponed alerts.</p>
+                </div>
+              </div>
+              <div class="form-grid">
+                <label class="week-field">
+                  Reporting week
+                  <button class="week-picker-btn" id="statusWeekFilter" type="button" aria-haspopup="dialog" aria-expanded="false"></button>
+                  <input name="week" type="hidden" required />
+                  <div class="week-picker" id="statusWeekPicker" hidden></div>
+                </label>
+                <label>
+                  Start date
+                  <input name="start_date" type="date" />
+                </label>
+                <label>
+                  End date
+                  <input name="due_date" type="date" />
+                </label>
+                <label>
+                  Health
+                  <select name="health">
+                    <option value="green">On Track</option>
+                    <option value="amber">In Progress</option>
+                    <option value="red">At Risk</option>
+                    <option value="gray">Paused</option>
+                  </select>
+                </label>
+                <label>
+                  Progress
+                  <input name="progress" type="number" min="0" max="100" value="60" />
+                </label>
+                <label>
+                  Stage
+                  <select name="stage">
+                    <option>Discovery</option>
+                    <option>Work in Progress</option>
+                    <option>Research</option>
+                    <option>Documentation</option>
+                    <option>Demo</option>
+                    <option>Testing</option>
+                    <option>QA</option>
+                    <option>Environment</option>
+                    <option>Wireframes</option>
+                    <option>Visual Design</option>
+                    <option>Prototype</option>
+                    <option>Design Review</option>
+                    <option>Dev Handoff</option>
+                    <option>QA Review</option>
+                    <option>Release</option>
+                    <option>Paused</option>
+                    <option>Completed</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+            <div class="form-section">
+              <div class="form-section-title">
+                <div>
+                  <h3>3. Narrative and decision signals</h3>
+                  <p class="muted small">Write the update in a way a leader can understand without extra context.</p>
+                </div>
+              </div>
+              <div class="form-grid">
+                <label class="full">
+                  Summary
+                  <textarea name="summary" required placeholder="What changed this week?"></textarea>
+                </label>
+                <label>
+                  Win
+                  <textarea name="win" placeholder="What progress should leadership notice?"></textarea>
+                </label>
+                <label>
+                  Blocker or risk
+                  <textarea name="blocker" placeholder="What is blocking delivery, design, review, feedback, or handoff?"></textarea>
+                </label>
+                <label>
+                  Next action
+                  <textarea name="next" placeholder="What is the next delivery, design, review, or handoff step?"></textarea>
+                </label>
+                <label>
+                  Risk impact
+                  <select name="impact">
+                    <option value="1">Low</option>
+                    <option value="2">Medium</option>
+                    <option value="3">High</option>
+                  </select>
+                </label>
+                <label>
+                  Time to solve
+                  <select name="time">
+                    <option value="1">Short</option>
+                    <option value="2">Medium</option>
+                    <option value="3">Long</option>
+                  </select>
+                </label>
+                <label>
+                  Priority
+                  <select name="priority">
+                    <option>Normal</option>
+                    <option>High</option>
+                    <option>Critical</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+            <div class="form-actions">
               <button class="btn" type="reset">Clear</button>
               <button class="btn primary" type="submit" id="saveReportBtn">Save Report</button>
             </div>
@@ -1600,10 +1788,25 @@
       <section class="view" id="reports" data-master-view>
         <div class="header">
           <div>
+            <span class="page-kicker">Source of truth</span>
             <h2>Source Status Reports</h2>
-            <p class="muted">Browse transformed product and UI/UX updates.</p>
+            <p class="muted">Review, edit, export, and audit every submitted product or UI/UX update. Select a card to open full details, save changes, or view history.</p>
           </div>
           <button class="btn primary" data-jump="dashboard">Back to Dashboard</button>
+        </div>
+        <div class="guide-grid">
+          <div class="guide-card theme-blue">
+            <strong>Filter first</strong>
+            <p class="muted small">Use owner, type, week, health, and role to narrow the working list.</p>
+          </div>
+          <div class="guide-card theme-green">
+            <strong>Edit safely</strong>
+            <p class="muted small">Changes update the selected report instead of creating duplicate cards.</p>
+          </div>
+          <div class="guide-card theme-amber">
+            <strong>Audit history</strong>
+            <p class="muted small">Use History to see saved changes by date and field.</p>
+          </div>
         </div>
         <div class="grid two-col">
           <div class="panel">
@@ -1654,7 +1857,7 @@
             <div class="report-list" id="reportList"></div>
           </div>
           <div class="panel" id="reportDetail">
-            <div class="empty">Click a submitted report card to view all details and enable Save Changes.</div>
+            <div class="empty"><strong>Select a report</strong>Click a submitted report card to view all details and enable Save Changes.</div>
           </div>
         </div>
       </section>
@@ -2806,7 +3009,7 @@
         summary.textContent = `${users.length} users configured - ${activeCount} active, ${inactiveCount} inactive.`;
       }
       if (!users.length) {
-        target.innerHTML = `<div class="empty">No users have been created yet. Use the Create User form below to add the first user.</div>`;
+        target.innerHTML = `<div class="empty"><strong>No users yet</strong>Use the Create User form above to add the first user.</div>`;
         return;
       }
       target.innerHTML = users.map(user => `
@@ -2851,7 +3054,7 @@
         summary.textContent = `${roleCounts.admin || 0} Admin, ${roleCounts.roles || 0} Role Manager, ${roleCounts.master || 0} Master admin.`;
       }
       if (!users.length) {
-        target.innerHTML = `<div class="empty">No users available. Create users on the Users page first.</div>`;
+        target.innerHTML = `<div class="empty"><strong>No users available</strong>Create users on the Users page first, then assign roles here.</div>`;
         return;
       }
       target.innerHTML = users.map(user => `
@@ -3376,7 +3579,7 @@
             <span class="chip ${status.tone}">${escapeHtml(status.label)}</span>
           </div>
         `;
-      }).join("") : `<div class="empty">${escapeHtml(emptyText)}</div>`;
+      }).join("") : `<div class="empty"><strong>No date alerts</strong>${escapeHtml(emptyText)}</div>`;
     }
 
     function matchesReportingDate(value, anchor) {
@@ -3535,7 +3738,7 @@
           </div>
           <span class="chip ${healthClass(report)}">${labels[report.health] || report.health}</span>
         </div>
-      `).join("") : `<div class="empty">No critical risks need executive attention.</div>`;
+      `).join("") : `<div class="empty"><strong>No executive risks</strong>No critical risks need executive attention for the current filters.</div>`;
 
       const owners = [...source.reduce((acc, report) => {
         const owner = ownerDisplay(report.owner);
@@ -3557,7 +3760,7 @@
             <span class="chip ${tone}">${ownerAvg}%</span>
           </div>
         `;
-      }).join("") : `<div class="empty">No owner data available.</div>`;
+      }).join("") : `<div class="empty"><strong>No owner data</strong>No owner performance data is available for the current filters.</div>`;
 
       const actions = source
         .filter(report => report.next)
@@ -3575,7 +3778,7 @@
           </div>
           <span class="chip ${healthClass(report)}">${escapeHtml(report.priority || "Normal")}</span>
         </div>
-      `).join("") : `<div class="empty">No next actions captured yet.</div>`;
+      `).join("") : `<div class="empty"><strong>No next actions</strong>No next actions were captured for the current filters.</div>`;
     }
 
     function renderExecutiveHealthProjects(source) {
@@ -3585,7 +3788,7 @@
       if (!selectedExecutiveHealth) {
         title.textContent = "Portfolio Workstreams";
         subtitle.textContent = "Select a delivery health status to focus this list.";
-        target.innerHTML = `<div class="empty">No workstreams are available for the current filters. Try changing Reporting week, Type of product, Role / Portfolio view, or Delivery health.</div>`;
+        target.innerHTML = `<div class="empty"><strong>Select a status</strong>Choose a health card above to focus the workstream list.</div>`;
         return;
       }
       const selectedLabel = labels[selectedExecutiveHealth] || selectedExecutiveHealth;
@@ -3612,7 +3815,7 @@
           <span class="chip ${healthClass(report)}">${labels[report.health] || report.health}</span>
         </button>
         ${report.id === selectedExecutiveProjectId ? projectDetailMarkup(report, "project") : ""}
-      `).join("") : `<div class="empty">No workstreams match these filters. Try changing Reporting week, Type of product, Role / Portfolio view, or Delivery health.</div>`;
+      `).join("") : `<div class="empty"><strong>No matching workstreams</strong>Try changing Reporting week, Type of product, Role / Portfolio view, or Delivery health.</div>`;
     }
 
     function projectDetailMarkup(report, noun = "card") {
@@ -3687,7 +3890,7 @@
         ${r.id === selectedPortfolioHealthId ? projectDetailMarkup(r, "card") : ""}
           `).join("")}
         </section>
-      `).join("") : `<div class="empty">No reports match these filters. Try changing Reporting week, Type of product, Role / Portfolio view, or Delivery health.</div>`;
+      `).join("") : `<div class="empty"><strong>No reports found</strong>Try changing Reporting week, Type of product, Role / Portfolio view, or Delivery health.</div>`;
     }
 
     function renderRiskMatrix() {
@@ -3727,7 +3930,7 @@
             <p class="muted small">${escapeHtml(r[key])}</p>
           </div>
         </div>
-      `).join("") : `<div class="empty">${emptyText}</div>`;
+      `).join("") : `<div class="empty"><strong>Nothing captured yet</strong>${escapeHtml(emptyText)}</div>`;
     }
 
     function renderReports() {
@@ -3739,7 +3942,7 @@
         renderDetail();
       }
       if (!filtered.length) {
-        list.innerHTML = `<div class="empty">No reports match these filters. Try changing owner, type of product, reporting week, health, or role.</div>`;
+        list.innerHTML = `<div class="empty"><strong>No reports found</strong>Try changing owner, type of product, reporting week, health, or role.</div>`;
         return;
       }
 
@@ -3976,11 +4179,17 @@
       const report = reports.find(r => r.id === selectedReportId);
       const detail = document.getElementById("reportDetail");
       if (!report) {
-        detail.innerHTML = `<div class="empty">Click a submitted report card to view all details and enable Save Changes.</div>`;
+        detail.innerHTML = `<div class="empty"><strong>Select a report</strong>Click a submitted report card to view all details, audit history, and enable Save Changes.</div>`;
         return;
       }
       detail.innerHTML = `
-        <h3>Edit Report</h3>
+        <div class="panel-title">
+          <div>
+            <h3>Edit Report</h3>
+            <p class="muted small">Updates are saved to the selected report card and recorded in history.</p>
+          </div>
+          <span class="chip ${healthClass(report)}">${escapeHtml(labels[report.health] || report.health || "Health")}</span>
+        </div>
         <form class="detail-form" id="editReportForm">
           <div class="inline-message success" id="reportFormMessage" hidden></div>
           <div class="form-grid">
@@ -4004,7 +4213,7 @@
             <label>Time to solve<select name="time"><option value="1" ${Number(report.time) === 1 ? "selected" : ""}>Short</option><option value="2" ${Number(report.time) === 2 ? "selected" : ""}>Medium</option><option value="3" ${Number(report.time) === 3 ? "selected" : ""}>Long</option></select></label>
             <label>Priority<select name="priority"><option ${report.priority === "Normal" ? "selected" : ""}>Normal</option><option ${report.priority === "High" ? "selected" : ""}>High</option><option ${report.priority === "Critical" ? "selected" : ""}>Critical</option></select></label>
           </div>
-          <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:6px">
+          <div class="form-actions" style="margin-top:6px">
             <button class="btn" type="button" id="reportHistoryBtn">History</button>
             <button class="btn" type="button" id="cancelEditReport">Cancel</button>
             <button class="btn danger" type="button" id="deleteReport">Delete Report</button>
@@ -4116,7 +4325,7 @@
                   </div>
                 `).join("")}
               </article>
-            `).join("")}</div>` : `<div class="empty">${history.length ? "No history matches this date." : "No saved changes have been recorded for this report yet."}</div>`}
+            `).join("")}</div>` : `<div class="empty"><strong>${history.length ? "No history for this date" : "No history yet"}</strong>${history.length ? "Try another date or show all dates." : "Saved edits for this report will appear here."}</div>`}
         </section>
       `;
     }
@@ -4580,5 +4789,4 @@
   </script>
 </body>
 </html>
-
 
