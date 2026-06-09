@@ -2884,7 +2884,7 @@
           ...user,
           username: cleanText(user.username).toLowerCase(),
           displayName: cleanText(user.displayName) || cleanText(user.username).toLowerCase(),
-          role: ["admin", "roles", "master"].includes(user.role) ? user.role : "admin",
+          role: normalizeRole(user.role),
           password: cleanText(user.password) || generateAccessCode(),
           active: user.active !== false
         }))
@@ -2899,13 +2899,21 @@
       localStorage.setItem(USERS_KEY, JSON.stringify(normalizeUsers(users)));
     }
 
+    function normalizeRole(role) {
+      const value = cleanText(role).toLowerCase().replace(/[_-]+/g, " ").trim();
+      if (["master", "master admin", "master administrator", "full access"].includes(value)) return "master";
+      if (["roles", "role", "role manager", "roles manager", "access manager", "user manager"].includes(value)) return "roles";
+      return "admin";
+    }
+
     function setSession(user) {
+      const role = normalizeRole(user.role);
       currentUser = {
         username: user.username,
         displayName: user.displayName,
-        role: user.role
+        role
       };
-      currentProfile = user.role;
+      currentProfile = role;
       localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
       localStorage.setItem(PROFILE_KEY, currentProfile);
       document.body.classList.remove("login-required");
@@ -2938,11 +2946,11 @@
     }
 
     function isMasterAdmin() {
-      return currentProfile === "master";
+      return normalizeRole(currentProfile) === "master";
     }
 
     function canManageRoles() {
-      return currentProfile === "roles" || isMasterAdmin();
+      return normalizeRole(currentProfile) === "roles" || isMasterAdmin();
     }
 
     function canAccessView(id) {
