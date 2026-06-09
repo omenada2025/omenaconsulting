@@ -2877,6 +2877,9 @@
 
         if (!response.ok) {
           const detail = await response.text();
+          if (response.status === 404) {
+            throw new Error("Email service is not deployed in Supabase.");
+          }
           throw new Error(detail || `HTTP ${response.status}`);
         }
 
@@ -2884,7 +2887,8 @@
       } catch (error) {
         console.warn("Credential email failed; opening fallback draft.", error);
         openCredentialEmail(user);
-        showRoleMessage("Automatic email failed. Opened an email draft instead.");
+        const detail = error instanceof Error ? error.message : "Unknown error";
+        showRoleMessage(`Automatic email failed: ${detail} Opened an email draft instead.`);
       }
     }
 
