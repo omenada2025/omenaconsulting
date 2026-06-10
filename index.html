@@ -149,20 +149,6 @@
       text-transform: uppercase;
     }
 
-    .profile-box {
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      background: #fff;
-      padding: 12px;
-      margin-bottom: 18px;
-      display: grid;
-      gap: 8px;
-    }
-
-    .profile-box label {
-      font-size: 12px;
-    }
-
     .role-pill {
       width: max-content;
       border-radius: 999px;
@@ -244,6 +230,14 @@
       background: var(--blue-soft);
       color: var(--blue);
       border-color: #cfe4f1;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
     }
 
     .header {
@@ -1250,12 +1244,6 @@
         <button class="tab" data-view="users" data-role-manager-only>Users</button>
         <button class="tab" data-view="roles" data-role-manager-only>Manage Roles</button>
       </nav>
-      <div class="profile-box">
-        <span class="role-pill" id="profileRoleLabel">Not signed in</span>
-        <strong id="profileUserLabel">User</strong>
-        <p class="muted small" id="profileHelp">Master admin can manage reports. Admin can view dashboards only.</p>
-        <button class="btn" type="button" id="logoutBtn">Logout</button>
-      </div>
     </aside>
 
     <main>
@@ -1266,7 +1254,10 @@
             <h2>Product & UI/UX Dashboard</h2>
             <p class="muted" id="dashboardSubtitle">Review the active product portfolio, filter by week, product type, owner, role, and health, then click workstream cards to open wins, blockers, and next actions in context.</p>
           </div>
-          <button class="btn primary" data-jump="intake" data-master-only>Add Product Status</button>
+          <div class="top-actions">
+            <button class="btn primary" data-jump="intake" data-master-only>Add Product Status</button>
+            <button class="btn" type="button" data-logout>Logout</button>
+          </div>
         </div>
 
         <div class="guide-grid">
@@ -1377,7 +1368,10 @@
             <h2>Executive Dashboard</h2>
             <p class="muted" id="executiveSubtitle">A focused view for portfolio health, risky workstreams, owner follow-up, delivery dates, and the next actions that need leadership attention.</p>
           </div>
-          <button class="btn primary" data-jump="reports" data-master-only>Review Source Reports</button>
+          <div class="top-actions">
+            <button class="btn primary" data-jump="reports" data-master-only>Review Source Reports</button>
+            <button class="btn" type="button" data-logout>Logout</button>
+          </div>
         </div>
 
         <div class="guide-grid">
@@ -1496,6 +1490,7 @@
             <h2>Users</h2>
             <p class="muted">Create access, share credentials, and control who can sign in.</p>
           </div>
+          <button class="btn" type="button" data-logout>Logout</button>
         </div>
 
         <div class="guide-grid">
@@ -1573,6 +1568,7 @@
             <h2>Manage Roles</h2>
             <p class="muted">Assign each existing user to Admin, Role Manager, or Master admin.</p>
           </div>
+          <button class="btn" type="button" data-logout>Logout</button>
         </div>
 
         <div class="guide-grid">
@@ -1609,6 +1605,7 @@
             <h2>Add Product or UI/UX Status Report</h2>
             <p class="muted">Capture one feature or workstream update for a product. After saving, dashboards, report history, date alerts, and exports update automatically.</p>
           </div>
+          <button class="btn" type="button" data-logout>Logout</button>
         </div>
 
         <div class="guide-grid">
@@ -1792,7 +1789,10 @@
             <h2>Source Status Reports</h2>
             <p class="muted">Review, edit, export, and audit every submitted product or UI/UX update. Select a card to open full details, save changes, or view history.</p>
           </div>
-          <button class="btn primary" data-jump="dashboard">Back to Dashboard</button>
+          <div class="top-actions">
+            <button class="btn primary" data-jump="dashboard">Back to Dashboard</button>
+            <button class="btn" type="button" data-logout>Logout</button>
+          </div>
         </div>
         <div class="guide-grid">
           <div class="guide-card theme-blue">
@@ -2986,18 +2986,6 @@
       document.querySelectorAll("[data-role-manager-view]").forEach(element => {
         element.hidden = !canManageRoles();
       });
-      const profileRoleLabel = document.getElementById("profileRoleLabel");
-      if (profileRoleLabel) profileRoleLabel.textContent = ROLE_LABELS[currentProfile] || "Admin";
-      const profileUserLabel = document.getElementById("profileUserLabel");
-      if (profileUserLabel) profileUserLabel.textContent = currentUser?.displayName || "Not signed in";
-      const profileHelp = document.getElementById("profileHelp");
-      if (profileHelp) {
-        profileHelp.textContent = isMasterAdmin()
-          ? "Master admin can view dashboards and manage reports. Access management is hidden."
-          : canManageRoles()
-            ? "Role Manager can view dashboards and manage users."
-            : "Admin can view Dashboard and Executive Dashboard only.";
-      }
       renderUserManagement();
       renderRoleManagement();
       if (!canAccessView(getActiveView())) {
@@ -4588,7 +4576,9 @@
       logUserAction("login", { role: user.role }, { target_type: "user", target_id: user.username });
     });
 
-    document.getElementById("logoutBtn").addEventListener("click", () => {
+    document.addEventListener("click", event => {
+      const logoutBtn = event.target.closest("[data-logout]");
+      if (!logoutBtn) return;
       logUserAction("logout", { role: currentProfile }, { target_type: "user", target_id: currentUser?.username });
       logout();
     });
