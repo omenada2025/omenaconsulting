@@ -2082,7 +2082,8 @@
     const DEFAULT_USERS = [
       { username: "admin", displayName: "Admin User", role: "admin", password: "admin2026", active: true },
       { username: "roles", displayName: "Role Manager", role: "roles", password: "roles2026", active: true },
-      { username: "master", displayName: "Master Admin", role: "master", password: "master2026", active: true }
+      { username: "master", displayName: "Master Admin", role: "master", password: "master2026", active: true },
+      { username: "faran", displayName: "Faran", role: "admin", password: "PU-SOEN-2FSO", active: true }
     ];
     const ROLE_LABELS = {
       admin: "Admin",
@@ -2904,6 +2905,15 @@
       if (["master", "master admin", "master administrator", "full access"].includes(value)) return "master";
       if (["roles", "role", "role manager", "roles manager", "access manager", "user manager"].includes(value)) return "roles";
       return "admin";
+    }
+
+    function normalizeLoginIdentifier(value = "") {
+      const identifier = cleanText(value).toLowerCase();
+      return identifier.includes("@") ? identifier.split("@")[0] : identifier;
+    }
+
+    function normalizeAccessCode(value = "") {
+      return cleanText(value).toUpperCase();
     }
 
     function setSession(user) {
@@ -4555,9 +4565,11 @@
     document.getElementById("loginForm").addEventListener("submit", event => {
       event.preventDefault();
       const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+      const loginIdentifier = normalizeLoginIdentifier(data.username);
+      const accessCode = normalizeAccessCode(data.password);
       const user = loadUsers().find(candidate =>
-        candidate.username.toLowerCase() === String(data.username || "").trim().toLowerCase() &&
-        candidate.password === data.password
+        normalizeLoginIdentifier(candidate.username) === loginIdentifier &&
+        normalizeAccessCode(candidate.password) === accessCode
       );
       const message = document.getElementById("loginMessage");
       if (!user) {
