@@ -1534,7 +1534,7 @@
               <select name="role">
                 <option value="admin">Admin - dashboard view only</option>
                 <option value="roles">Role Manager - users and roles</option>
-                <option value="master">Master admin - full access</option>
+                <option value="master">Master admin - reports and status</option>
               </select>
             </label>
             <label>
@@ -1586,7 +1586,7 @@
           </div>
           <div class="guide-card">
             <strong>Master admin</strong>
-            <p class="muted small">Can manage users, roles, reports, and status data.</p>
+            <p class="muted small">Can manage reports and status data. Access management stays with Role Manager.</p>
           </div>
         </div>
 
@@ -2950,11 +2950,11 @@
     }
 
     function canManageRoles() {
-      return normalizeRole(currentProfile) === "roles" || isMasterAdmin();
+      return normalizeRole(currentProfile) === "roles";
     }
 
     function canAccessView(id) {
-      if (isMasterAdmin()) return true;
+      if (isMasterAdmin()) return ["dashboard", "executive", "intake", "reports"].includes(id);
       if (canManageRoles()) return ["dashboard", "executive", "users", "roles"].includes(id);
       return ["dashboard", "executive"].includes(id);
     }
@@ -2968,7 +2968,7 @@
 
     function requireRoleManager(action = "manage roles") {
       if (canManageRoles()) return true;
-      alert(`Admin profile can only view dashboards. Use Role Manager or Master admin to ${action}.`);
+      alert(`${ROLE_LABELS[currentProfile] || "Admin"} profile cannot ${action}. Use Role Manager for access management.`);
       switchView("dashboard");
       return false;
     }
@@ -2993,7 +2993,7 @@
       const profileHelp = document.getElementById("profileHelp");
       if (profileHelp) {
         profileHelp.textContent = isMasterAdmin()
-          ? "Master admin can view dashboards, manage users, and manage reports."
+          ? "Master admin can view dashboards and manage reports. Access management is hidden."
           : canManageRoles()
             ? "Role Manager can view dashboards and manage users."
             : "Admin can view Dashboard and Executive Dashboard only.";
@@ -3078,7 +3078,7 @@
             <select data-role-user="${escapeHtml(user.username)}">
               <option value="admin" ${user.role === "admin" ? "selected" : ""}>Admin - dashboards only</option>
               <option value="roles" ${user.role === "roles" ? "selected" : ""}>Role Manager - users and roles</option>
-              <option value="master" ${user.role === "master" ? "selected" : ""}>Master admin - full access</option>
+              <option value="master" ${user.role === "master" ? "selected" : ""}>Master admin - reports and status</option>
             </select>
           </label>
         </div>
@@ -4578,7 +4578,7 @@
         return;
       }
       if (user.active === false) {
-        message.textContent = "This user is inactive. Contact a Role Manager or Master admin.";
+        message.textContent = "This user is inactive. Contact a Role Manager.";
         message.hidden = false;
         return;
       }
