@@ -2080,7 +2080,14 @@
     const USERS_KEY = "product-uiux-pulse-users-v1";
     const SESSION_KEY = "product-uiux-pulse-session-v1";
     const TEAM_ACCESS_CODE = "PU-SOEN-2FSO";
-    const TEAM_EMAIL_DOMAINS = ["zenatech.com", "zena.tech"];
+    const TEAM_EMAIL_DOMAINS = ["zenatech.com", "zena.tech", "zenadrone.com", "epazz.com"];
+    const LOGIN_ALIASES = {
+      krishna: "krishina",
+      krish: "krishina",
+      nadishni: "nadishani",
+      nadish: "nadishani",
+      saurabh: "sam"
+    };
     const DEFAULT_USERS = [
       { username: "admin", displayName: "Admin User", role: "admin", password: "admin2026", active: true },
       { username: "roles", displayName: "Role Manager", role: "roles", password: "roles2026", active: true },
@@ -2918,7 +2925,8 @@
 
     function normalizeLoginIdentifier(value = "") {
       const identifier = cleanText(value).toLowerCase();
-      return identifier.includes("@") ? identifier.split("@")[0] : identifier;
+      const localPart = identifier.includes("@") ? identifier.split("@")[0] : identifier;
+      return LOGIN_ALIASES[localPart] || localPart;
     }
 
     function normalizeAccessCode(value = "") {
@@ -2942,7 +2950,8 @@
     function teamFallbackUser(username, accessCode) {
       const rawUsername = cleanText(username).toLowerCase();
       if (!rawUsername.includes("@")) return null;
-      if (!TEAM_EMAIL_DOMAINS.includes(emailDomain(rawUsername))) return null;
+      const domain = emailDomain(rawUsername);
+      if (!TEAM_EMAIL_DOMAINS.includes(domain) && !domain.includes("zena")) return null;
       if (normalizeAccessCode(accessCode) !== normalizeAccessCode(TEAM_ACCESS_CODE)) return null;
       return {
         username: rawUsername,
