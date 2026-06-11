@@ -494,6 +494,7 @@
     .guide-card.theme-blue { border-color: #cfe4f1; background: linear-gradient(180deg, #fff, var(--blue-soft)); }
     .guide-card.theme-green { border-color: #c8e4d4; background: linear-gradient(180deg, #fff, var(--green-soft)); }
     .guide-card.theme-amber { border-color: #f4d895; background: linear-gradient(180deg, #fff, var(--amber-soft)); }
+    .guide-card.theme-red { border-color: #efc0cb; background: linear-gradient(180deg, #fff, var(--red-soft)); }
 
     .guide-card strong {
       font-size: 14px;
@@ -1243,6 +1244,7 @@
         <div class="nav-section" data-role-manager-only>Access</div>
         <button class="tab" data-view="users" data-role-manager-only>Users</button>
         <button class="tab" data-view="roles" data-role-manager-only>Manage Roles</button>
+        <button class="tab" data-view="incidents" data-role-manager-only>Incident Report</button>
       </nav>
     </aside>
 
@@ -1578,7 +1580,7 @@
           </div>
           <div class="guide-card">
             <strong>Role Manager</strong>
-            <p class="muted small">Can view dashboards, create users, and assign roles.</p>
+            <p class="muted small">Can view dashboards, incident indicators, create users, and assign roles.</p>
           </div>
           <div class="guide-card">
             <strong>Master admin</strong>
@@ -1595,6 +1597,80 @@
           </div>
           <div class="report-list" id="roleUserList"></div>
           <div class="inline-message success" id="roleMessage" hidden></div>
+        </div>
+      </section>
+
+      <section class="view" id="incidents" data-role-manager-view>
+        <div class="header">
+          <div>
+            <span class="page-kicker">Incident indicators</span>
+            <h2>Incidents & Delays by Project</h2>
+            <p class="muted" id="incidentReportSubtitle">Monitor delayed workstreams, due-soon dates, postponed reports, blockers, and critical items grouped by project.</p>
+          </div>
+          <button class="btn" type="button" data-logout>Logout</button>
+        </div>
+
+        <div class="guide-grid">
+          <div class="guide-card theme-red">
+            <strong>Delayed</strong>
+            <p class="muted small">End date has already passed.</p>
+          </div>
+          <div class="guide-card theme-amber">
+            <strong>Due soon</strong>
+            <p class="muted small">End date is within the next 5 days.</p>
+          </div>
+          <div class="guide-card theme-blue">
+            <strong>Incident signal</strong>
+            <p class="muted small">At Risk, Critical priority, or blocker/risk text is present.</p>
+          </div>
+        </div>
+
+        <div class="panel filter-bar">
+          <label>
+            Project
+            <select id="incidentProductFilter"></select>
+          </label>
+          <label>
+            Owner
+            <select id="incidentOwnerFilter"></select>
+          </label>
+          <label>
+            Alert type
+            <select id="incidentTypeFilter">
+              <option value="all">All incident signals</option>
+              <option value="delayed">Delayed</option>
+              <option value="dueSoon">Due soon</option>
+              <option value="postponed">Postponed</option>
+              <option value="blocker">Blocker / At Risk</option>
+            </select>
+          </label>
+          <label>
+            Type of product
+            <select id="incidentProductTypeFilter"></select>
+          </label>
+        </div>
+
+        <div class="grid summary-grid" id="incidentMetrics"></div>
+
+        <div class="grid two-col" style="margin-top:16px">
+          <div class="panel">
+            <div class="panel-title">
+              <div>
+                <h3>Project Indicators</h3>
+                <p class="muted small">Grouped by project. Highest delayed and critical counts appear first.</p>
+              </div>
+            </div>
+            <div class="report-list" id="incidentProjectList"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">
+              <div>
+                <h3>Incident Details</h3>
+                <p class="muted small">Workstreams included by date alert, blocker, At Risk health, or Critical priority.</p>
+              </div>
+            </div>
+            <div class="report-list" id="incidentDetailList"></div>
+          </div>
         </div>
       </section>
 
@@ -2145,6 +2221,12 @@
       week: "",
       health: "all",
       role: "all"
+    };
+    const incidentFilters = {
+      product: "all",
+      owner: "all",
+      type: "all",
+      productType: "all"
     };
     let reportHistoryOpen = false;
     let reportHistoryDate = "";
@@ -3011,7 +3093,7 @@
 
     function canAccessView(id) {
       if (isMasterAdmin()) return ["dashboard", "executive", "intake", "reports"].includes(id);
-      if (canManageRoles()) return ["dashboard", "executive", "users", "roles"].includes(id);
+      if (canManageRoles()) return ["dashboard", "executive", "users", "roles", "incidents"].includes(id);
       return ["dashboard", "executive"].includes(id);
     }
 
@@ -3615,6 +3697,59 @@
       }, { delayed: 0, dueSoon: 0, postponed: 0 });
     }
 
+    function hasBlockerSignal(report) {
+      return Boolean(cleanText(report?.blocker)) || report?.health === "red" || report?.priority === "Critical";
+    }
+
+    function incidentFlags(report) {
+      const status = endDateStatus(report);
+      return {
+        delayed: status?.tone === "red",
+        dueSoon: status?.tone === "amber",
+        postponed: status?.tone === "orange",
+        blocker: hasBlockerSignal(report)
+      };
+    }
+
+    function isIncidentReport(report) {
+      const flags = incidentFlags(report);
+      return flags.delayed || flags.dueSoon || flags.postponed || flags.blocker;
+    }
+
+    function incidentTone(report) {
+      const flags = incidentFlags(report);
+      if (flags.delayed || report.health === "red" || report.priority === "Critical") return "red";
+      if (flags.dueSoon) return "amber";
+      if (flags.postponed) return "orange";
+      return "blue";
+    }
+
+    function incidentLabel(report) {
+      const flags = incidentFlags(report);
+      if (flags.delayed) return "Delayed";
+      if (report.priority === "Critical") return "Critical";
+      if (report.health === "red") return "At Risk";
+      if (flags.dueSoon) return "Due soon";
+      if (flags.postponed) return "Postponed";
+      return "Blocker";
+    }
+
+    function incidentSortRank(report) {
+      const flags = incidentFlags(report);
+      const rank = flags.delayed ? 0
+        : report.priority === "Critical" ? 1
+        : report.health === "red" ? 2
+        : flags.dueSoon ? 3
+        : flags.postponed ? 4
+        : 5;
+      return [
+        rank,
+        reportEndDate(report) || "9999-12-31",
+        report.product || "",
+        reportTitle(report)
+      ].join("|");
+    }
+
     function renderEndDateMonitor(targetId, source, emptyText) {
       const target = document.getElementById(targetId);
       if (!target) return;
@@ -3669,6 +3804,120 @@
         (reportFilters.health === "all" || report.health === reportFilters.health) &&
         (reportFilters.role === "all" || report.role === reportFilters.role)
       );
+    }
+
+    function getIncidentReports() {
+      return reports
+        .filter(isIncidentReport)
+        .filter(report => {
+          const flags = incidentFlags(report);
+          return (
+            (incidentFilters.product === "all" || report.product === incidentFilters.product) &&
+            (incidentFilters.owner === "all" || ownerKey(report.owner) === ownerKey(incidentFilters.owner)) &&
+            (incidentFilters.productType === "all" || report.product_type === incidentFilters.productType) &&
+            (incidentFilters.type === "all" || Boolean(flags[incidentFilters.type]))
+          );
+        })
+        .sort((a, b) => incidentSortRank(a).localeCompare(incidentSortRank(b)));
+    }
+
+    function renderIncidentReport() {
+      const metricsTarget = document.getElementById("incidentMetrics");
+      const projectsTarget = document.getElementById("incidentProjectList");
+      const detailsTarget = document.getElementById("incidentDetailList");
+      if (!metricsTarget || !projectsTarget || !detailsTarget) return;
+
+      fillSelect("incidentProductFilter", reports.map(report => report.product), "All projects", incidentFilters.product);
+      fillSelect("incidentOwnerFilter", uniqueOwners(), "All owners", incidentFilters.owner);
+      fillSelect("incidentProductTypeFilter", PRODUCT_TYPE_OPTIONS, "All product types", incidentFilters.productType);
+
+      const source = getIncidentReports();
+      const counts = source.reduce((acc, report) => {
+        const flags = incidentFlags(report);
+        if (flags.delayed) acc.delayed += 1;
+        if (flags.dueSoon) acc.dueSoon += 1;
+        if (flags.postponed) acc.postponed += 1;
+        if (flags.blocker) acc.blocker += 1;
+        return acc;
+      }, { delayed: 0, dueSoon: 0, postponed: 0, blocker: 0 });
+      const projectGroups = [...source.reduce((acc, report) => {
+        const product = cleanText(report.product) || "No product";
+        if (!acc.has(product)) acc.set(product, []);
+        acc.get(product).push(report);
+        return acc;
+      }, new Map()).entries()].sort((a, b) => {
+        const aCounts = endDateCounts(a[1]);
+        const bCounts = endDateCounts(b[1]);
+        return bCounts.delayed - aCounts.delayed
+          || b[1].filter(hasBlockerSignal).length - a[1].filter(hasBlockerSignal).length
+          || a[0].localeCompare(b[0]);
+      });
+
+      const subtitle = document.getElementById("incidentReportSubtitle");
+      if (subtitle) {
+        subtitle.textContent = `${source.length} incident signal${source.length === 1 ? "" : "s"} across ${projectGroups.length} project${projectGroups.length === 1 ? "" : "s"}. Filter by project, owner, alert type, or product type.`;
+      }
+
+      const metrics = [
+        ["Projects impacted", projectGroups.length, projectGroups.length ? "red" : "green", "Projects with incident signals"],
+        ["Delayed", counts.delayed, counts.delayed ? "red" : "green", "End date already passed"],
+        ["Due soon", counts.dueSoon, counts.dueSoon ? "amber" : "green", "Due in the next 5 days"],
+        ["Postponed", counts.postponed, counts.postponed ? "orange" : "green", "End date moved later"],
+        ["Blockers / Risks", counts.blocker, counts.blocker ? "red" : "green", "At Risk, Critical, or blocker text"],
+      ];
+      metricsTarget.innerHTML = metrics.map(([name, value, tone, note]) => `
+        <div class="panel metric">
+          <span class="chip ${tone}">${escapeHtml(name)}</span>
+          <strong>${escapeHtml(value)}</strong>
+          <span class="muted small">${escapeHtml(note)}</span>
+        </div>
+      `).join("");
+
+      projectsTarget.innerHTML = projectGroups.length ? projectGroups.map(([product, rows]) => {
+        const dateCounts = endDateCounts(rows);
+        const blockerCount = rows.filter(hasBlockerSignal).length;
+        const avg = Math.round(rows.reduce((sum, report) => sum + Number(report.progress || 0), 0) / rows.length);
+        const tone = dateCounts.delayed || blockerCount ? "red" : dateCounts.dueSoon ? "amber" : "orange";
+        return `
+          <div class="report-card">
+            <div class="panel-title">
+              <div>
+                <span class="product-label">${escapeHtml(product)}</span>
+                <h3>${escapeHtml(product)}</h3>
+                <p class="muted small">${rows.length} impacted workstream${rows.length === 1 ? "" : "s"} - average progress ${avg}%</p>
+              </div>
+              <span class="chip ${tone}">${dateCounts.delayed} delayed</span>
+            </div>
+            <div class="metric-split">
+              <span>${dateCounts.dueSoon} due soon</span>
+              <span>${dateCounts.postponed} postponed</span>
+              <span>${blockerCount} blockers / risks</span>
+            </div>
+          </div>
+        `;
+      }).join("") : `<div class="empty"><strong>No incident indicators</strong>No delayed, due soon, postponed, blocked, At Risk, or Critical items match the current filters.</div>`;
+
+      detailsTarget.innerHTML = source.length ? source.map(report => {
+        const tone = incidentTone(report);
+        return `
+          <div class="report-card">
+            <div class="panel-title">
+              <div>
+                <span class="product-label">${escapeHtml(report.product || "No product")}</span>
+                <h3>${escapeHtml(reportTitle(report))}</h3>
+                <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.role || "No role")} - Reporting week ${escapeHtml(report.week || "No date")}${reportEndDate(report) ? ` - ${endDateMarkup(report)}` : ""}</p>
+              </div>
+              <span class="chip ${tone}">${escapeHtml(incidentLabel(report))}</span>
+            </div>
+            <p>${escapeHtml(report.summary || "No summary captured.")}</p>
+            <div class="report-card-detail">
+              <div><strong>Blocker or risk</strong><p class="muted small">${escapeHtml(report.blocker || "No blocker captured.")}</p></div>
+              <div><strong>Next action</strong><p class="muted small">${escapeHtml(report.next || "No next action captured.")}</p></div>
+              <div><strong>Priority</strong><p class="muted small">${escapeHtml(report.priority || "Normal")} - ${escapeHtml(labels[report.health] || report.health || "No health")}</p></div>
+            </div>
+          </div>
+        `;
+      }).join("") : `<div class="empty"><strong>No details available</strong>Change the filters to review incident and delay details.</div>`;
     }
 
     function roleStats(role, source) {
@@ -4193,6 +4442,9 @@
       if (id === "executiveTypeFilter") executiveFilters.productType = nextValue;
       if (id === "reportOwnerFilter") reportFilters.owner = nextValue;
       if (id === "reportTypeFilter") reportFilters.productType = nextValue;
+      if (id === "incidentProductFilter") incidentFilters.product = nextValue;
+      if (id === "incidentOwnerFilter") incidentFilters.owner = nextValue;
+      if (id === "incidentProductTypeFilter") incidentFilters.productType = nextValue;
       return nextValue;
     }
 
@@ -4451,6 +4703,7 @@
       renderTimeline("blockerList", "blocker", "No blockers captured yet.");
       renderTimeline("nextList", "next", "No next actions captured yet.");
       renderReports();
+      renderIncidentReport();
     }
 
     function escapeHtml(value = "") {
@@ -4811,6 +5064,30 @@
       reportFilters.role = event.target.value;
       logFilterChange("source_reports", "role", event.target.value);
       renderReports();
+    });
+
+    document.getElementById("incidentProductFilter").addEventListener("change", event => {
+      incidentFilters.product = event.target.value;
+      logFilterChange("incident_report", "product", event.target.value);
+      renderIncidentReport();
+    });
+
+    document.getElementById("incidentOwnerFilter").addEventListener("change", event => {
+      incidentFilters.owner = event.target.value;
+      logFilterChange("incident_report", "owner", event.target.value);
+      renderIncidentReport();
+    });
+
+    document.getElementById("incidentTypeFilter").addEventListener("change", event => {
+      incidentFilters.type = event.target.value;
+      logFilterChange("incident_report", "alert_type", event.target.value);
+      renderIncidentReport();
+    });
+
+    document.getElementById("incidentProductTypeFilter").addEventListener("change", event => {
+      incidentFilters.productType = event.target.value;
+      logFilterChange("incident_report", "product_type", event.target.value);
+      renderIncidentReport();
     });
 
     document.getElementById("exportCsvBtn").addEventListener("click", exportReportsCsv);
