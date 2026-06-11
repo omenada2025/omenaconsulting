@@ -3821,10 +3821,37 @@
       return true;
     }
 
+    function reportDateRange(value) {
+      if (!value) return null;
+      const monday = mondayForDate(value);
+      return workweekRange(monday);
+    }
+
+    function rangesOverlap(aStart, aEnd, bStart, bEnd) {
+      if (!aStart || !aEnd || !bStart || !bEnd) return false;
+      return aStart <= bEnd && aEnd >= bStart;
+    }
+
+    function monthRange(anchor) {
+      const start = parseDate(anchor ? `${anchor.slice(0, 7)}-01` : "");
+      if (!start || Number.isNaN(start.getTime())) return null;
+      const end = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+      return { start, end };
+    }
+
     function matchesDateFilter(value, filters) {
       if (!filters) return true;
-      if (filters.period === "monthly") return filters.week ? isSameMonth(value, filters.week) : true;
-      if (filters.period === "custom") return (filters.start || filters.end) ? isWithinDateRange(value, filters.start, filters.end) : true;
+      const reportRange = reportDateRange(value);
+      if (filters.period === "monthly") {
+        const range = monthRange(filters.week);
+        return range && reportRange ? rangesOverlap(reportRange.start, reportRange.end, range.start, range.end) : isSameMonth(value, filters.week);
+      }
+      if (filters.period === "custom") {
+        if (!(filters.start || filters.end)) return true;
+        const start = parseDate(filters.start || "0001-01-01");
+        const end = parseDate(filters.end || "9999-12-31");
+        return reportRange ? rangesOverlap(reportRange.start, reportRange.end, start, end) : isWithinDateRange(value, filters.start, filters.end);
+      }
       return matchesReportingDate(value, filters.week);
     }
 
@@ -4744,7 +4771,8 @@
       const syncStatus = document.getElementById("dashboardSubtitle").dataset.syncStatus || "Local browser storage";
       const filteredCount = getDashboardReports().length;
       const selectedPeriod = `Selected ${dateFilterLabel(dashboardFilters)} - `;
-      document.getElementById("dashboardSubtitle").textContent = latest ? `${selectedPeriod}Latest reporting date: ${latest} - ${filteredCount} of ${reports.length} Omena Consulting updates - ${syncStatus}.` : `Live rollup from submitted Omena Consulting reports - ${syncStatus}.`;
+      const latestPeriod = latest ? reportingFieldLabel(latest) : "";
+      document.getElementById("dashboardSubtitle").textContent = latest ? `${selectedPeriod}Latest reporting period: ${latestPeriod} - ${filteredCount} of ${reports.length} Omena Consulting updates - ${syncStatus}.` : `Live rollup from submitted Omena Consulting reports - ${syncStatus}.`;
       renderMetrics();
       renderExecutiveDashboard();
       renderHealth();
