@@ -1287,10 +1287,26 @@
         </div>
 
         <div class="panel filter-bar">
+          <label>
+            Date filter
+            <select id="dashboardPeriodFilter">
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="custom">Custom</option>
+            </select>
+          </label>
           <label class="week-field">
-            Reporting week
+            Reporting date
             <button class="week-picker-btn" id="dashboardWeekFilter" type="button" aria-haspopup="dialog" aria-expanded="false"></button>
             <div class="week-picker" id="dashboardWeekPicker" hidden></div>
+          </label>
+          <label class="date-custom dashboard-custom-date" hidden>
+            Start date
+            <input type="date" id="dashboardStartFilter" />
+          </label>
+          <label class="date-custom dashboard-custom-date" hidden>
+            End date
+            <input type="date" id="dashboardEndFilter" />
           </label>
           <label>
             Type of product
@@ -1401,10 +1417,26 @@
         </div>
 
         <div class="panel filter-bar">
+          <label>
+            Date filter
+            <select id="executivePeriodFilter">
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="custom">Custom</option>
+            </select>
+          </label>
           <label class="week-field">
-            Reporting week
+            Reporting date
             <button class="week-picker-btn" id="executiveWeekFilter" type="button" aria-haspopup="dialog" aria-expanded="false"></button>
             <div class="week-picker" id="executiveWeekPicker" hidden></div>
+          </label>
+          <label class="date-custom executive-custom-date" hidden>
+            Start date
+            <input type="date" id="executiveStartFilter" />
+          </label>
+          <label class="date-custom executive-custom-date" hidden>
+            End date
+            <input type="date" id="executiveEndFilter" />
           </label>
           <label>
             Type of product
@@ -1598,6 +1630,27 @@
         </div>
 
         <div class="panel filter-bar">
+          <label>
+            Date filter
+            <select id="incidentPeriodFilter">
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="custom">Custom</option>
+            </select>
+          </label>
+          <label class="week-field">
+            Reporting date
+            <button class="week-picker-btn" id="incidentWeekFilter" type="button" aria-haspopup="dialog" aria-expanded="false"></button>
+            <div class="week-picker" id="incidentWeekPicker" hidden></div>
+          </label>
+          <label class="date-custom incident-custom-date" hidden>
+            Start date
+            <input type="date" id="incidentStartFilter" />
+          </label>
+          <label class="date-custom incident-custom-date" hidden>
+            End date
+            <input type="date" id="incidentEndFilter" />
+          </label>
           <label>
             Project
             <select id="incidentProductFilter"></select>
@@ -2173,7 +2226,10 @@
       "Twinpeaksweb", "Webbeeo", "WorkAware", "ZenaDrone", "ZenaPay", "ZenaTech", "Zigvoice", "Zinergy"
     ];
     const dashboardFilters = {
+      period: "weekly",
       week: "",
+      start: "",
+      end: "",
       productType: "all",
       owner: "all",
       role: "all",
@@ -2183,7 +2239,10 @@
       groupBy: "date"
     };
     const executiveFilters = {
+      period: "weekly",
       week: "",
+      start: "",
+      end: "",
       productType: "all",
       role: "all",
       health: "all"
@@ -2196,6 +2255,10 @@
       role: "all"
     };
     const incidentFilters = {
+      period: "weekly",
+      week: "",
+      start: "",
+      end: "",
       product: "all",
       owner: "all",
       type: "all",
@@ -3120,17 +3183,18 @@
       if (!target) return;
       const users = normalizeUsers(loadUsers());
       saveUsers(users);
+      const managedUsers = users.filter(user => !DEFAULT_USERS.some(defaultUser => defaultUser.username === user.username));
       const summary = document.getElementById("userDirectorySummary");
       if (summary) {
-        const activeCount = users.filter(user => user.active !== false).length;
-        const inactiveCount = users.length - activeCount;
-        summary.textContent = `${users.length} users configured - ${activeCount} active, ${inactiveCount} inactive.`;
+        const activeCount = managedUsers.filter(user => user.active !== false).length;
+        const inactiveCount = managedUsers.length - activeCount;
+        summary.textContent = `${managedUsers.length} managed users - ${activeCount} active, ${inactiveCount} inactive.`;
       }
-      if (!users.length) {
-        target.innerHTML = `<div class="empty"><strong>No users yet</strong>Use the Create User form above to add the first user.</div>`;
+      if (!managedUsers.length) {
+        target.innerHTML = `<div class="empty"><strong>No managed users yet</strong>Use the Create User form above to add users. Default system users are hidden from this list.</div>`;
         return;
       }
-      target.innerHTML = users.map(user => `
+      target.innerHTML = managedUsers.map(user => `
         <div class="report-card user-card">
           <header>
             <div>
@@ -3567,6 +3631,23 @@
         : `reporting date ${anchor}`;
     }
 
+    function monthPeriodLabel(anchor) {
+      const date = parseDate(anchor ? `${anchor.slice(0, 7)}-01` : "");
+      return date && !Number.isNaN(date.getTime()) ? date.toLocaleString("en-US", { month: "long", year: "numeric" }) : "all months";
+    }
+
+    function dateFilterLabel(filters) {
+      if (!filters) return "all reporting dates";
+      if (filters.period === "monthly") return `month ${monthPeriodLabel(filters.week)}`;
+      if (filters.period === "custom") {
+        if (filters.start && filters.end) return `${filters.start} to ${filters.end}`;
+        if (filters.start) return `from ${filters.start}`;
+        if (filters.end) return `through ${filters.end}`;
+        return "custom range";
+      }
+      return reportingPeriodLabel(filters.week);
+    }
+
     function reportingFieldLabel(anchor) {
       if (!anchor) return "All reporting dates";
       const range = workweekRange(anchor);
@@ -3730,9 +3811,26 @@
         : isSameDay(value, anchor);
     }
 
+    function isWithinDateRange(value, start, end) {
+      const date = parseDate(value);
+      const startDate = parseDate(start);
+      const endDate = parseDate(end);
+      if (!date || Number.isNaN(date.getTime())) return false;
+      if (startDate && date < startDate) return false;
+      if (endDate && date > endDate) return false;
+      return true;
+    }
+
+    function matchesDateFilter(value, filters) {
+      if (!filters) return true;
+      if (filters.period === "monthly") return filters.week ? isSameMonth(value, filters.week) : true;
+      if (filters.period === "custom") return (filters.start || filters.end) ? isWithinDateRange(value, filters.start, filters.end) : true;
+      return matchesReportingDate(value, filters.week);
+    }
+
     function matchesExecutivePeriod(report) {
       return (
-        matchesReportingDate(report.week, executiveFilters.week) &&
+        matchesDateFilter(report.week, executiveFilters) &&
         (executiveFilters.productType === "all" || report.product_type === executiveFilters.productType) &&
         (executiveFilters.role === "all" || report.role === executiveFilters.role) &&
         (executiveFilters.health === "all" || report.health === executiveFilters.health)
@@ -3741,7 +3839,7 @@
 
     function getDashboardReports() {
       return reports.filter(report =>
-        matchesReportingDate(report.week, dashboardFilters.week) &&
+        matchesDateFilter(report.week, dashboardFilters) &&
         (dashboardFilters.productType === "all" || report.product_type === dashboardFilters.productType) &&
         (dashboardFilters.owner === "all" || ownerKey(report.owner) === ownerKey(dashboardFilters.owner)) &&
         (dashboardFilters.role === "all" || report.role === dashboardFilters.role) &&
@@ -3768,6 +3866,7 @@
             (incidentFilters.product === "all" || report.product === incidentFilters.product) &&
             (incidentFilters.owner === "all" || ownerKey(report.owner) === ownerKey(incidentFilters.owner)) &&
             (incidentFilters.productType === "all" || report.product_type === incidentFilters.productType) &&
+            matchesDateFilter(report.week, incidentFilters) &&
             (incidentFilters.type === "all" || Boolean(flags[incidentFilters.type]))
           );
         })
@@ -3939,9 +4038,7 @@
           Number(a.progress || 0) - Number(b.progress || 0)
         );
 
-      const periodLabel = executiveFilters.week
-        ? reportingPeriodLabel(executiveFilters.week)
-        : "all reporting dates";
+      const periodLabel = dateFilterLabel(executiveFilters);
       document.getElementById("executiveSubtitle").textContent = latest
         ? `Showing ${periodLabel} - latest reporting week: ${latest} - ${products} products and ${total} workstreams. Click status cards, then workstream cards for detail.`
         : `No reports match these filters. Try changing Reporting week, Type of product, Role / Portfolio view, or Delivery health.`;
@@ -4646,7 +4743,7 @@
       const latest = weeks[weeks.length - 1];
       const syncStatus = document.getElementById("dashboardSubtitle").dataset.syncStatus || "Local browser storage";
       const filteredCount = getDashboardReports().length;
-      const selectedPeriod = dashboardFilters.week ? `Selected ${reportingPeriodLabel(dashboardFilters.week)} - ` : "";
+      const selectedPeriod = `Selected ${dateFilterLabel(dashboardFilters)} - `;
       document.getElementById("dashboardSubtitle").textContent = latest ? `${selectedPeriod}Latest reporting date: ${latest} - ${filteredCount} of ${reports.length} product and UI/UX updates - ${syncStatus}.` : `Live rollup from submitted product and UI/UX reports - ${syncStatus}.`;
       renderMetrics();
       renderExecutiveDashboard();
@@ -4675,6 +4772,23 @@
       if (input.classList.contains("week-picker-btn")) {
         input.textContent = reportingFieldLabel(input.value);
         input.setAttribute("aria-label", `Reporting week ${reportingFieldLabel(input.value)}`);
+      }
+    }
+
+    function refreshDateFilterControls(prefix, filters) {
+      const button = document.getElementById(`${prefix}WeekFilter`);
+      const picker = document.getElementById(`${prefix}WeekPicker`);
+      const period = document.getElementById(`${prefix}PeriodFilter`);
+      const customFields = document.querySelectorAll(`.${prefix}-custom-date`);
+      const weekField = button?.closest(".week-field");
+      if (period) period.value = filters.period || "weekly";
+      const custom = filters.period === "custom";
+      if (weekField) weekField.hidden = custom;
+      if (picker) picker.hidden = true;
+      customFields.forEach(field => { field.hidden = !custom; });
+      if (button) {
+        button.textContent = filters.period === "monthly" ? monthPeriodLabel(filters.week) : reportingFieldLabel(filters.week);
+        button.setAttribute("aria-label", `${filters.period === "monthly" ? "Reporting month" : "Reporting week"} ${button.textContent}`);
       }
     }
 
@@ -4940,6 +5054,25 @@
       renderAll();
     });
 
+    document.getElementById("dashboardPeriodFilter").addEventListener("change", event => {
+      dashboardFilters.period = event.target.value;
+      refreshDateFilterControls("dashboard", dashboardFilters);
+      logFilterChange("dashboard", "date_filter", event.target.value);
+      renderAll();
+    });
+
+    document.getElementById("dashboardStartFilter").addEventListener("change", event => {
+      dashboardFilters.start = event.target.value;
+      logFilterChange("dashboard", "start_date", event.target.value);
+      renderAll();
+    });
+
+    document.getElementById("dashboardEndFilter").addEventListener("change", event => {
+      dashboardFilters.end = event.target.value;
+      logFilterChange("dashboard", "end_date", event.target.value);
+      renderAll();
+    });
+
     document.getElementById("dashboardOwnerFilter").addEventListener("change", event => {
       dashboardFilters.owner = event.target.value;
       logFilterChange("dashboard", "owner", event.target.value);
@@ -4949,6 +5082,25 @@
     document.getElementById("executiveTypeFilter").addEventListener("change", event => {
       executiveFilters.productType = event.target.value;
       logFilterChange("executive", "product_type", event.target.value);
+      renderExecutiveDashboard();
+    });
+
+    document.getElementById("executivePeriodFilter").addEventListener("change", event => {
+      executiveFilters.period = event.target.value;
+      refreshDateFilterControls("executive", executiveFilters);
+      logFilterChange("executive", "date_filter", event.target.value);
+      renderExecutiveDashboard();
+    });
+
+    document.getElementById("executiveStartFilter").addEventListener("change", event => {
+      executiveFilters.start = event.target.value;
+      logFilterChange("executive", "start_date", event.target.value);
+      renderExecutiveDashboard();
+    });
+
+    document.getElementById("executiveEndFilter").addEventListener("change", event => {
+      executiveFilters.end = event.target.value;
+      logFilterChange("executive", "end_date", event.target.value);
       renderExecutiveDashboard();
     });
 
@@ -5039,6 +5191,25 @@
       renderIncidentReport();
     });
 
+    document.getElementById("incidentPeriodFilter").addEventListener("change", event => {
+      incidentFilters.period = event.target.value;
+      refreshDateFilterControls("incident", incidentFilters);
+      logFilterChange("incident_report", "date_filter", event.target.value);
+      renderIncidentReport();
+    });
+
+    document.getElementById("incidentStartFilter").addEventListener("change", event => {
+      incidentFilters.start = event.target.value;
+      logFilterChange("incident_report", "start_date", event.target.value);
+      renderIncidentReport();
+    });
+
+    document.getElementById("incidentEndFilter").addEventListener("change", event => {
+      incidentFilters.end = event.target.value;
+      logFilterChange("incident_report", "end_date", event.target.value);
+      renderIncidentReport();
+    });
+
     document.getElementById("incidentOwnerFilter").addEventListener("change", event => {
       incidentFilters.owner = event.target.value;
       logFilterChange("incident_report", "owner", event.target.value);
@@ -5063,21 +5234,48 @@
 
     populateProductSelect(document.querySelector('#statusForm select[name="product"]'));
     const defaultReportingMonday = mondayForDate();
+    const defaultReportingRange = workweekRange(defaultReportingMonday);
+    const defaultReportingFriday = defaultReportingRange ? formatDate(defaultReportingRange.end) : defaultReportingMonday;
+    [
+      [dashboardFilters, "dashboard"],
+      [executiveFilters, "executive"],
+      [incidentFilters, "incident"]
+    ].forEach(([filters, prefix]) => {
+      filters.week = defaultReportingMonday;
+      filters.start = defaultReportingMonday;
+      filters.end = defaultReportingFriday;
+      const startInput = document.getElementById(`${prefix}StartFilter`);
+      const endInput = document.getElementById(`${prefix}EndFilter`);
+      if (startInput) startInput.value = filters.start;
+      if (endInput) endInput.value = filters.end;
+    });
     initWeekPicker(document.getElementById("statusWeekFilter"), document.getElementById("statusWeekPicker"), value => {
       document.querySelector('#statusForm input[name="week"]').value = value;
     }, defaultReportingMonday, document.querySelector('#statusForm input[name="week"]'));
     initWeekPicker(document.getElementById("dashboardWeekFilter"), document.getElementById("dashboardWeekPicker"), value => {
       dashboardFilters.week = value;
-      logFilterChange("dashboard", "reporting_week", reportingFieldLabel(value));
+      refreshDateFilterControls("dashboard", dashboardFilters);
+      logFilterChange("dashboard", "reporting_date", dateFilterLabel(dashboardFilters));
       renderAll();
     }, defaultReportingMonday);
     dashboardFilters.week = document.getElementById("dashboardWeekFilter").value;
     initWeekPicker(document.getElementById("executiveWeekFilter"), document.getElementById("executiveWeekPicker"), value => {
       executiveFilters.week = value;
-      logFilterChange("executive", "reporting_week", reportingFieldLabel(value));
+      refreshDateFilterControls("executive", executiveFilters);
+      logFilterChange("executive", "reporting_date", dateFilterLabel(executiveFilters));
       renderExecutiveDashboard();
     }, defaultReportingMonday);
     executiveFilters.week = document.getElementById("executiveWeekFilter").value;
+    initWeekPicker(document.getElementById("incidentWeekFilter"), document.getElementById("incidentWeekPicker"), value => {
+      incidentFilters.week = value;
+      refreshDateFilterControls("incident", incidentFilters);
+      logFilterChange("incident_report", "reporting_date", dateFilterLabel(incidentFilters));
+      renderIncidentReport();
+    }, defaultReportingMonday);
+    incidentFilters.week = document.getElementById("incidentWeekFilter").value;
+    refreshDateFilterControls("dashboard", dashboardFilters);
+    refreshDateFilterControls("executive", executiveFilters);
+    refreshDateFilterControls("incident", incidentFilters);
     initWeekPicker(document.getElementById("reportWeekFilter"), document.getElementById("reportWeekPicker"), value => {
       reportFilters.week = value;
       logFilterChange("source_reports", "reporting_week", reportingFieldLabel(value));
