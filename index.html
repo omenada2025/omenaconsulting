@@ -2935,12 +2935,12 @@
           const defaultMerged = DEFAULT_USERS.map(defaultUser => ({
             ...defaultUser,
             ...(saved.find(user => user.username === defaultUser.username) || {})
-          }));
+          })).filter(user => user.deleted !== true);
           const customUsers = saved
-            .filter(user => user?.username && !DEFAULT_USERS.some(defaultUser => defaultUser.username === user.username))
+            .filter(user => user?.username && user.deleted !== true && !DEFAULT_USERS.some(defaultUser => defaultUser.username === user.username))
             .map(user => ({ ...user, active: user.active !== false }));
           const merged = [...defaultMerged.map(user => ({ ...user, active: user.active !== false })), ...customUsers];
-          localStorage.setItem(USERS_KEY, JSON.stringify(merged));
+          saveUsers(merged);
           return merged;
         }
       } catch {}
@@ -2958,7 +2958,8 @@
           displayName: cleanText(user.displayName) || cleanText(user.username).toLowerCase(),
           role: normalizeRole(user.role),
           password: cleanText(user.password) || generateAccessCode(),
-          active: user.active !== false
+          active: user.active !== false,
+          deleted: user.deleted === true
         }))
         .filter(user => {
           if (seen.has(user.username)) return false;
@@ -2968,7 +2969,17 @@
     }
 
     function saveUsers(users) {
-      localStorage.setItem(USERS_KEY, JSON.stringify(normalizeUsers(users)));
+      let deletedDefaults = [];
+      try {
+        const existing = JSON.parse(localStorage.getItem(USERS_KEY) || "[]");
+        deletedDefaults = normalizeUsers(Array.isArray(existing) ? existing : [])
+          .filter(user => user.deleted === true && DEFAULT_USERS.some(defaultUser => defaultUser.username === user.username));
+      } catch {}
+      const normalized = normalizeUsers(users);
+      const preservedDeletes = deletedDefaults.filter(deletedUser =>
+        !normalized.some(user => user.username === deletedUser.username)
+      );
+      localStorage.setItem(USERS_KEY, JSON.stringify([...normalized, ...preservedDeletes]));
     }
 
     function normalizeRole(role) {
@@ -3438,7 +3449,11 @@
         alert("Keep at least one active Master admin.");
         return;
       }
-      saveUsers(users.filter(user => user.username !== username));
+      saveUsers(users.map(user => user.username === username ? {
+        ...user,
+        active: false,
+        deleted: true
+      } : user));
       renderUserManagement();
       showRoleMessage(`User deleted: ${targetUser.displayName || username}.`);
       logUserAction("user_deleted", {
