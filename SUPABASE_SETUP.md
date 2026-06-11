@@ -1,6 +1,6 @@
 # Supabase Setup
 
-This dashboard uses Supabase as the shared database for product and UI/UX status reports.
+This dashboard uses Supabase as the shared database for Omena Consulting status reports.
 
 ## 1. Create Or Update The Table
 
@@ -26,7 +26,7 @@ window.SUPABASE_CONFIG = {
 };
 ```
 
-For this project, the app is already configured for project `qjxdfqtzcrsopprcmicr`.
+For this project, the app is already configured for project `vwvmfuktrkpzrzlklbkr`.
 
 ## 3. Deploy With GitHub Pages
 
@@ -39,3 +39,5 @@ In GitHub, open the repository settings:
 5. Save.
 
 GitHub will provide a public URL after the first Pages build finishes.
+
+

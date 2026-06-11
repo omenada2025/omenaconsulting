@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <meta name="dashboard-build" content="2026-06-09-ui-ux-refresh" />
-  <title>Product & UI/UX Pulse Dashboard</title>
+  <title>Omena Consulting Dashboard</title>
   <style>
     :root {
       --ink: #17212b;
@@ -1219,7 +1219,7 @@
       <div>
         <div class="mark" style="margin-bottom:12px">PU</div>
         <h2>Sign in</h2>
-        <p class="muted">Access the Product & UI/UX Pulse dashboard with your assigned role.</p>
+        <p class="muted">Access the Omena Consulting dashboard with your assigned role.</p>
       </div>
       <form id="loginForm">
         <label>
@@ -1240,7 +1240,7 @@
       <div class="brand">
         <div class="mark">PU</div>
         <div>
-          <h1>Product & UI/UX Pulse</h1>
+          <h1>Omena Consulting</h1>
           <p class="muted small">Portfolio status dashboard</p>
         </div>
       </div>
@@ -1262,7 +1262,7 @@
         <div class="header">
           <div>
             <span class="page-kicker">Portfolio command center</span>
-            <h2>Product & UI/UX Dashboard</h2>
+            <h2>Omena Consulting Dashboard</h2>
             <p class="muted" id="dashboardSubtitle">Review the active product portfolio, filter by week, product type, owner, role, and health, then click workstream cards to open wins, blockers, and next actions in context.</p>
           </div>
           <div class="top-actions">
@@ -3297,11 +3297,11 @@
     }
 
     function credentialEmailUrl(user) {
-      const subject = encodeURIComponent("Product & UI/UX Pulse access");
+      const subject = encodeURIComponent("Omena Consulting access");
       const body = encodeURIComponent([
         `Hello ${user.displayName},`,
         "",
-        "Your Product & UI/UX Pulse dashboard access has been created.",
+        "Your Omena Consulting dashboard access has been created.",
         "",
         `Login: ${window.location.href.split("#")[0]}`,
         `Username/email: ${user.username}`,
@@ -3322,7 +3322,7 @@
       return [
         `Hello ${user.displayName || user.username},`,
         "",
-        "Your Product & UI/UX Pulse dashboard access has been created.",
+        "Your Omena Consulting dashboard access has been created.",
         "",
         `Login: ${window.location.href.split("#")[0]}`,
         `Username/email: ${user.username}`,
@@ -4457,7 +4457,7 @@
           </head>
           <body>
             <h1>Source Status Reports</h1>
-            <p>${rows.length} filtered report${rows.length === 1 ? "" : "s"} exported from Product & UI/UX Pulse.</p>
+            <p>${rows.length} filtered report${rows.length === 1 ? "" : "s"} exported from Omena Consulting.</p>
             ${table}
           </body>
         </html>
@@ -4744,7 +4744,7 @@
       const syncStatus = document.getElementById("dashboardSubtitle").dataset.syncStatus || "Local browser storage";
       const filteredCount = getDashboardReports().length;
       const selectedPeriod = `Selected ${dateFilterLabel(dashboardFilters)} - `;
-      document.getElementById("dashboardSubtitle").textContent = latest ? `${selectedPeriod}Latest reporting date: ${latest} - ${filteredCount} of ${reports.length} product and UI/UX updates - ${syncStatus}.` : `Live rollup from submitted product and UI/UX reports - ${syncStatus}.`;
+      document.getElementById("dashboardSubtitle").textContent = latest ? `${selectedPeriod}Latest reporting date: ${latest} - ${filteredCount} of ${reports.length} Omena Consulting updates - ${syncStatus}.` : `Live rollup from submitted Omena Consulting reports - ${syncStatus}.`;
       renderMetrics();
       renderExecutiveDashboard();
       renderHealth();
@@ -5287,4 +5287,5 @@
   </script>
 </body>
 </html>
+
 

@@ -1,7 +1,7 @@
 param(
-  [string]$ProjectRef = "qjxdfqtzcrsopprcmicr",
+  [string]$ProjectRef = "vwvmfuktrkpzrzlklbkr",
   [string]$AllowedOrigin = "https://omenada2025.github.io",
-  [string]$FromName = "Product & UI/UX Pulse"
+  [string]$FromName = "Omena Consulting"
 )
 
 $ErrorActionPreference = "Stop"
@@ -69,3 +69,4 @@ try {
 }
 
 Write-Host "SendGrid email function setup complete."
+

@@ -42,7 +42,7 @@ function textEmail(payload: Required<InvitePayload>) {
   return [
     `Hello ${payload.displayName},`,
     "",
-    "Your Product & UI/UX Pulse dashboard access has been created.",
+    "Your Omena Consulting dashboard access has been created.",
     "",
     `Login: ${payload.loginUrl}`,
     `Username/email: ${payload.username}`,
@@ -61,7 +61,7 @@ function htmlEmail(payload: Required<InvitePayload>) {
   const role = escapeHtml(payload.role);
   return `
     <div style="font-family:Arial,sans-serif;line-height:1.5;color:#17212b">
-      <h2>Product &amp; UI/UX Pulse access</h2>
+      <h2>Omena Consulting access</h2>
       <p>Hello ${displayName},</p>
       <p>Your dashboard access has been created.</p>
       <table style="border-collapse:collapse">
@@ -87,7 +87,7 @@ Deno.serve(async (request) => {
   try {
     const sendgridApiKey = requiredEnv("SENDGRID_API_KEY");
     const fromEmail = requiredEnv("SENDGRID_FROM_EMAIL");
-    const fromName = Deno.env.get("SENDGRID_FROM_NAME") || "Product & UI/UX Pulse";
+    const fromName = Deno.env.get("SENDGRID_FROM_NAME") || "Omena Consulting";
     const payload = await request.json() as InvitePayload;
 
     const requiredPayload: Required<InvitePayload> = {
@@ -113,7 +113,7 @@ Deno.serve(async (request) => {
         personalizations: [
           {
             to: [{ email: requiredPayload.to, name: requiredPayload.displayName }],
-            subject: "Product & UI/UX Pulse access",
+            subject: "Omena Consulting access",
           },
         ],
         from: { email: fromEmail, name: fromName },
@@ -139,3 +139,4 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: error instanceof Error ? error.message : "Unknown error" }, 500);
   }
 });
+

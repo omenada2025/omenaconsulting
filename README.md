@@ -1,2 +1,3 @@
-# dashboard
-Shared Product and UI/UX dashboard backed by Supabase.
+# omenaconsulting
+Shared Omena Consulting dashboard backed by Supabase.
+
