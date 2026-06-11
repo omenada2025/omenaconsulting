@@ -1248,12 +1248,12 @@
         <div class="nav-section">Review</div>
         <button class="tab active" data-view="dashboard">Dashboard</button>
         <button class="tab" data-view="executive">Executive Dashboard</button>
+        <button class="tab" data-view="incidents">Incident Report</button>
         <button class="tab" data-view="reports" data-master-only>Source Reports</button>
         <div class="nav-section" data-master-only>Update</div>
         <button class="tab" data-view="intake" data-master-only>Add Status</button>
         <div class="nav-section" data-role-manager-only>Access</div>
         <button class="tab" data-view="users" data-role-manager-only>Users</button>
-        <button class="tab" data-view="incidents" data-role-manager-only>Incident Report</button>
       </nav>
     </aside>
 
@@ -1572,7 +1572,7 @@
         </div>
       </section>
 
-      <section class="view" id="incidents" data-role-manager-view>
+      <section class="view" id="incidents">
         <div class="header">
           <div>
             <span class="page-kicker">Incident indicators</span>
@@ -3076,9 +3076,9 @@
     }
 
     function canAccessView(id) {
-      if (isMasterAdmin()) return ["dashboard", "executive", "intake", "reports"].includes(id);
+      if (isMasterAdmin()) return ["dashboard", "executive", "incidents", "intake", "reports"].includes(id);
       if (canManageRoles()) return ["dashboard", "executive", "users", "incidents"].includes(id);
-      return ["dashboard", "executive"].includes(id);
+      return ["dashboard", "executive", "incidents"].includes(id);
     }
 
     function requireMasterAdmin(action = "manage reports") {
