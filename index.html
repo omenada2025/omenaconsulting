@@ -2163,6 +2163,7 @@
     let actionLoggingDisabled = false;
     let currentUser = null;
     let currentProfile = "admin";
+    let pendingUserDelete = "";
     const PRODUCT_TYPE_OPTIONS = ["Legacy", "New product"];
     const PRODUCT_OPTIONS = [
       "AeroPass", "Ameritek Ventures", "Augmum", "DAAS", "DeskFlex", "DittoMask", "Ecker Capital", "Epazz",
@@ -3103,6 +3104,7 @@
     }
 
     function renderUserManagement() {
+      pendingUserDelete = "";
       const target = document.getElementById("userList");
       if (!target) return;
       const users = normalizeUsers(loadUsers());
@@ -3436,7 +3438,6 @@
         alert("Keep at least one active Master admin.");
         return;
       }
-      if (!confirm(`Delete user ${targetUser.displayName || username}?`)) return;
       saveUsers(users.filter(user => user.username !== username));
       renderUserManagement();
       showRoleMessage(`User deleted: ${targetUser.displayName || username}.`);
@@ -4856,7 +4857,21 @@
       }
       const deleteBtn = event.target.closest("[data-delete-user]");
       if (deleteBtn) {
-        deleteManagedUser(deleteBtn.dataset.deleteUser);
+        event.preventDefault();
+        event.stopPropagation();
+        const username = deleteBtn.dataset.deleteUser;
+        if (pendingUserDelete !== username) {
+          pendingUserDelete = username;
+          document.querySelectorAll("[data-delete-user]").forEach(button => {
+            button.textContent = "Delete user";
+            button.classList.remove("primary");
+          });
+          deleteBtn.textContent = "Confirm delete";
+          deleteBtn.classList.add("primary");
+          showRoleMessage("Click Confirm delete to permanently remove this user.");
+          return;
+        }
+        deleteManagedUser(username);
       }
     });
 
