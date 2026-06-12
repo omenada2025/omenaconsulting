@@ -2519,25 +2519,32 @@
     function loadReports() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (!saved) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleReports));
-        return sampleReports;
+        const normalizedSeeds = sampleReports.map(normalizeReportPeople);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedSeeds));
+        return normalizedSeeds;
       }
       try {
         const parsed = JSON.parse(saved);
         if (!Array.isArray(parsed)) {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleReports));
-          return sampleReports;
+          const normalizedSeeds = sampleReports.map(normalizeReportPeople);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedSeeds));
+          return normalizedSeeds;
         }
         const seen = new Set(parsed.map(report => `${report.product}|${report.owner}|${report.week}`));
         const missingSeeds = sampleReports.filter(report => !seen.has(`${report.product}|${report.owner}|${report.week}`));
-        const merged = [...parsed, ...missingSeeds];
-        if (missingSeeds.length) localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        const merged = [...parsed, ...missingSeeds].map(normalizeReportPeople);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
         return merged;
       }
-      catch { return sampleReports; }
+      catch {
+        const normalizedSeeds = sampleReports.map(normalizeReportPeople);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedSeeds));
+        return normalizedSeeds;
+      }
     }
 
     function saveReports() {
+      reports = reports.map(normalizeReportPeople);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(reports));
     }
 
@@ -2689,7 +2696,7 @@
         stage: row.stage || "Discovery",
         role: row.role || legacyMeta.role || recoveredRole(row)
       };
-      return applyFieldOverride({
+      return normalizeReportPeople(applyFieldOverride({
         id: row.id,
         product: normalized.product,
         feature_workstream: row.feature_workstream || row.featureWorkstream || row.feature || row.workstream || legacyMeta.feature_workstream || "",
@@ -2713,7 +2720,7 @@
         history: Array.isArray(legacyMeta.history) ? legacyMeta.history : (Array.isArray(row.history) ? row.history : []),
         created_at: row.created_at || "",
         updated_at: row.updated_at || "",
-      });
+      }));
     }
 
     function toDbReport(report, legacy = false) {
@@ -2879,9 +2886,11 @@
     function uniqueOwners(source = reports) {
       const owners = new Map();
       source.forEach(report => {
-        const display = ownerDisplay(report.owner);
-        const key = ownerKey(display);
-        if (!owners.has(key)) owners.set(key, display);
+        splitPeople(report.owner).forEach(person => {
+          const display = ownerDisplay(person);
+          const key = ownerKey(display);
+          if (!owners.has(key)) owners.set(key, display);
+        });
       });
       return [...owners.values()].sort((a, b) => a.localeCompare(b));
     }
@@ -2891,6 +2900,31 @@
         .split(/\s*(?:\/|,|;|\band\b|&)\s*/i)
         .map(cleanText)
         .filter(Boolean);
+    }
+
+    function normalizeReportPeople(report) {
+      const ownerPeople = splitPeople(report.owner);
+      if (ownerPeople.length <= 1) {
+        return {
+          ...report,
+          owner: ownerPeople[0] || cleanText(report.owner || ""),
+          participants: uniquePeople(splitPeople(report.participants)).join(" / ")
+        };
+      }
+      const [primaryOwner, ...additionalOwners] = ownerPeople;
+      const participants = uniquePeople([...splitPeople(report.participants), ...additionalOwners]
+        .filter(person => ownerKey(person) !== ownerKey(primaryOwner)));
+      return {
+        ...report,
+        owner: primaryOwner,
+        participants: participants.join(" / ")
+      };
+    }
+
+    function reportHasPerson(value = "", person = "all") {
+      if (person === "all") return true;
+      const target = ownerKey(person);
+      return splitPeople(value).some(item => ownerKey(item) === target);
     }
 
     function loadCustomPeople() {
@@ -4244,7 +4278,7 @@
       return reports.filter(report =>
         matchesDateFilter(report.week, dashboardFilters) &&
         (dashboardFilters.productType === "all" || report.product_type === dashboardFilters.productType) &&
-        (dashboardFilters.owner === "all" || ownerKey(report.owner) === ownerKey(dashboardFilters.owner)) &&
+        reportHasPerson(report.owner, dashboardFilters.owner) &&
         (dashboardFilters.role === "all" || report.role === dashboardFilters.role) &&
         (dashboardFilters.health === "all" || report.health === dashboardFilters.health)
       );
@@ -4252,7 +4286,7 @@
 
     function getReportList() {
       return reports.filter(report =>
-        (reportFilters.owner === "all" || ownerKey(report.owner) === ownerKey(reportFilters.owner)) &&
+        reportHasPerson(report.owner, reportFilters.owner) &&
         (reportFilters.productType === "all" || report.product_type === reportFilters.productType) &&
         matchesReportingDate(report.week, reportFilters.week) &&
         (reportFilters.health === "all" || report.health === reportFilters.health) &&
@@ -4267,7 +4301,7 @@
           const flags = incidentFlags(report);
           return (
             (incidentFilters.product === "all" || report.product === incidentFilters.product) &&
-            (incidentFilters.owner === "all" || ownerKey(report.owner) === ownerKey(incidentFilters.owner)) &&
+            reportHasPerson(report.owner, incidentFilters.owner) &&
             (incidentFilters.productType === "all" || report.product_type === incidentFilters.productType) &&
             matchesDateFilter(report.week, incidentFilters) &&
             (incidentFilters.type === "all" || Boolean(flags[incidentFilters.type]))
@@ -5180,24 +5214,25 @@
       if (isWeekend(data.week)) {
         throw new Error("Reporting week cannot be Saturday or Sunday.");
       }
-      return {
+      return normalizeReportPeople({
         ...data,
         id,
         role: data.role || "Product Manager",
         progress: Math.max(0, Math.min(100, Number(data.progress || 0))),
         impact: Number(data.impact || 1),
         time: Number(data.time || 1)
-      };
+      });
     }
 
     function renderAll() {
       const weeks = reports.map(r => r.week).filter(Boolean).sort();
       const latest = weeks[weeks.length - 1];
-      const syncStatus = document.getElementById("dashboardSubtitle").dataset.syncStatus || "Local browser storage";
       const filteredCount = getDashboardReports().length;
-      const selectedPeriod = `Selected ${dateFilterLabel(dashboardFilters)} - `;
+      const selectedPeriod = dateFilterLabel(dashboardFilters);
       const latestPeriod = latest ? reportingFieldLabel(latest) : "";
-      document.getElementById("dashboardSubtitle").textContent = latest ? `${selectedPeriod}Latest reporting period: ${latestPeriod} - ${filteredCount} of ${reports.length} Omena Consulting updates - ${syncStatus}.` : `Live rollup from submitted Omena Consulting reports - ${syncStatus}.`;
+      document.getElementById("dashboardSubtitle").textContent = latest
+        ? `Showing ${filteredCount} of ${reports.length} updates for ${selectedPeriod}. Latest available reporting period: ${latestPeriod}.`
+        : "No updates are available yet. Add a status report to start building the portfolio view.";
       renderMetrics();
       renderExecutiveDashboard();
       renderHealth();
