@@ -266,6 +266,19 @@
     .grid {
       display: grid;
       gap: 16px;
+      min-width: 0;
+    }
+
+    .panel,
+    .metric,
+    .report-card,
+    .exec-row,
+    .timeline-item,
+    .monitor-card,
+    .health-detail,
+    .risk-point {
+      min-width: 0;
+      overflow-wrap: anywhere;
     }
 
     .summary-grid {
@@ -275,7 +288,7 @@
 
     .filter-bar {
       display: grid;
-      grid-template-columns: repeat(5, minmax(150px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
       gap: 12px;
       margin-bottom: 16px;
       position: sticky;
@@ -286,6 +299,7 @@
 
     .filter-bar label {
       font-size: 12px;
+      min-width: 0;
     }
 
     .week-field {
@@ -395,6 +409,109 @@
 
     .report-filter-bar {
       grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .status-workspace {
+      align-items: start;
+    }
+
+    .status-workspace .panel {
+      min-width: 0;
+    }
+
+    .status-workspace #reportDetail {
+      position: sticky;
+      top: 84px;
+      max-height: calc(100vh - 108px);
+      overflow: auto;
+    }
+
+    .workflow-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #5b4bb2;
+      padding: 5px 9px;
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin-bottom: 8px;
+    }
+
+    .selected-report-summary {
+      display: grid;
+      gap: 10px;
+      border: 1px solid #cfe4f1;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #fff, var(--blue-soft));
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+
+    .selected-report-summary header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .selected-report-summary h3 {
+      margin: 4px 0;
+      font-size: 18px;
+    }
+
+    .summary-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .summary-meta span {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,.78);
+      padding: 5px 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .edit-section-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .edit-form-section {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fbfdfe;
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .edit-form-section h4 {
+      margin: 0 0 3px;
+      font-size: 14px;
+    }
+
+    .edit-form-section .form-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .detail-actions {
+      position: sticky;
+      bottom: -16px;
+      z-index: 8;
+      margin: 4px -14px -14px;
+      padding: 12px 14px;
+      border-top: 1px solid var(--line);
+      border-radius: 0 0 14px 14px;
+      background: rgba(255,255,255,.94);
+      backdrop-filter: blur(8px);
     }
 
     .export-actions {
@@ -863,10 +980,12 @@
       font-size: 13px;
       font-weight: 700;
       color: var(--ink);
+      min-width: 0;
     }
 
     input, select, textarea {
       width: 100%;
+      min-width: 0;
       border: 1px solid var(--line);
       border-radius: 10px;
       background: #fff;
@@ -875,9 +994,128 @@
       outline: none;
     }
 
+    select,
+    .week-picker-btn,
+    .people-picker-btn {
+      min-height: 44px;
+    }
+
     input:focus, select:focus, textarea:focus, .week-picker-btn:focus {
       border-color: var(--blue);
       box-shadow: 0 0 0 3px rgba(78, 120, 150, .15);
+    }
+
+    .people-field {
+      position: relative;
+      display: grid;
+      gap: 6px;
+    }
+
+    .people-picker {
+      position: relative;
+      min-width: 0;
+    }
+
+    .people-picker-btn {
+      width: 100%;
+      min-width: 0;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--ink);
+      padding: 10px 12px;
+      text-align: left;
+      font: inherit;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .people-picker-btn:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(78, 120, 150, .15);
+      outline: none;
+    }
+
+    .people-picker-btn span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .people-picker-btn::after {
+      content: "⌄";
+      color: var(--muted);
+      font-weight: 900;
+    }
+
+    .people-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      z-index: 25;
+      width: min(360px, 92vw);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: var(--shadow);
+      padding: 10px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .people-menu[hidden] {
+      display: none;
+    }
+
+    .people-options {
+      display: grid;
+      gap: 6px;
+      max-height: 190px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .people-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fbfdfe;
+      padding: 8px 10px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .people-option input {
+      width: auto;
+      margin: 0;
+    }
+
+    .people-add {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+    }
+
+    .people-add input {
+      min-height: 36px;
+      padding: 8px 10px;
+    }
+
+    .people-add .btn {
+      min-height: 36px;
+      padding: 8px 10px;
+      font-size: 12px;
     }
 
     textarea {
@@ -889,6 +1127,7 @@
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
+      min-width: 0;
     }
 
     .form-section {
@@ -1209,6 +1448,11 @@
       .side-actions { position: static; margin-top: 22px; }
       main { padding: 18px; }
       .summary-grid, .two-col, .three-col, .exec-grid, .exec-metrics, .health-stack, .form-grid, .filter-bar, .health-toolbar, .health-detail-grid, .report-card-detail { grid-template-columns: 1fr; }
+      .edit-form-section .form-grid { grid-template-columns: 1fr; }
+      .status-workspace #reportDetail {
+        position: static;
+        max-height: none;
+      }
       .header { flex-direction: column; }
     }
   </style>
@@ -1245,15 +1489,14 @@
         </div>
       </div>
       <nav class="tabs" aria-label="Primary">
-        <div class="nav-section">Review</div>
-        <button class="tab active" data-view="dashboard">Dashboard</button>
-        <button class="tab" data-view="executive">Executive Dashboard</button>
-        <button class="tab" data-view="incidents">Incident Report</button>
-        <button class="tab" data-view="reports" data-master-only>Source Reports</button>
-        <div class="nav-section" data-master-only>Update</div>
-        <button class="tab" data-view="intake" data-master-only>Add Status</button>
-        <div class="nav-section" data-role-manager-only>Access</div>
-        <button class="tab" data-view="users" data-role-manager-only>Users</button>
+        <div class="nav-section">Dashboards</div>
+        <button class="tab active" data-view="dashboard" title="Portfolio health, workstreams, dates, risks, wins, blockers, and next actions">Portfolio Dashboard</button>
+        <button class="tab" data-view="executive" title="Leadership summary focused on attention items and decisions">Executive View</button>
+        <div class="nav-section">Monitor</div>
+        <button class="tab" data-view="incidents" title="Delayed, due soon, postponed, blocked, at-risk, and critical workstreams">Incidents & Delays</button>
+        <button class="tab" data-view="reports" data-master-only>Status Center</button>
+        <div class="nav-section" data-role-manager-only>Admin</div>
+        <button class="tab" data-view="users" data-role-manager-only>User Access</button>
       </nav>
     </aside>
 
@@ -1266,7 +1509,7 @@
             <p class="muted" id="dashboardSubtitle">Review the active product portfolio, filter by week, product type, owner, role, and health, then click workstream cards to open wins, blockers, and next actions in context.</p>
           </div>
           <div class="top-actions">
-            <button class="btn primary" data-jump="intake" data-master-only>Add Product Status</button>
+            <button class="btn primary" data-jump="reports" data-master-only>Open Status Center</button>
             <button class="btn" type="button" data-logout>Logout</button>
           </div>
         </div>
@@ -1396,7 +1639,7 @@
             <p class="muted" id="executiveSubtitle">A focused view for portfolio health, risky workstreams, owner follow-up, delivery dates, and the next actions that need leadership attention.</p>
           </div>
           <div class="top-actions">
-            <button class="btn primary" data-jump="reports" data-master-only>Review Source Reports</button>
+            <button class="btn primary" data-jump="reports" data-master-only>Open Status Center</button>
             <button class="btn" type="button" data-logout>Logout</button>
           </div>
         </div>
@@ -1702,11 +1945,14 @@
       <section class="view" id="intake" data-master-view>
         <div class="header">
           <div>
-            <span class="page-kicker">Weekly intake</span>
+            <span class="page-kicker">Status center</span>
             <h2>Add Product or UI/UX Status Report</h2>
             <p class="muted">Capture one feature or workstream update for a product. After saving, dashboards, report history, date alerts, and exports update automatically.</p>
           </div>
-          <button class="btn" type="button" data-logout>Logout</button>
+          <div class="top-actions">
+            <button class="btn" data-jump="reports" type="button">Back to Status Center</button>
+            <button class="btn" type="button" data-logout>Logout</button>
+          </div>
         </div>
 
         <div class="guide-grid">
@@ -1744,11 +1990,11 @@
                 </label>
                 <label>
                   Owner
-                  <input name="owner" placeholder="e.g., Sam" />
+                  <div class="people-picker" data-people-picker data-name="owner" data-label="Owner" data-placeholder="Select owner"></div>
                 </label>
                 <label>
                   Participants (optional)
-                  <input name="participants" placeholder="e.g., PM, designer, developer" />
+                  <div class="people-picker" data-people-picker data-name="participants" data-label="Participants" data-placeholder="Select participants" data-multiple="true"></div>
                 </label>
                 <label>
                   Type of product
@@ -1886,35 +2132,37 @@
       <section class="view" id="reports" data-master-view>
         <div class="header">
           <div>
-            <span class="page-kicker">Source of truth</span>
-            <h2>Source Status Reports</h2>
-            <p class="muted">Review, edit, export, and audit every submitted product or UI/UX update. Select a card to open full details, save changes, or view history.</p>
+            <span class="page-kicker">Status center</span>
+            <h2>Status Center</h2>
+            <p class="muted">Create new weekly updates, review submitted reports, edit saved details, export data, and audit history from one workspace.</p>
           </div>
           <div class="top-actions">
-            <button class="btn primary" data-jump="dashboard">Back to Dashboard</button>
+            <button class="btn primary" data-jump="intake">Add Status</button>
+            <button class="btn" data-jump="dashboard">Back to Dashboard</button>
             <button class="btn" type="button" data-logout>Logout</button>
           </div>
         </div>
         <div class="guide-grid">
           <div class="guide-card theme-blue">
-            <strong>Filter first</strong>
-            <p class="muted small">Use owner, type, week, health, and role to narrow the working list.</p>
+            <strong>Add status</strong>
+            <p class="muted small">Create a product or workstream update with dates, health, risks, wins, and next actions.</p>
           </div>
           <div class="guide-card theme-green">
-            <strong>Edit safely</strong>
-            <p class="muted small">Changes update the selected report instead of creating duplicate cards.</p>
+            <strong>Review source reports</strong>
+            <p class="muted small">Use owner, type, week, health, and role to narrow the working list before editing.</p>
           </div>
           <div class="guide-card theme-amber">
-            <strong>Audit history</strong>
-            <p class="muted small">Use History to see saved changes by date and field.</p>
+            <strong>Audit and export</strong>
+            <p class="muted small">Use History for saved changes and export the filtered data to CSV, Excel, or PDF.</p>
           </div>
         </div>
-        <div class="grid two-col">
+        <div class="grid two-col status-workspace">
           <div class="panel">
             <div class="panel-title">
               <div>
+                <span class="workflow-label">Step 1 - Select a report</span>
                 <h3>Submitted Reports</h3>
-                <p class="muted small">Export uses the currently filtered report list.</p>
+                <p class="muted small">Filter the list, select one card, then edit the details in the right panel. Export uses the currently filtered list.</p>
               </div>
             </div>
             <div class="filter-bar report-filter-bar">
@@ -2179,6 +2427,7 @@
     const supabaseBaseUrl = hasSupabaseConfig ? `${supabaseRestUrl}/${supabaseTable}` : "";
     const PROFILE_KEY = "product-uiux-pulse-profile-v1";
     const USERS_KEY = "product-uiux-pulse-users-v1";
+    const PEOPLE_KEY = "product-uiux-pulse-people-v1";
     const SESSION_KEY = "product-uiux-pulse-session-v1";
     const TEAM_ACCESS_CODE = "PU-SOEN-2FSO";
     const TEAM_EMAIL_DOMAINS = ["zenatech.com", "zena.tech", "zenadrone.com", "epazz.com"];
@@ -2635,6 +2884,132 @@
         if (!owners.has(key)) owners.set(key, display);
       });
       return [...owners.values()].sort((a, b) => a.localeCompare(b));
+    }
+
+    function splitPeople(value = "") {
+      return cleanText(value)
+        .split(/\s*(?:\/|,|;|\band\b|&)\s*/i)
+        .map(cleanText)
+        .filter(Boolean);
+    }
+
+    function loadCustomPeople() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(PEOPLE_KEY) || "[]");
+        return Array.isArray(parsed) ? parsed.map(cleanText).filter(Boolean) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveCustomPeople(values) {
+      const people = uniquePeople(values);
+      localStorage.setItem(PEOPLE_KEY, JSON.stringify(people));
+    }
+
+    function uniquePeople(values = []) {
+      const map = new Map();
+      values.forEach(value => {
+        const display = cleanText(value);
+        if (!display) return;
+        const key = canonicalText(display);
+        if (!map.has(key)) map.set(key, display);
+      });
+      return [...map.values()].sort((a, b) => a.localeCompare(b));
+    }
+
+    function peopleDirectory() {
+      const defaultPeople = DEFAULT_USERS
+        .filter(user => !["admin", "roles", "master"].includes(user.username))
+        .map(user => user.displayName || user.username);
+      const reportPeople = reports.flatMap(report => [
+        ...splitPeople(report.owner),
+        ...splitPeople(report.participants)
+      ]);
+      return uniquePeople([...defaultPeople, ...reportPeople, ...loadCustomPeople()]);
+    }
+
+    function addPersonToDirectory(name) {
+      const person = cleanText(name);
+      if (!person) return "";
+      saveCustomPeople([...loadCustomPeople(), person]);
+      return person;
+    }
+
+    function peoplePickerMarkup(name, value = "", { multiple = false, label = "Person", placeholder = "Select person" } = {}) {
+      const selected = multiple ? splitPeople(value) : splitPeople(value).slice(0, 1);
+      const hiddenValue = multiple ? selected.join(" / ") : (selected[0] || "");
+      return `
+        <div class="people-picker" data-people-picker data-name="${escapeHtml(name)}" data-label="${escapeHtml(label)}" data-placeholder="${escapeHtml(placeholder)}" ${multiple ? 'data-multiple="true"' : ""} data-selected="${escapeHtml(selected.join("|"))}">
+          <input type="hidden" name="${escapeHtml(name)}" value="${escapeHtml(hiddenValue)}" />
+        </div>
+      `;
+    }
+
+    function peoplePickerDisplay(selected = [], placeholder = "Select person", multiple = false) {
+      if (!selected.length) return placeholder;
+      if (!multiple) return selected[0];
+      if (selected.length <= 2) return selected.join(" / ");
+      return `${selected.length} participants selected`;
+    }
+
+    function renderPeoplePicker(picker) {
+      const name = picker.dataset.name;
+      const multiple = picker.dataset.multiple === "true";
+      const placeholder = picker.dataset.placeholder || (multiple ? "Select people" : "Select person");
+      const selected = (picker.dataset.selected || "")
+        .split("|")
+        .map(cleanText)
+        .filter(Boolean);
+      const hidden = picker.querySelector(`input[name="${CSS.escape(name)}"]`);
+      if (hidden) hidden.value = multiple ? selected.join(" / ") : (selected[0] || "");
+      const people = peopleDirectory();
+      const selectedText = peoplePickerDisplay(selected, placeholder, multiple);
+      const selectedTitle = selected.length ? selected.join(" / ") : placeholder;
+      picker.innerHTML = `
+        <input type="hidden" name="${escapeHtml(name)}" value="${escapeHtml(multiple ? selected.join(" / ") : (selected[0] || ""))}" />
+        <button class="people-picker-btn" type="button" aria-haspopup="listbox" aria-expanded="false" title="${escapeHtml(selectedTitle)}">
+          <span>${escapeHtml(selectedText)}</span>
+        </button>
+        <div class="people-menu" hidden>
+          <div class="people-options" role="listbox" aria-label="${escapeHtml(picker.dataset.label || "People")}">
+            ${people.map(person => {
+              const checked = selected.some(value => canonicalText(value) === canonicalText(person));
+              return `
+                <label class="people-option">
+                  <input type="${multiple ? "checkbox" : "radio"}" name="${escapeHtml(name)}_choice" value="${escapeHtml(person)}" ${checked ? "checked" : ""}>
+                  <span>${escapeHtml(person)}</span>
+                </label>
+              `;
+            }).join("") || `<div class="empty"><strong>No people yet</strong>Add the first person below.</div>`}
+          </div>
+          <div class="people-add">
+            <input type="text" data-new-person placeholder="Add person" />
+            <button class="btn" type="button" data-add-person>Add</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function updatePeoplePickerSelection(picker, nextSelected, { keepOpen = false } = {}) {
+      picker.dataset.selected = uniquePeople(nextSelected).join("|");
+      renderPeoplePicker(picker);
+      if (keepOpen) {
+        const menu = picker.querySelector(".people-menu");
+        const button = picker.querySelector(".people-picker-btn");
+        if (menu) menu.hidden = false;
+        if (button) button.setAttribute("aria-expanded", "true");
+      }
+    }
+
+    function initPeoplePickers(root = document) {
+      root.querySelectorAll("[data-people-picker]").forEach(picker => {
+        if (!picker.dataset.selected) {
+          const hidden = picker.querySelector(`input[name="${CSS.escape(picker.dataset.name)}"]`);
+          picker.dataset.selected = hidden?.value ? splitPeople(hidden.value).join("|") : "";
+        }
+        renderPeoplePicker(picker);
+      });
     }
 
     function reportIdentityKey(report) {
@@ -3531,7 +3906,8 @@
         id = "dashboard";
       }
       document.querySelectorAll(".view").forEach(view => view.classList.toggle("active", view.id === id));
-      document.querySelectorAll(".tab").forEach(tab => tab.classList.toggle("active", tab.dataset.view === id));
+      const activeTab = id === "intake" ? "reports" : id;
+      document.querySelectorAll(".tab").forEach(tab => tab.classList.toggle("active", tab.dataset.view === activeTab));
       logUserAction("view_opened", { view: id }, { target_type: "view", target_id: id });
     }
 
@@ -4471,7 +4847,7 @@
         <html>
           <head>
             <meta charset="utf-8">
-            <title>Source Status Reports</title>
+            <title>Status Center Reports</title>
             <style>
               body { font-family: Arial, sans-serif; color: #17212b; padding: 24px; }
               h1 { font-size: 22px; margin: 0 0 6px; }
@@ -4483,7 +4859,7 @@
             </style>
           </head>
           <body>
-            <h1>Source Status Reports</h1>
+            <h1>Status Center Reports</h1>
             <p>${rows.length} filtered report${rows.length === 1 ? "" : "s"} exported from Omena Consulting.</p>
             ${table}
           </body>
@@ -4566,35 +4942,83 @@
       detail.innerHTML = `
         <div class="panel-title">
           <div>
+            <span class="workflow-label">Step 2 - Edit selected report</span>
             <h3>Edit Report</h3>
-            <p class="muted small">Updates are saved to the selected report card and recorded in history.</p>
+            <p class="muted small">Review the selected report, adjust only what changed, then save. Every saved edit is recorded in History.</p>
           </div>
-          <span class="chip ${healthClass(report)}">${escapeHtml(labels[report.health] || report.health || "Health")}</span>
         </div>
+        <section class="selected-report-summary" aria-label="Selected report summary">
+          <header>
+            <div>
+              <span class="product-label">${escapeHtml(report.product || "Product not separated")}</span>
+              <h3>${escapeHtml(report.feature_workstream || report.product || "Untitled report")}</h3>
+              <p class="muted small">${escapeHtml(report.summary || "No summary captured yet.")}</p>
+            </div>
+            <span class="chip ${healthClass(report)}">${escapeHtml(labels[report.health] || report.health || "Health")}</span>
+          </header>
+          <div class="summary-meta">
+            <span>Owner: ${escapeHtml(report.owner || "Not assigned")}</span>
+            <span>Week: ${escapeHtml(reportingFieldLabel(report.week))}</span>
+            <span>Role: ${escapeHtml(report.role || "Product Manager")}</span>
+            <span>Progress: ${Number(report.progress || 0)}%</span>
+          </div>
+        </section>
         <form class="detail-form" id="editReportForm">
           <div class="inline-message success" id="reportFormMessage" hidden></div>
-          <div class="form-grid">
-            <label>Product<select name="product" required>${productOptionsMarkup(report.product)}</select></label>
-            ${editField("Feature / workstream", "feature_workstream", report.feature_workstream || "", "text", true)}
-            ${editField("Owner", "owner", report.owner)}
-            ${editField("Participants (optional)", "participants", report.participants || "")}
-            <label>Type of product<select name="product_type"><option ${report.product_type === "Legacy" ? "selected" : ""}>Legacy</option><option ${report.product_type === "New product" ? "selected" : ""}>New product</option></select></label>
-            <label>Role<select name="role"><option ${report.role === "Product Manager" ? "selected" : ""}>Product Manager</option><option ${report.role === "UI/UX" ? "selected" : ""}>UI/UX</option></select></label>
-            ${editWeekField(report.week)}
-            ${editField("Start date", "start_date", report.start_date, "date")}
-            ${editEndDateField(report)}
-            <label>Health<select name="health"><option value="green" ${report.health === "green" ? "selected" : ""}>On Track</option><option value="amber" ${report.health === "amber" ? "selected" : ""}>In Progress</option><option value="red" ${report.health === "red" ? "selected" : ""}>At Risk</option><option value="gray" ${report.health === "gray" ? "selected" : ""}>Paused</option></select></label>
-            ${editField("Progress", "progress", report.progress, "number")}
-            ${stageSelect(report.stage)}
-            ${editArea("Summary", "summary", report.summary, true)}
-            ${editArea("Win", "win", report.win)}
-            ${editArea("Blocker or risk", "blocker", report.blocker)}
-            ${editArea("Next action", "next", report.next)}
-            <label>Risk impact<select name="impact"><option value="1" ${Number(report.impact) === 1 ? "selected" : ""}>Low</option><option value="2" ${Number(report.impact) === 2 ? "selected" : ""}>Medium</option><option value="3" ${Number(report.impact) === 3 ? "selected" : ""}>High</option></select></label>
-            <label>Time to solve<select name="time"><option value="1" ${Number(report.time) === 1 ? "selected" : ""}>Short</option><option value="2" ${Number(report.time) === 2 ? "selected" : ""}>Medium</option><option value="3" ${Number(report.time) === 3 ? "selected" : ""}>Long</option></select></label>
-            <label>Priority<select name="priority"><option ${report.priority === "Normal" ? "selected" : ""}>Normal</option><option ${report.priority === "High" ? "selected" : ""}>High</option><option ${report.priority === "Critical" ? "selected" : ""}>Critical</option></select></label>
+          <div class="edit-section-grid">
+            <section class="edit-form-section">
+              <div>
+                <h4>1. What is this report about?</h4>
+                <p class="muted small">Keep product, workstream, owner, and role clean so filters and dashboards stay reliable.</p>
+              </div>
+              <div class="form-grid">
+                <label>Product<select name="product" required>${productOptionsMarkup(report.product)}</select></label>
+                ${editField("Feature / workstream", "feature_workstream", report.feature_workstream || "", "text", true)}
+                <label>Owner${peoplePickerMarkup("owner", report.owner, { label: "Owner", placeholder: "Select owner" })}</label>
+                <label>Participants (optional)${peoplePickerMarkup("participants", report.participants || "", { multiple: true, label: "Participants", placeholder: "Select participants" })}</label>
+                <label>Type of product<select name="product_type"><option ${report.product_type === "Legacy" ? "selected" : ""}>Legacy</option><option ${report.product_type === "New product" ? "selected" : ""}>New product</option></select></label>
+                <label>Role<select name="role"><option ${report.role === "Product Manager" ? "selected" : ""}>Product Manager</option><option ${report.role === "UI/UX" ? "selected" : ""}>UI/UX</option></select></label>
+              </div>
+            </section>
+            <section class="edit-form-section">
+              <div>
+                <h4>2. Timing and health</h4>
+                <p class="muted small">Dates feed the delayed, due soon, and postponed indicators across dashboards.</p>
+              </div>
+              <div class="form-grid">
+                ${editWeekField(report.week)}
+                ${editField("Start date", "start_date", report.start_date, "date")}
+                ${editEndDateField(report)}
+                <label>Health<select name="health"><option value="green" ${report.health === "green" ? "selected" : ""}>On Track</option><option value="amber" ${report.health === "amber" ? "selected" : ""}>In Progress</option><option value="red" ${report.health === "red" ? "selected" : ""}>At Risk</option><option value="gray" ${report.health === "gray" ? "selected" : ""}>Paused</option></select></label>
+                ${editField("Progress", "progress", report.progress, "number")}
+                ${stageSelect(report.stage)}
+              </div>
+            </section>
+            <section class="edit-form-section">
+              <div>
+                <h4>3. Decision-ready update</h4>
+                <p class="muted small">Use short, clear text. These fields appear on the dashboards and in report history.</p>
+              </div>
+              <div class="form-grid">
+                ${editArea("Summary", "summary", report.summary, true)}
+                ${editArea("Win", "win", report.win)}
+                ${editArea("Blocker or risk", "blocker", report.blocker)}
+                ${editArea("Next action", "next", report.next)}
+              </div>
+            </section>
+            <section class="edit-form-section">
+              <div>
+                <h4>4. Escalation signal</h4>
+                <p class="muted small">Priority, impact, and time to solve help leadership understand urgency.</p>
+              </div>
+              <div class="form-grid">
+                <label>Risk impact<select name="impact"><option value="1" ${Number(report.impact) === 1 ? "selected" : ""}>Low</option><option value="2" ${Number(report.impact) === 2 ? "selected" : ""}>Medium</option><option value="3" ${Number(report.impact) === 3 ? "selected" : ""}>High</option></select></label>
+                <label>Time to solve<select name="time"><option value="1" ${Number(report.time) === 1 ? "selected" : ""}>Short</option><option value="2" ${Number(report.time) === 2 ? "selected" : ""}>Medium</option><option value="3" ${Number(report.time) === 3 ? "selected" : ""}>Long</option></select></label>
+                <label>Priority<select name="priority"><option ${report.priority === "Normal" ? "selected" : ""}>Normal</option><option ${report.priority === "High" ? "selected" : ""}>High</option><option ${report.priority === "Critical" ? "selected" : ""}>Critical</option></select></label>
+              </div>
+            </section>
           </div>
-          <div class="form-actions" style="margin-top:6px">
+          <div class="form-actions detail-actions">
             <button class="btn" type="button" id="reportHistoryBtn">History</button>
             <button class="btn" type="button" id="cancelEditReport">Cancel</button>
             <button class="btn danger" type="button" id="deleteReport">Delete Report</button>
@@ -4606,6 +5030,7 @@
       const editWeekButton = detail.querySelector("#editWeekFilter");
       const editWeekPicker = detail.querySelector("#editWeekPicker");
       const editWeekInput = detail.querySelector('input[name="week"]');
+      initPeoplePickers(detail);
       initWeekPicker(editWeekButton, editWeekPicker, () => {}, report.week || mondayForDate(), editWeekInput);
       document.getElementById("reportHistoryBtn").addEventListener("click", () => {
         reportHistoryOpen = !reportHistoryOpen;
@@ -5038,6 +5463,61 @@
       updateUserRole(select.dataset.roleUser, select.value);
     });
 
+    document.addEventListener("click", event => {
+      const pickerButton = event.target.closest(".people-picker-btn");
+      const addButton = event.target.closest("[data-add-person]");
+      const option = event.target.closest(".people-option input");
+      const activePicker = event.target.closest("[data-people-picker]");
+
+      if (pickerButton) {
+        event.stopPropagation();
+        const picker = pickerButton.closest("[data-people-picker]");
+        const menu = picker.querySelector(".people-menu");
+        const opening = menu.hidden;
+        document.querySelectorAll(".people-menu").forEach(item => {
+          if (item !== menu) item.hidden = true;
+        });
+        document.querySelectorAll(".people-picker-btn").forEach(button => {
+          if (button !== pickerButton) button.setAttribute("aria-expanded", "false");
+        });
+        menu.hidden = !opening;
+        pickerButton.setAttribute("aria-expanded", String(opening));
+        return;
+      }
+
+      if (addButton) {
+        event.stopPropagation();
+        const picker = addButton.closest("[data-people-picker]");
+        const input = picker.querySelector("[data-new-person]");
+        const person = addPersonToDirectory(input.value);
+        if (!person) return;
+        const selected = (picker.dataset.selected || "").split("|").map(cleanText).filter(Boolean);
+        updatePeoplePickerSelection(picker, picker.dataset.multiple === "true" ? [...selected, person] : [person], { keepOpen: picker.dataset.multiple === "true" });
+        return;
+      }
+
+      if (option) {
+        event.stopPropagation();
+        const picker = option.closest("[data-people-picker]");
+        const selected = picker.dataset.multiple === "true"
+          ? [...picker.querySelectorAll(".people-option input:checked")].map(input => input.value)
+          : [option.value];
+        updatePeoplePickerSelection(picker, selected, { keepOpen: picker.dataset.multiple === "true" });
+        if (picker.dataset.multiple !== "true") {
+          picker.querySelector(".people-menu").hidden = true;
+          picker.querySelector(".people-picker-btn").setAttribute("aria-expanded", "false");
+        }
+        return;
+      }
+
+      if (!activePicker) {
+        document.querySelectorAll(".people-menu").forEach(menu => { menu.hidden = true; });
+        document.querySelectorAll(".people-picker-btn").forEach(button => {
+          button.setAttribute("aria-expanded", "false");
+        });
+      }
+    });
+
     document.getElementById("statusForm").addEventListener("submit", async event => {
       event.preventDefault();
       if (!requireMasterAdmin("add status reports")) return;
@@ -5049,6 +5529,10 @@
         const report = readReportForm(form);
         await createReport(report);
         form.reset();
+        form.querySelectorAll("[data-people-picker]").forEach(picker => {
+          picker.dataset.selected = "";
+          renderPeoplePicker(picker);
+        });
         setWeekdayDateValue(document.getElementById("statusWeekFilter"), mondayForDate());
         setWeekdayDateValue(form.week, mondayForDate());
         saveBtn.textContent = "Saved";
@@ -5061,6 +5545,15 @@
       } finally {
         saveBtn.disabled = false;
       }
+    });
+
+    document.getElementById("statusForm").addEventListener("reset", event => {
+      setTimeout(() => {
+        event.currentTarget.querySelectorAll("[data-people-picker]").forEach(picker => {
+          picker.dataset.selected = "";
+          renderPeoplePicker(picker);
+        });
+      }, 0);
     });
 
     document.getElementById("reportList").addEventListener("click", event => {
@@ -5309,6 +5802,7 @@
       logFilterChange("source_reports", "reporting_week", reportingFieldLabel(value));
       renderReports();
     }, "");
+    initPeoplePickers(document.getElementById("statusForm"));
     initReportingWeekInputs();
     restoreSession();
     fetchReports();
