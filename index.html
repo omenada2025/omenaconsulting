@@ -2519,27 +2519,22 @@
     function loadReports() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (!saved) {
-        const normalizedSeeds = sampleReports.map(normalizeReportPeople);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedSeeds));
-        return normalizedSeeds;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+        return [];
       }
       try {
         const parsed = JSON.parse(saved);
         if (!Array.isArray(parsed)) {
-          const normalizedSeeds = sampleReports.map(normalizeReportPeople);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedSeeds));
-          return normalizedSeeds;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+          return [];
         }
-        const seen = new Set(parsed.map(report => `${report.product}|${report.owner}|${report.week}`));
-        const missingSeeds = sampleReports.filter(report => !seen.has(`${report.product}|${report.owner}|${report.week}`));
-        const merged = [...parsed, ...missingSeeds].map(normalizeReportPeople);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-        return merged;
+        const normalizedReports = parsed.map(normalizeReportPeople);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedReports));
+        return normalizedReports;
       }
       catch {
-        const normalizedSeeds = sampleReports.map(normalizeReportPeople);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedSeeds));
-        return normalizedSeeds;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+        return [];
       }
     }
 
@@ -3133,18 +3128,9 @@
       }
 
       if (!data.length) {
-        try {
-          const seeded = await supabaseWrite("?select=*", {
-            method: "POST",
-            body: sampleReports
-          });
-          reports = seeded.map(normalizeReport);
-          setSyncStatus(useLegacySupabasePayload ? "Synced with Supabase legacy schema" : "Synced with Supabase");
-        } catch (seedError) {
-          console.error("Supabase seed failed:", seedError);
-          reports = loadReports();
-          setSyncStatus("Supabase seed failed; showing local fallback");
-        }
+        reports = [];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+        setSyncStatus("Synced with Supabase");
       } else {
         reports = data.map(normalizeReport);
         setSyncStatus("Synced with Supabase");
