@@ -10,24 +10,29 @@
   <title>Omena Consulting Dashboard</title>
   <style>
     :root {
-      --ink: #17212b;
-      --muted: #64717d;
-      --line: #d8e0e5;
+      --ink: #13202e;
+      --muted: #657386;
+      --line: #d8e0e8;
+      --line-strong: #c4ced9;
       --panel: #ffffff;
-      --canvas: #f6f8f7;
-      --soft: #eef3f4;
-      --green: #4f9b76;
-      --green-soft: #e3f1e9;
-      --amber: #d59d2f;
-      --amber-soft: #fff0cf;
-      --red: #a3163d;
-      --red-soft: #f8e5eb;
-      --blue: #4e7896;
-      --blue-soft: #e5eff4;
-      --purple: #6656a8;
-      --purple-soft: #eeeafa;
-      --shadow: 0 14px 35px rgba(31, 42, 51, 0.1);
-      --shadow-soft: 0 8px 24px rgba(31, 42, 51, 0.07);
+      --canvas: #f4f6f8;
+      --soft: #f0f4f7;
+      --sidebar: #0f1b2a;
+      --sidebar-soft: #16263a;
+      --accent: #2f6f8f;
+      --accent-strong: #1f5874;
+      --green: #287a55;
+      --green-soft: #e6f4ed;
+      --amber: #b7791f;
+      --amber-soft: #fff4d8;
+      --red: #a21b3f;
+      --red-soft: #fae8ee;
+      --blue: #2f6f8f;
+      --blue-soft: #e7f1f6;
+      --purple: #5b4aa2;
+      --purple-soft: #f0edfb;
+      --shadow: 0 18px 45px rgba(15, 27, 42, 0.10);
+      --shadow-soft: 0 10px 26px rgba(15, 27, 42, 0.07);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
@@ -37,8 +42,10 @@
       margin: 0;
       color: var(--ink);
       background:
-        linear-gradient(var(--line) 1px, transparent 1px),
-        linear-gradient(90deg, var(--line) 1px, transparent 1px),
+        radial-gradient(circle at top left, rgba(47, 111, 143, 0.10), transparent 32rem),
+        radial-gradient(circle at top right, rgba(91, 74, 162, 0.08), transparent 28rem),
+        linear-gradient(rgba(216, 224, 232, 0.42) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(216, 224, 232, 0.42) 1px, transparent 1px),
         var(--canvas);
       background-size: 24px 24px;
     }
@@ -56,7 +63,7 @@
 
     .login-card {
       width: min(460px, 100%);
-      background: #fff;
+      background: rgba(255, 255, 255, 0.94);
       border: 1px solid var(--line);
       border-radius: 18px;
       box-shadow: var(--shadow);
@@ -82,9 +89,10 @@
       top: 0;
       height: 100vh;
       padding: 24px 18px;
-      background: rgba(255, 255, 255, 0.82);
-      border-right: 1px solid var(--line);
+      background: linear-gradient(180deg, var(--sidebar), var(--sidebar-soft));
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
       backdrop-filter: blur(12px);
+      color: #f8fafc;
     }
 
     main {
@@ -107,8 +115,13 @@
       display: grid;
       place-items: center;
       color: white;
-      background: var(--ink);
+      background: linear-gradient(135deg, #0b1220, #2f6f8f);
       font-weight: 800;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+    }
+
+    aside .muted {
+      color: #b9c5d2;
     }
 
     h1, h2, h3, p { margin: 0; }
@@ -124,8 +137,8 @@
       width: max-content;
       margin-bottom: 8px;
       border-radius: 999px;
-      background: var(--purple-soft);
-      color: var(--purple);
+      background: #e9f1f7;
+      color: var(--accent-strong);
       padding: 5px 9px;
       font-size: 11px;
       font-weight: 900;
@@ -142,7 +155,7 @@
     .nav-section {
       margin: 16px 0 6px;
       padding: 0 12px;
-      color: var(--muted);
+      color: #9fb0c3;
       font-size: 11px;
       font-weight: 900;
       letter-spacing: .08em;
@@ -152,8 +165,8 @@
     .role-pill {
       width: max-content;
       border-radius: 999px;
-      background: var(--blue-soft);
-      color: var(--blue);
+      background: rgba(255, 255, 255, 0.10);
+      color: #dce8f3;
       padding: 5px 9px;
       font-size: 12px;
       font-weight: 800;
@@ -163,7 +176,7 @@
       width: 100%;
       border: 1px solid transparent;
       background: transparent;
-      color: var(--ink);
+      color: #dce8f3;
       border-radius: 10px;
       padding: 11px 12px;
       text-align: left;
@@ -175,13 +188,13 @@
     }
 
     .tab:hover {
-      background: rgba(23, 33, 43, 0.06);
+      background: rgba(255, 255, 255, 0.08);
     }
 
     .tab.active {
-      background: var(--ink);
-      color: #fff;
-      box-shadow: var(--shadow);
+      background: #ffffff;
+      color: var(--sidebar);
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.22);
     }
 
     .side-actions {
@@ -206,19 +219,19 @@
       gap: 8px;
       min-height: 40px;
       font-weight: 750;
-      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
     }
 
     .btn:hover {
-      border-color: #b9c7d1;
+      border-color: var(--line-strong);
       box-shadow: var(--shadow-soft);
       transform: translateY(-1px);
     }
 
     .btn.primary {
-      background: var(--ink);
+      background: linear-gradient(135deg, var(--sidebar), var(--accent-strong));
       color: #fff;
-      border-color: var(--ink);
+      border-color: var(--accent-strong);
     }
 
     .btn.danger {
@@ -229,7 +242,7 @@
     .btn.soft {
       background: var(--blue-soft);
       color: var(--blue);
-      border-color: #cfe4f1;
+      border-color: #c9dde8;
     }
 
     .top-actions {
@@ -247,9 +260,9 @@
       gap: 16px;
       margin-bottom: 22px;
       padding: 18px;
-      border: 1px solid rgba(216, 224, 229, .75);
-      border-radius: 18px;
-      background: rgba(255,255,255,.78);
+      border: 1px solid rgba(216, 224, 232, .85);
+      border-radius: 22px;
+      background: rgba(255,255,255,.90);
       box-shadow: var(--shadow-soft);
       backdrop-filter: blur(10px);
     }
@@ -295,6 +308,11 @@
       top: 12px;
       z-index: 10;
       box-shadow: var(--shadow-soft);
+      border: 1px solid rgba(216, 224, 232, .82);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.92);
+      padding: 16px;
+      backdrop-filter: blur(10px);
     }
 
     .filter-bar label {
@@ -308,7 +326,7 @@
       flex-direction: column;
       gap: 8px;
       font-size: 12px;
-      font-weight: 700;
+      font-weight: 800;
     }
 
     .week-picker-btn {
@@ -396,14 +414,14 @@
     }
 
     .week-day.in-selected-week {
-      background: #dbeafe;
-      border-color: #bfdbfe;
-      color: #1d4ed8;
+      background: var(--blue-soft);
+      border-color: #bad7e5;
+      color: var(--accent-strong);
     }
 
     .week-day.selected {
-      background: var(--ink);
-      border-color: var(--ink);
+      background: var(--accent-strong);
+      border-color: var(--accent-strong);
       color: #fff;
     }
 
@@ -431,8 +449,8 @@
       align-items: center;
       gap: 6px;
       border-radius: 999px;
-      background: #eef2ff;
-      color: #5b4bb2;
+      background: #edf4f8;
+      color: var(--accent-strong);
       padding: 5px 9px;
       font-size: 11px;
       font-weight: 900;
@@ -444,9 +462,9 @@
     .selected-report-summary {
       display: grid;
       gap: 10px;
-      border: 1px solid #cfe4f1;
+      border: 1px solid #c9dde8;
       border-radius: 14px;
-      background: linear-gradient(180deg, #fff, var(--blue-soft));
+      background: linear-gradient(180deg, #fff, #f0f7fa);
       padding: 14px;
       margin-bottom: 14px;
     }
@@ -600,18 +618,18 @@
 
     .guide-card {
       border: 1px solid var(--line);
-      border-radius: 14px;
-      background: #fff;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.92);
       padding: 14px;
       display: grid;
       gap: 6px;
       box-shadow: var(--shadow-soft);
     }
 
-    .guide-card.theme-blue { border-color: #cfe4f1; background: linear-gradient(180deg, #fff, var(--blue-soft)); }
-    .guide-card.theme-green { border-color: #c8e4d4; background: linear-gradient(180deg, #fff, var(--green-soft)); }
-    .guide-card.theme-amber { border-color: #f4d895; background: linear-gradient(180deg, #fff, var(--amber-soft)); }
-    .guide-card.theme-red { border-color: #efc0cb; background: linear-gradient(180deg, #fff, var(--red-soft)); }
+    .guide-card.theme-blue { border-color: #c9dde8; background: linear-gradient(180deg, #fff, #edf6fa); }
+    .guide-card.theme-green { border-color: #cbe7d9; background: linear-gradient(180deg, #fff, #eef8f3); }
+    .guide-card.theme-amber { border-color: #edd28f; background: linear-gradient(180deg, #fff, #fff8e8); }
+    .guide-card.theme-red { border-color: #edc2cd; background: linear-gradient(180deg, #fff, #fff0f4); }
 
     .guide-card strong {
       font-size: 14px;
@@ -637,8 +655,8 @@
       gap: 12px;
       padding: 12px;
       border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #fff;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.94);
     }
 
     .exec-row.featured {
@@ -658,7 +676,7 @@
 
     .health-slice {
       min-height: 96px;
-      border-radius: 8px;
+      border-radius: 14px;
       padding: 12px;
       border: 1px solid var(--line);
       background: #fff;
@@ -741,10 +759,10 @@
     }
 
     .panel {
-      background: rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.94);
       border: 1px solid var(--line);
-      border-radius: 16px;
-      box-shadow: var(--shadow);
+      border-radius: 20px;
+      box-shadow: var(--shadow-soft);
       padding: 18px;
     }
 
@@ -846,8 +864,8 @@
       padding: 12px;
       margin-bottom: 12px;
       border: 1px solid var(--line);
-      border-radius: 10px;
-      background: var(--soft);
+      border-radius: 14px;
+      background: #f6f9fb;
     }
 
     .health-detail header {
@@ -866,7 +884,7 @@
     .health-detail-card {
       padding: 10px;
       border: 1px solid var(--line);
-      border-radius: 8px;
+      border-radius: 12px;
       background: #fff;
     }
 
@@ -883,7 +901,7 @@
       padding: 12px;
       border: 1px solid var(--line);
       border-radius: 12px;
-      background: #fff;
+      background: rgba(255, 255, 255, 0.94);
     }
 
     .status-row.interactive {
@@ -988,7 +1006,7 @@
       min-width: 0;
       border: 1px solid var(--line);
       border-radius: 10px;
-      background: #fff;
+      background: rgba(255, 255, 255, 0.95);
       color: var(--ink);
       padding: 10px 11px;
       outline: none;
@@ -1001,8 +1019,8 @@
     }
 
     input:focus, select:focus, textarea:focus, .week-picker-btn:focus {
-      border-color: var(--blue);
-      box-shadow: 0 0 0 3px rgba(78, 120, 150, .15);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(47, 111, 143, .16);
     }
 
     .people-field {
@@ -1022,7 +1040,7 @@
       min-height: 42px;
       border: 1px solid var(--line);
       border-radius: 10px;
-      background: #fff;
+      background: rgba(255, 255, 255, 0.96);
       color: var(--ink);
       padding: 10px 12px;
       text-align: left;
@@ -1067,6 +1085,12 @@
       padding: 10px;
       display: grid;
       gap: 10px;
+    }
+
+    .picker-search {
+      min-height: 36px;
+      padding: 8px 10px;
+      font-size: 13px;
     }
 
     .people-menu[hidden] {
@@ -1132,8 +1156,8 @@
 
     .form-section {
       border: 1px solid var(--line);
-      border-radius: 16px;
-      background: #f8fbfc;
+      border-radius: 18px;
+      background: #f8fafc;
       padding: 16px;
       display: grid;
       gap: 12px;
@@ -1191,10 +1215,10 @@
 
     .report-card {
       border: 1px solid var(--line);
-      border-radius: 14px;
-      background: #fff;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.95);
       padding: 14px;
-      box-shadow: 0 8px 18px rgba(31, 42, 51, 0.04);
+      box-shadow: 0 10px 22px rgba(15, 27, 42, 0.05);
     }
 
     .report-card.interactive {
@@ -1212,8 +1236,8 @@
     }
 
     .report-card.selected {
-      border-color: var(--ink);
-      box-shadow: inset 0 0 0 1px var(--ink);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(47, 111, 143, .14);
     }
 
     .report-card-detail {
@@ -1227,9 +1251,9 @@
 
     .report-card-detail div {
       border: 1px solid var(--line);
-      border-radius: 8px;
+      border-radius: 12px;
       padding: 10px;
-      background: var(--soft);
+      background: #f6f9fb;
     }
 
     .report-card-detail strong {
@@ -1982,7 +2006,7 @@
               <div class="form-grid">
                 <label>
                   Product
-                  <select name="product" required></select>
+                  <div class="people-picker" data-product-picker data-name="product" data-label="Product" data-placeholder="Select product"></div>
                 </label>
                 <label>
                   Feature / workstream
@@ -2468,12 +2492,12 @@
     let pendingUserDelete = "";
     const PRODUCT_TYPE_OPTIONS = ["Legacy", "New product"];
     const PRODUCT_OPTIONS = [
-      "AeroPass", "Ameritek Ventures", "Augmum", "DAAS", "DeskFlex", "DittoMask", "Ecker Capital", "Epazz",
+      "AeroPass", "Ameritek Ventures", "Augmum", "DaaS360", "DAAS", "DeskFlex", "DittoMask", "Ecker Capital", "Epazz",
       "ESM Software", "FlexFridge", "Galaxy Batteries", "Interactive System", "InterlinkOne", "Jadian",
       "K9sky", "Now Solutions", "NightSun", "PacePlus", "Passleys", "PhantomXmotors", "Provitrac",
-      "PsPortals", "QReate & Track", "Spider Vision", "Strantin", "StreamPay", "SystemView", "TillerStack",
+      "PsPortals", "QReate & Track", "Spider Vision", "Strantin", "StreamPay", "Survey software", "SystemView", "TillerStack",
       "Twinpeaksweb", "Webbeeo", "WorkAware", "ZenaDrone", "ZenaPay", "ZenaTech", "Zigvoice", "Zinergy"
-    ];
+    ].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
     const dashboardFilters = {
       period: "weekly",
       week: "",
@@ -3001,11 +3025,12 @@
           <span>${escapeHtml(selectedText)}</span>
         </button>
         <div class="people-menu" hidden>
+          <input type="text" class="picker-search" data-picker-search placeholder="Type to search ${escapeHtml((picker.dataset.label || "people").toLowerCase())}" />
           <div class="people-options" role="listbox" aria-label="${escapeHtml(picker.dataset.label || "People")}">
             ${people.map(person => {
               const checked = selected.some(value => canonicalText(value) === canonicalText(person));
               return `
-                <label class="people-option">
+                <label class="people-option" data-search-text="${escapeHtml(canonicalText(person))}">
                   <input type="${multiple ? "checkbox" : "radio"}" name="${escapeHtml(name)}_choice" value="${escapeHtml(person)}" ${checked ? "checked" : ""}>
                   <span>${escapeHtml(person)}</span>
                 </label>
@@ -3039,6 +3064,81 @@
         }
         renderPeoplePicker(picker);
       });
+    }
+
+    function productPickerMarkup(value = "") {
+      return `
+        <div class="people-picker" data-product-picker data-name="product" data-label="Product" data-placeholder="Select product" data-selected="${escapeHtml(value || "")}">
+          <input type="hidden" name="product" value="${escapeHtml(value || "")}" />
+        </div>
+      `;
+    }
+
+    function renderProductPicker(picker) {
+      const selected = cleanText(picker.dataset.selected || "");
+      const selectedTitle = selected || picker.dataset.placeholder || "Select product";
+      const values = [...new Set([selected, ...PRODUCT_OPTIONS].filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+      picker.innerHTML = `
+        <input type="hidden" name="${escapeHtml(picker.dataset.name || "product")}" value="${escapeHtml(selected)}" />
+        <button class="people-picker-btn" type="button" aria-haspopup="listbox" aria-expanded="false" title="${escapeHtml(selectedTitle)}">
+          <span>${escapeHtml(selectedTitle)}</span>
+        </button>
+        <div class="people-menu" hidden>
+          <input type="text" class="picker-search" data-picker-search placeholder="Type to search products" />
+          <div class="people-options" role="listbox" aria-label="${escapeHtml(picker.dataset.label || "Products")}">
+            ${values.map(product => `
+              <label class="people-option" data-search-text="${escapeHtml(canonicalText(product))}">
+                <input type="radio" name="${escapeHtml(picker.dataset.name || "product")}_choice" value="${escapeHtml(product)}" ${product === selected ? "checked" : ""}>
+                <span>${escapeHtml(product)}</span>
+              </label>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    function updateProductPickerSelection(picker, value, { keepOpen = false } = {}) {
+      picker.dataset.selected = cleanText(value);
+      renderProductPicker(picker);
+      if (keepOpen) {
+        const menu = picker.querySelector(".people-menu");
+        const button = picker.querySelector(".people-picker-btn");
+        if (menu) menu.hidden = false;
+        if (button) button.setAttribute("aria-expanded", "true");
+      }
+    }
+
+    function initProductPickers(root = document) {
+      root.querySelectorAll("[data-product-picker]").forEach(picker => {
+        if (!picker.dataset.selected) {
+          const hidden = picker.querySelector(`input[name="${CSS.escape(picker.dataset.name || "product")}"]`);
+          picker.dataset.selected = hidden?.value ? cleanText(hidden.value) : "";
+        }
+        renderProductPicker(picker);
+      });
+    }
+
+    function filterPickerOptions(menu, query) {
+      const needle = canonicalText(query);
+      let visibleCount = 0;
+      menu.querySelectorAll(".people-option").forEach(option => {
+        const haystack = option.dataset.searchText || canonicalText(option.textContent || "");
+        const visible = !needle || haystack.includes(needle);
+        option.hidden = !visible;
+        if (visible) visibleCount += 1;
+      });
+      let empty = menu.querySelector("[data-picker-empty]");
+      if (!empty) {
+        empty = document.createElement("div");
+        empty.className = "empty";
+        empty.dataset.pickerEmpty = "true";
+        empty.innerHTML = menu.closest("[data-product-picker]")
+          ? "<strong>No matches</strong>Try another letter."
+          : "<strong>No matches</strong>Try another letter or add the person below.";
+        menu.querySelector(".people-options")?.appendChild(empty);
+      }
+      empty.hidden = visibleCount > 0;
     }
 
     function reportIdentityKey(report) {
@@ -4922,9 +5022,8 @@
     }
 
     function productOptionsMarkup(current = "") {
-      const values = PRODUCT_OPTIONS.includes(current) || !current
-        ? PRODUCT_OPTIONS
-        : [current, ...PRODUCT_OPTIONS];
+      const values = [...new Set([current, ...PRODUCT_OPTIONS].filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
       return [
         `<option value="" ${current ? "" : "selected"} disabled>Select product</option>`,
         ...values.map(product => `<option value="${escapeHtml(product)}" ${product === current ? "selected" : ""}>${escapeHtml(product)}</option>`)
@@ -4992,7 +5091,7 @@
                 <p class="muted small">Keep product, workstream, owner, and role clean so filters and dashboards stay reliable.</p>
               </div>
               <div class="form-grid">
-                <label>Product<select name="product" required>${productOptionsMarkup(report.product)}</select></label>
+                <label>Product${productPickerMarkup(report.product)}</label>
                 ${editField("Feature / workstream", "feature_workstream", report.feature_workstream || "", "text", true)}
                 <label>Owner${peoplePickerMarkup("owner", report.owner, { label: "Owner", placeholder: "Select owner" })}</label>
                 <label>Participants (optional)${peoplePickerMarkup("participants", report.participants || "", { multiple: true, label: "Participants", placeholder: "Select participants" })}</label>
@@ -5050,6 +5149,7 @@
       const editWeekButton = detail.querySelector("#editWeekFilter");
       const editWeekPicker = detail.querySelector("#editWeekPicker");
       const editWeekInput = detail.querySelector('input[name="week"]');
+      initProductPickers(detail);
       initPeoplePickers(detail);
       initWeekPicker(editWeekButton, editWeekPicker, () => {}, report.week || mondayForDate(), editWeekInput);
       document.getElementById("reportHistoryBtn").addEventListener("click", () => {
@@ -5197,6 +5297,9 @@
 
     function readReportForm(form, id = crypto.randomUUID()) {
       const data = Object.fromEntries(new FormData(form).entries());
+      if (!cleanText(data.product)) {
+        throw new Error("Select a product before saving.");
+      }
       if (isWeekend(data.week)) {
         throw new Error("Reporting week cannot be Saturday or Sunday.");
       }
@@ -5488,11 +5591,11 @@
       const pickerButton = event.target.closest(".people-picker-btn");
       const addButton = event.target.closest("[data-add-person]");
       const option = event.target.closest(".people-option input");
-      const activePicker = event.target.closest("[data-people-picker]");
+      const activePicker = event.target.closest("[data-people-picker], [data-product-picker]");
 
       if (pickerButton) {
         event.stopPropagation();
-        const picker = pickerButton.closest("[data-people-picker]");
+        const picker = pickerButton.closest("[data-people-picker], [data-product-picker]");
         const menu = picker.querySelector(".people-menu");
         const opening = menu.hidden;
         document.querySelectorAll(".people-menu").forEach(item => {
@@ -5503,6 +5606,14 @@
         });
         menu.hidden = !opening;
         pickerButton.setAttribute("aria-expanded", String(opening));
+        if (opening) {
+          const search = menu.querySelector("[data-picker-search]");
+          if (search) {
+            search.value = "";
+            filterPickerOptions(menu, "");
+            setTimeout(() => search.focus(), 0);
+          }
+        }
         return;
       }
 
@@ -5519,7 +5630,13 @@
 
       if (option) {
         event.stopPropagation();
-        const picker = option.closest("[data-people-picker]");
+        const picker = option.closest("[data-people-picker], [data-product-picker]");
+        if (picker.matches("[data-product-picker]")) {
+          updateProductPickerSelection(picker, option.value);
+          picker.querySelector(".people-menu").hidden = true;
+          picker.querySelector(".people-picker-btn").setAttribute("aria-expanded", "false");
+          return;
+        }
         const selected = picker.dataset.multiple === "true"
           ? [...picker.querySelectorAll(".people-option input:checked")].map(input => input.value)
           : [option.value];
@@ -5537,6 +5654,14 @@
           button.setAttribute("aria-expanded", "false");
         });
       }
+    });
+
+    document.addEventListener("input", event => {
+      const search = event.target.closest("[data-picker-search]");
+      if (!search) return;
+      const menu = search.closest(".people-menu");
+      if (!menu) return;
+      filterPickerOptions(menu, search.value);
     });
 
     document.getElementById("statusForm").addEventListener("submit", async event => {
@@ -5562,7 +5687,9 @@
       } catch (error) {
         console.error(error);
         saveBtn.textContent = "Save Report";
-        alert(error.message.includes("Saturday or Sunday") ? error.message : "Could not save this report. Check Supabase configuration or connection.");
+        alert(error.message.includes("Saturday or Sunday") || error.message.includes("Select a product")
+          ? error.message
+          : "Could not save this report. Check Supabase configuration or connection.");
       } finally {
         saveBtn.disabled = false;
       }
@@ -5570,6 +5697,10 @@
 
     document.getElementById("statusForm").addEventListener("reset", event => {
       setTimeout(() => {
+        event.currentTarget.querySelectorAll("[data-product-picker]").forEach(picker => {
+          picker.dataset.selected = "";
+          renderProductPicker(picker);
+        });
         event.currentTarget.querySelectorAll("[data-people-picker]").forEach(picker => {
           picker.dataset.selected = "";
           renderPeoplePicker(picker);
@@ -5774,7 +5905,6 @@
     document.getElementById("exportExcelBtn").addEventListener("click", exportReportsExcel);
     document.getElementById("exportPdfBtn").addEventListener("click", exportReportsPdf);
 
-    populateProductSelect(document.querySelector('#statusForm select[name="product"]'));
     const defaultReportingMonday = mondayForDate();
     const defaultReportingRange = workweekRange(defaultReportingMonday);
     const defaultReportingFriday = defaultReportingRange ? formatDate(defaultReportingRange.end) : defaultReportingMonday;
@@ -5823,6 +5953,7 @@
       logFilterChange("source_reports", "reporting_week", reportingFieldLabel(value));
       renderReports();
     }, "");
+    initProductPickers(document.getElementById("statusForm"));
     initPeoplePickers(document.getElementById("statusForm"));
     initReportingWeekInputs();
     restoreSession();
