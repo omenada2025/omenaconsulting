@@ -2447,6 +2447,7 @@
     const hasSupabaseConfig = Boolean(config.url && config.anonKey);
     const supabaseTable = config.table || "status_reports";
     const actionLogTable = config.actionLogTable || "user_action_logs";
+    const usersTable = config.usersTable || "app_users";
     const supabaseRestUrl = hasSupabaseConfig ? `${config.url.replace(/\/$/, "")}/rest/v1` : "";
     const supabaseBaseUrl = hasSupabaseConfig ? `${supabaseRestUrl}/${supabaseTable}` : "";
     const PROFILE_KEY = "product-uiux-pulse-profile-v1";
@@ -2849,7 +2850,8 @@
         throw parseSupabaseError(response.status, await response.text());
       }
       if (response.status === 204) return null;
-      return response.json();
+      const text = await response.text();
+      return text ? JSON.parse(text) : null;
     }
 
     async function supabaseRequest(path = "", options = {}) {
@@ -3540,6 +3542,105 @@
       localStorage.setItem(USERS_KEY, JSON.stringify([...normalized, ...preservedDeletes]));
     }
 
+    function isDefaultUser(username) {
+      return DEFAULT_USERS.some(defaultUser => defaultUser.username === username);
+    }
+
+    function toDbUser(user) {
+      const normalized = normalizeUsers([user])[0];
+      if (!normalized) return null;
+      return {
+        username: normalized.username,
+        display_name: normalized.displayName,
+        role: normalized.role,
+        password: normalized.password,
+        active: normalized.active !== false,
+        deleted: normalized.deleted === true,
+        last_credential_email_at: normalized.lastCredentialEmailAt || null
+      };
+    }
+
+    function fromDbUser(row) {
+      if (!row?.username) return null;
+      return {
+        username: cleanText(row.username).toLowerCase(),
+        displayName: cleanText(row.display_name || row.displayName || row.username),
+        role: normalizeRole(row.role),
+        password: cleanText(row.password) || generateAccessCode(),
+        active: row.active !== false,
+        deleted: row.deleted === true,
+        lastCredentialEmailAt: row.last_credential_email_at || row.lastCredentialEmailAt || ""
+      };
+    }
+
+    async function fetchCloudUsers() {
+      if (!hasSupabaseConfig) return [];
+      const rows = await supabaseTableRequest(usersTable, "?select=*&deleted=eq.false&order=display_name.asc", {
+        prefer: "",
+        timeoutMs: 10000
+      });
+      return normalizeUsers((rows || []).map(fromDbUser).filter(Boolean));
+    }
+
+    async function upsertCloudUser(user) {
+      if (!hasSupabaseConfig) return null;
+      const payload = toDbUser(user);
+      if (!payload || isDefaultUser(payload.username)) return null;
+      const result = await supabaseTableRequest(usersTable, "?on_conflict=username", {
+        method: "POST",
+        body: payload,
+        prefer: "resolution=merge-duplicates,return=representation",
+        timeoutMs: 10000
+      });
+      return fromDbUser(result?.[0]);
+    }
+
+    async function saveCloudUsers(users) {
+      if (!hasSupabaseConfig) return;
+      const payload = normalizeUsers(users)
+        .filter(user => !isDefaultUser(user.username))
+        .map(toDbUser)
+        .filter(Boolean);
+      if (!payload.length) return;
+      await supabaseTableRequest(usersTable, "?on_conflict=username", {
+        method: "POST",
+        body: payload,
+        prefer: "resolution=merge-duplicates,return=minimal",
+        timeoutMs: 15000
+      });
+    }
+
+    async function syncUsersWithCloud() {
+      if (!hasSupabaseConfig) return loadUsers();
+      const localUsers = normalizeUsers(loadUsers());
+      const localManaged = localUsers.filter(user => !isDefaultUser(user.username) && user.deleted !== true);
+      try {
+        const cloudUsers = await fetchCloudUsers();
+        const cloudUsernames = new Set(cloudUsers.map(user => user.username));
+        const localOnlyManaged = localManaged.filter(user => !cloudUsernames.has(user.username));
+        if (localOnlyManaged.length) {
+          await saveCloudUsers(localOnlyManaged);
+        }
+        const merged = normalizeUsers([...DEFAULT_USERS, ...cloudUsers, ...localOnlyManaged]);
+        saveUsers(merged);
+        return merged;
+      } catch (error) {
+        console.warn("Cloud user sync failed. Using local cached users.", error);
+        showRoleMessage("User access sync could not reach Supabase. Using local cached access for now.");
+        return localUsers;
+      }
+    }
+
+    async function softDeleteCloudUser(username) {
+      if (!hasSupabaseConfig || isDefaultUser(username)) return;
+      await supabaseTableRequest(usersTable, `?username=eq.${encodeURIComponent(username)}`, {
+        method: "PATCH",
+        body: { active: false, deleted: true },
+        prefer: "return=minimal",
+        timeoutMs: 10000
+      });
+    }
+
     function normalizeRole(role) {
       const value = cleanText(role).toLowerCase().replace(/[_-]+/g, " ").trim();
       if (["master", "master admin", "master administrator", "full access"].includes(value)) return "master";
@@ -3678,7 +3779,7 @@
       if (!target) return;
       const users = normalizeUsers(loadUsers());
       saveUsers(users);
-      const managedUsers = users.filter(user => !DEFAULT_USERS.some(defaultUser => defaultUser.username === user.username));
+      const managedUsers = users.filter(user => !isDefaultUser(user.username));
       const summary = document.getElementById("userDirectorySummary");
       if (summary) {
         const activeCount = managedUsers.filter(user => user.active !== false).length;
@@ -3717,6 +3818,7 @@
           </div>
           <div class="report-actions">
             <button class="btn primary" type="button" data-copy-invite="${escapeHtml(user.username)}">Copy invite</button>
+            <button class="btn soft" type="button" data-reset-user="${escapeHtml(user.username)}">Reset & email code</button>
             <button class="btn soft" type="button" data-email-user="${escapeHtml(user.username)}">Resend email</button>
             <button class="btn" type="button" data-toggle-user="${escapeHtml(user.username)}">${user.active === false ? "Activate" : "Deactivate"}</button>
             <button class="btn danger" type="button" data-delete-user="${escapeHtml(user.username)}" ${user.username === currentUser?.username ? "disabled" : ""}>Delete user</button>
@@ -3748,6 +3850,7 @@
       };
       users.push(user);
       saveUsers(users);
+      await upsertCloudUser(user);
       form.reset();
       renderUserManagement();
       showRoleMessage(`User created: ${user.displayName}. Sending access email now...`);
@@ -3782,12 +3885,16 @@
       });
     }
 
-    function markCredentialEmailSent(username, sentAt = new Date().toISOString()) {
+    async function markCredentialEmailSent(username, sentAt = new Date().toISOString()) {
       const users = loadUsers().map(user => user.username === username ? {
         ...user,
         lastCredentialEmailAt: sentAt
       } : user);
       saveUsers(users);
+      const updated = users.find(user => user.username === username);
+      if (updated) {
+        await upsertCloudUser(updated);
+      }
       renderUserManagement();
     }
 
@@ -3885,7 +3992,7 @@
         }
 
         const result = await response.json().catch(() => ({}));
-        markCredentialEmailSent(user.username, result.sent_at);
+        await markCredentialEmailSent(user.username, result.sent_at);
         showRoleMessage(`Credentials email accepted by SendGrid for ${user.username}. Check Inbox, Spam, or SendGrid Activity.`);
       } catch (error) {
         console.warn("Credential email failed; opening fallback draft.", error);
@@ -3907,6 +4014,7 @@
       const users = currentUsers.map(user => user.username === username ? { ...user, active: user.active === false } : user);
       saveUsers(users);
       const updated = users.find(user => user.username === username);
+      await upsertCloudUser(updated);
       renderUserManagement();
       showRoleMessage(`${updated.displayName} is now ${updated.active === false ? "inactive" : "active"}.`);
       if (updated.active) {
@@ -3915,7 +4023,7 @@
       logUserAction("user_activation_changed", { username, active: updated.active }, { target_type: "user", target_id: username });
     }
 
-    function updateUserRole(username, role) {
+    async function updateUserRole(username, role) {
       if (!requireRoleManager("manage roles")) return;
       const currentUsers = loadUsers();
       const targetUser = currentUsers.find(user => user.username === username);
@@ -3927,6 +4035,8 @@
       }
       const users = currentUsers.map(user => user.username === username ? { ...user, role } : user);
       saveUsers(users);
+      const updated = users.find(user => user.username === username);
+      await upsertCloudUser(updated);
       const updatedCurrent = users.find(user => user.username === currentUser?.username);
       if (updatedCurrent) setSession(updatedCurrent);
       renderUserManagement();
@@ -3979,8 +4089,11 @@
         ...edited,
         displayName: edited.displayName || edited.username
       } : user);
+      const passwordChanged = existing.password !== edited.password;
+      const usernameChanged = existing.username !== edited.username;
       saveUsers(updatedUsers);
       const updated = normalizeUsers(updatedUsers).find(user => user.username === edited.username);
+      await upsertCloudUser(updated);
       if (currentUser?.username === username && updated) setSession(updated);
       renderUserManagement();
       showRoleMessage(`User saved: ${updated?.displayName || edited.username}.`);
@@ -3990,12 +4103,12 @@
         role: edited.role,
         active: edited.active
       }, { target_type: "user", target_id: edited.username });
-      if (existing.active === false && updated?.active !== false) {
+      if ((existing.active === false && updated?.active !== false) || passwordChanged || usernameChanged) {
         await sendCredentialEmail(updated);
       }
     }
 
-    function deleteManagedUser(username) {
+    async function deleteManagedUser(username) {
       if (!requireRoleManager("delete users")) return;
       if (username === currentUser?.username) {
         alert("You cannot delete the user currently signed in.");
@@ -4013,11 +4126,34 @@
         active: false,
         deleted: true
       } : user));
+      await softDeleteCloudUser(username);
       renderUserManagement();
       showRoleMessage(`User deleted: ${targetUser.displayName || username}.`);
       logUserAction("user_deleted", {
         username,
         role: targetUser.role
+      }, { target_type: "user", target_id: username });
+    }
+
+    async function resetUserAccess(username) {
+      if (!requireRoleManager("reset access codes")) return;
+      const users = loadUsers();
+      const targetUser = users.find(user => user.username === username);
+      if (!targetUser) return;
+      const updatedUsers = users.map(user => user.username === username ? {
+        ...user,
+        password: generateAccessCode(),
+        active: true
+      } : user);
+      saveUsers(updatedUsers);
+      const updated = updatedUsers.find(user => user.username === username);
+      await upsertCloudUser(updated);
+      renderUserManagement();
+      showRoleMessage(`New access code generated for ${updated.displayName || username}. Sending email now...`);
+      await sendCredentialEmail(updated);
+      logUserAction("user_access_reset", {
+        username,
+        role: updated.role
       }, { target_type: "user", target_id: username });
     }
 
@@ -5505,16 +5641,19 @@
       });
     });
 
-    document.getElementById("loginForm").addEventListener("submit", event => {
+    document.getElementById("loginForm").addEventListener("submit", async event => {
       event.preventDefault();
       const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+      const message = document.getElementById("loginMessage");
+      message.textContent = "Checking access...";
+      message.hidden = false;
+      await syncUsersWithCloud();
       const loginIdentifier = normalizeLoginIdentifier(data.username);
       const accessCode = normalizeAccessCode(data.password);
       const user = loadUsers().find(candidate =>
         normalizeLoginIdentifier(candidate.username) === loginIdentifier &&
         normalizeAccessCode(candidate.password) === accessCode
       ) || teamFallbackUser(data.username, data.password);
-      const message = document.getElementById("loginMessage");
       if (!user) {
         message.textContent = "Invalid username or access code.";
         message.hidden = false;
@@ -5556,6 +5695,11 @@
         await copyCredentialInvite(user);
         return;
       }
+      const resetBtn = event.target.closest("[data-reset-user]");
+      if (resetBtn) {
+        await resetUserAccess(resetBtn.dataset.resetUser);
+        return;
+      }
       const toggleBtn = event.target.closest("[data-toggle-user]");
       if (toggleBtn) {
         await toggleUserActive(toggleBtn.dataset.toggleUser);
@@ -5577,14 +5721,14 @@
           showRoleMessage("Click Confirm delete to permanently remove this user.");
           return;
         }
-        deleteManagedUser(username);
+        await deleteManagedUser(username);
       }
     });
 
-    document.getElementById("userList").addEventListener("change", event => {
+    document.getElementById("userList").addEventListener("change", async event => {
       const select = event.target.closest("[data-role-user]");
       if (!select) return;
-      updateUserRole(select.dataset.roleUser, select.value);
+      await updateUserRole(select.dataset.roleUser, select.value);
     });
 
     document.addEventListener("click", event => {
@@ -5956,8 +6100,11 @@
     initProductPickers(document.getElementById("statusForm"));
     initPeoplePickers(document.getElementById("statusForm"));
     initReportingWeekInputs();
-    restoreSession();
-    fetchReports();
+    (async () => {
+      await syncUsersWithCloud();
+      restoreSession();
+      await fetchReports();
+    })();
   </script>
 </body>
 </html>
