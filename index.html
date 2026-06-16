@@ -2512,7 +2512,14 @@
       krish: "krishina",
       nadishni: "nadishani",
       nadish: "nadishani",
-      saurabh: "sam"
+      saurabh: "sam",
+      "saurabh.jogdeo": "sam",
+      swati: "swatti"
+    };
+    const USERNAME_ALIASES = {
+      "krishna@zenatech.com": "krishina@zenatech.com",
+      "saurabh.jogdeo@zenatech.com": "sam@zenatech.com",
+      "swati.gurbani@zenatech.com": "swatti@zenatech.com"
     };
     const DEFAULT_USERS = [
       { username: "admin", displayName: "Admin User", role: "admin", password: "admin2026", active: true },
@@ -3556,24 +3563,54 @@
       return DEFAULT_USERS;
     }
 
+    function canonicalUsername(value = "") {
+      const username = cleanText(value).toLowerCase();
+      return USERNAME_ALIASES[username] || username;
+    }
+
+    function canonicalDisplayName(username = "", displayName = "") {
+      const canonical = canonicalUsername(username);
+      if (canonical === "krishina@zenatech.com") return "Krishina";
+      if (canonical === "sam@zenatech.com") return "Sam";
+      if (canonical === "swatti@zenatech.com") return "Swatti";
+      return cleanText(displayName) || canonical;
+    }
+
+    function mergeUserRecords(existing, incoming) {
+      if (!existing) return incoming;
+      const existingTime = Date.parse(existing.lastCredentialEmailAt || existing.updatedAt || "") || 0;
+      const incomingTime = Date.parse(incoming.lastCredentialEmailAt || incoming.updatedAt || "") || 0;
+      const base = incomingTime >= existingTime ? { ...existing, ...incoming } : { ...incoming, ...existing };
+      return {
+        ...base,
+        username: existing.username,
+        displayName: canonicalDisplayName(existing.username, base.displayName),
+        role: normalizeRole(base.role),
+        active: existing.active !== false || incoming.active !== false,
+        deleted: existing.deleted === true && incoming.deleted === true
+      };
+    }
+
     function normalizeUsers(users) {
-      const seen = new Set();
-      return users
+      const byUsername = new Map();
+      users
         .filter(user => user?.username)
-        .map(user => ({
-          ...user,
-          username: cleanText(user.username).toLowerCase(),
-          displayName: cleanText(user.displayName) || cleanText(user.username).toLowerCase(),
-          role: normalizeRole(user.role),
-          password: cleanText(user.password) || generateAccessCode(),
-          active: user.active !== false,
-          deleted: user.deleted === true
-        }))
-        .filter(user => {
-          if (seen.has(user.username)) return false;
-          seen.add(user.username);
-          return true;
+        .forEach(user => {
+          const username = canonicalUsername(user.username);
+          const normalized = {
+            ...user,
+            username,
+            displayName: canonicalDisplayName(username, user.displayName),
+            role: normalizeRole(user.role),
+            password: cleanText(user.password) || generateAccessCode(),
+            active: user.active !== false,
+            deleted: user.deleted === true,
+            lastCredentialEmailAt: user.lastCredentialEmailAt || user.last_credential_email_at || "",
+            updatedAt: user.updatedAt || user.updated_at || ""
+          };
+          byUsername.set(username, mergeUserRecords(byUsername.get(username), normalized));
         });
+      return [...byUsername.values()];
     }
 
     function saveUsers(users) {
