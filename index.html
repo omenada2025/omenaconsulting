@@ -1865,6 +1865,7 @@
               <h3>Existing Users</h3>
               <p class="muted small" id="userDirectorySummary">Review access status, update assigned role, and share credentials.</p>
             </div>
+            <button class="btn soft" type="button" id="refreshUsersBtn">Refresh access list</button>
           </div>
           <div class="report-list" id="userList"></div>
           <div class="inline-message success" id="userMessage" hidden></div>
@@ -2491,6 +2492,7 @@
     let currentUser = null;
     let currentProfile = "admin";
     let pendingUserDelete = "";
+    let userDirectoryRefreshPromise = null;
     const PRODUCT_TYPE_OPTIONS = ["Legacy", "New product"];
     const PRODUCT_OPTIONS = [
       "AeroPass", "Ameritek Ventures", "Augmum", "DaaS360", "DAAS", "DeskFlex", "DittoMask", "Ecker Capital", "Epazz",
@@ -3633,6 +3635,26 @@
       }
     }
 
+    async function refreshUserManagementFromCloud() {
+      if (!canManageRoles()) return loadUsers();
+      if (userDirectoryRefreshPromise) return userDirectoryRefreshPromise;
+      userDirectoryRefreshPromise = syncUsersWithCloud()
+        .then(users => {
+          renderUserManagement();
+          showRoleMessage("Access list refreshed from Supabase.");
+          return users;
+        })
+        .catch(error => {
+          console.warn("User directory refresh failed.", error);
+          showRoleMessage("Could not refresh the access list from Supabase. Showing cached data.");
+          return loadUsers();
+        })
+        .finally(() => {
+          userDirectoryRefreshPromise = null;
+        });
+      return userDirectoryRefreshPromise;
+    }
+
     async function softDeleteCloudUser(username) {
       if (!hasSupabaseConfig || isDefaultUser(username)) return;
       await supabaseTableRequest(usersTable, `?username=eq.${encodeURIComponent(username)}`, {
@@ -3920,6 +3942,7 @@
       } else {
         showRoleMessage(`User created inactive: ${user.displayName}. Activate when access should begin.`);
       }
+      await refreshUserManagementFromCloud();
       logUserAction("user_created", { username: user.username, role: user.role, active: user.active }, { target_type: "user", target_id: user.username });
     }
 
@@ -3953,7 +3976,11 @@
       } : user);
       saveUsers(users);
       await patchCloudUser(username, { last_credential_email_at: sentAt });
-      renderUserManagement();
+      if (getActiveView() === "users") {
+        await refreshUserManagementFromCloud();
+      } else {
+        renderUserManagement();
+      }
     }
 
     function credentialEmailUrl(user) {
@@ -4078,6 +4105,7 @@
       if (updated.active) {
         await sendCredentialEmail(updated);
       }
+      await refreshUserManagementFromCloud();
       logUserAction("user_activation_changed", { username, active: updated.active }, { target_type: "user", target_id: username });
     }
 
@@ -4166,6 +4194,7 @@
       if ((existing.active === false && updated?.active !== false) || passwordChanged || usernameChanged) {
         await sendCredentialEmail(updated);
       }
+      await refreshUserManagementFromCloud();
     }
 
     async function deleteManagedUser(username) {
@@ -4187,7 +4216,7 @@
         deleted: true
       } : user));
       await softDeleteCloudUser(username);
-      renderUserManagement();
+      await refreshUserManagementFromCloud();
       showRoleMessage(`User deleted: ${targetUser.displayName || username}.`);
       logUserAction("user_deleted", {
         username,
@@ -5696,6 +5725,9 @@
     document.querySelectorAll("[data-view]").forEach(tab => {
       tab.addEventListener("click", async () => {
         switchView(tab.dataset.view);
+        if (tab.dataset.view === "users") {
+          await refreshUserManagementFromCloud();
+        }
         await refreshSharedDashboards();
       });
     });
@@ -5703,6 +5735,9 @@
     document.querySelectorAll("[data-jump]").forEach(btn => {
       btn.addEventListener("click", async () => {
         switchView(btn.dataset.jump);
+        if (btn.dataset.jump === "users") {
+          await refreshUserManagementFromCloud();
+        }
         await refreshSharedDashboards();
       });
     });
@@ -5717,6 +5752,10 @@
     document.getElementById("createUserForm").addEventListener("submit", async event => {
       event.preventDefault();
       await createUserFromForm(event.currentTarget);
+    });
+
+    document.getElementById("refreshUsersBtn")?.addEventListener("click", async () => {
+      await refreshUserManagementFromCloud();
     });
 
     document.getElementById("userList").addEventListener("click", async event => {
