@@ -3586,6 +3586,17 @@
       return fromDbUser(result?.[0]);
     }
 
+    async function patchCloudUser(username, patch) {
+      if (!hasSupabaseConfig || isDefaultUser(username)) return null;
+      const result = await supabaseTableRequest(usersTable, `?username=eq.${encodeURIComponent(username)}`, {
+        method: "PATCH",
+        body: patch,
+        prefer: "return=representation",
+        timeoutMs: 10000
+      });
+      return fromDbUser(result?.[0]);
+    }
+
     async function saveCloudUsers(users) {
       if (!hasSupabaseConfig) return;
       const payload = normalizeUsers(users)
@@ -3888,10 +3899,7 @@
         lastCredentialEmailAt: sentAt
       } : user);
       saveUsers(users);
-      const updated = users.find(user => user.username === username);
-      if (updated) {
-        await upsertCloudUser(updated);
-      }
+      await patchCloudUser(username, { last_credential_email_at: sentAt });
       renderUserManagement();
     }
 
@@ -4022,23 +4030,25 @@
 
     async function updateUserRole(username, role) {
       if (!requireRoleManager("manage roles")) return;
+      const nextRole = normalizeRole(role);
       const currentUsers = loadUsers();
       const targetUser = currentUsers.find(user => user.username === username);
       if (!targetUser) return;
-      if (targetUser.role === "master" && role !== "master" && !hasAnotherActiveMaster(currentUsers, username)) {
+      if (targetUser.role === "master" && nextRole !== "master" && !hasAnotherActiveMaster(currentUsers, username)) {
         alert("Keep at least one active Master admin.");
         renderUserManagement();
         return;
       }
-      const users = currentUsers.map(user => user.username === username ? { ...user, role } : user);
+      const users = currentUsers.map(user => user.username === username ? { ...user, role: nextRole } : user);
       saveUsers(users);
       const updated = users.find(user => user.username === username);
       await upsertCloudUser(updated);
       const updatedCurrent = users.find(user => user.username === currentUser?.username);
       if (updatedCurrent) setSession(updatedCurrent);
+      await syncUsersWithCloud();
       renderUserManagement();
       showRoleMessage("Role updated.");
-      logUserAction("role_updated", { username, role }, { target_type: "user_role", target_id: username });
+      logUserAction("role_updated", { username, role: nextRole }, { target_type: "user_role", target_id: username });
     }
 
     function readUserCard(username) {
@@ -4137,8 +4147,12 @@
       const users = loadUsers();
       const targetUser = users.find(user => user.username === username);
       if (!targetUser) return;
+      const roleSelect = [...document.querySelectorAll("[data-role-user]")]
+        .find(select => select.dataset.roleUser === username);
+      const selectedRole = normalizeRole(roleSelect?.value || targetUser.role);
       const updatedUsers = users.map(user => user.username === username ? {
         ...user,
+        role: selectedRole,
         password: generateAccessCode(),
         active: true
       } : user);
@@ -4148,6 +4162,8 @@
       renderUserManagement();
       showRoleMessage(`New access code generated for ${updated.displayName || username}. Sending email now...`);
       await sendCredentialEmail(updated);
+      await syncUsersWithCloud();
+      renderUserManagement();
       logUserAction("user_access_reset", {
         username,
         role: updated.role
