@@ -2512,14 +2512,17 @@
       krish: "krishina",
       nadishni: "nadishani",
       nadish: "nadishani",
-      saurabh: "sam",
-      "saurabh.jogdeo": "sam",
-      swati: "swatti"
+      sam: "saurabh.jogdeo",
+      saurabh: "saurabh.jogdeo",
+      "saurabh.jogdeo": "saurabh.jogdeo",
+      swatti: "swati.gurbani",
+      swati: "swati.gurbani",
+      "swati.gurbani": "swati.gurbani"
     };
     const USERNAME_ALIASES = {
       "krishna@zenatech.com": "krishina@zenatech.com",
-      "saurabh.jogdeo@zenatech.com": "sam@zenatech.com",
-      "swati.gurbani@zenatech.com": "swatti@zenatech.com"
+      "sam@zenatech.com": "saurabh.jogdeo@zenatech.com",
+      "swatti@zenatech.com": "swati.gurbani@zenatech.com"
     };
     const DEFAULT_USERS = [
       { username: "admin", displayName: "Admin User", role: "admin", password: "admin2026", active: true },
@@ -2531,8 +2534,8 @@
       { username: "krishina", displayName: "Krishina", role: "admin", password: TEAM_ACCESS_CODE, active: true },
       { username: "nadishani", displayName: "Nadishani", role: "admin", password: TEAM_ACCESS_CODE, active: true },
       { username: "riya", displayName: "Riya", role: "admin", password: TEAM_ACCESS_CODE, active: true },
-      { username: "sam", displayName: "Sam", role: "admin", password: TEAM_ACCESS_CODE, active: true },
-      { username: "swatti", displayName: "Swatti", role: "admin", password: TEAM_ACCESS_CODE, active: true }
+      { username: "saurabh.jogdeo@zenatech.com", displayName: "Sam", role: "admin", password: TEAM_ACCESS_CODE, active: true },
+      { username: "swati.gurbani@zenatech.com", displayName: "Swati", role: "admin", password: TEAM_ACCESS_CODE, active: true }
     ];
     const ROLE_LABELS = {
       admin: "Admin",
@@ -3571,8 +3574,8 @@
     function canonicalDisplayName(username = "", displayName = "") {
       const canonical = canonicalUsername(username);
       if (canonical === "krishina@zenatech.com") return "Krishina";
-      if (canonical === "sam@zenatech.com") return "Sam";
-      if (canonical === "swatti@zenatech.com") return "Swatti";
+      if (canonical === "saurabh.jogdeo@zenatech.com") return "Sam";
+      if (canonical === "swati.gurbani@zenatech.com") return "Swati";
       return cleanText(displayName) || canonical;
     }
 
