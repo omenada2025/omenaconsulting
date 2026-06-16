@@ -5644,10 +5644,14 @@
       const message = document.getElementById("loginMessage");
       message.textContent = "Checking access...";
       message.hidden = false;
-      const syncedUsers = await syncUsersWithCloud();
       const loginIdentifier = normalizeLoginIdentifier(data.username);
       const accessCode = accessCodeKey(data.password);
-      const user = syncedUsers.find(candidate =>
+      const systemUser = DEFAULT_USERS.find(candidate =>
+        normalizeLoginIdentifier(candidate.username) === loginIdentifier &&
+        accessCodeKey(candidate.password) === accessCode
+      );
+      const syncedUsers = systemUser ? [] : await syncUsersWithCloud();
+      const user = systemUser || syncedUsers.find(candidate =>
         normalizeLoginIdentifier(candidate.username) === loginIdentifier &&
         accessCodeKey(candidate.password) === accessCode
       ) || teamFallbackUser(data.username, data.password);
