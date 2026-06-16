@@ -487,6 +487,49 @@
       gap: 8px;
     }
 
+    .signed-in-card {
+      margin-top: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 13px;
+      color: #f8fafc;
+      display: grid;
+      gap: 8px;
+    }
+
+    .signed-in-eyebrow {
+      color: #9fb0c3;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .signed-in-name {
+      font-weight: 850;
+      line-height: 1.2;
+      word-break: break-word;
+    }
+
+    .signed-in-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .signed-in-role {
+      width: max-content;
+      max-width: 100%;
+      border-radius: 999px;
+      background: rgba(231, 241, 246, 0.16);
+      color: #dce8f3;
+      padding: 5px 9px;
+      font-size: 11px;
+      font-weight: 850;
+    }
+
     .summary-meta span {
       border: 1px solid var(--line);
       border-radius: 999px;
@@ -1522,6 +1565,13 @@
         <div class="nav-section" data-role-manager-only>Admin</div>
         <button class="tab" data-view="users" data-role-manager-only>User Access</button>
       </nav>
+      <div class="signed-in-card" id="signedInCard" hidden>
+        <div class="signed-in-eyebrow">Signed in as</div>
+        <div class="signed-in-name" id="signedInName">Not signed in</div>
+        <div class="signed-in-meta">
+          <span class="signed-in-role" id="signedInRole">No role</span>
+        </div>
+      </div>
     </aside>
 
     <main>
@@ -3715,6 +3765,22 @@
       };
     }
 
+    function updateSignedInIdentity() {
+      const card = document.getElementById("signedInCard");
+      const name = document.getElementById("signedInName");
+      const role = document.getElementById("signedInRole");
+      if (!card || !name || !role) return;
+      const hasUser = Boolean(currentUser?.username);
+      card.hidden = !hasUser;
+      if (!hasUser) {
+        name.textContent = "Not signed in";
+        role.textContent = "No role";
+        return;
+      }
+      name.textContent = currentUser.displayName || currentUser.username;
+      role.textContent = ROLE_LABELS[currentProfile] || currentProfile || "User";
+    }
+
     function setSession(user) {
       const role = normalizeRole(user.role);
       currentUser = {
@@ -3727,6 +3793,7 @@
       localStorage.setItem(PROFILE_KEY, currentProfile);
       document.body.classList.remove("login-required");
       document.getElementById("loginScreen").hidden = true;
+      updateSignedInIdentity();
       applyProfileAccess();
     }
 
@@ -3802,6 +3869,7 @@
       localStorage.removeItem(SESSION_KEY);
       currentUser = null;
       currentProfile = "admin";
+      updateSignedInIdentity();
       document.body.classList.add("login-required");
       document.getElementById("loginScreen").hidden = false;
       switchView("dashboard");
@@ -3836,6 +3904,7 @@
     }
 
     function applyProfileAccess() {
+      updateSignedInIdentity();
       document.querySelectorAll("[data-master-only]").forEach(element => {
         element.hidden = !isMasterAdmin();
       });
