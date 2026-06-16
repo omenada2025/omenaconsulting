@@ -3723,6 +3723,59 @@
       return false;
     }
 
+    async function handleLoginSubmit(event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const data = Object.fromEntries(new FormData(form).entries());
+      const message = document.getElementById("loginMessage");
+      if (message) {
+        message.textContent = "Checking access...";
+        message.hidden = false;
+      }
+
+      try {
+        const loginIdentifier = normalizeLoginIdentifier(data.username);
+        const accessCode = accessCodeKey(data.password);
+        const systemUser = DEFAULT_USERS.find(candidate =>
+          normalizeLoginIdentifier(candidate.username) === loginIdentifier &&
+          accessCodeKey(candidate.password) === accessCode
+        );
+        const syncedUsers = systemUser ? [] : await syncUsersWithCloud();
+        const user = systemUser || syncedUsers.find(candidate =>
+          normalizeLoginIdentifier(candidate.username) === loginIdentifier &&
+          accessCodeKey(candidate.password) === accessCode
+        ) || teamFallbackUser(data.username, data.password);
+
+        if (!user) {
+          if (message) {
+            message.textContent = "Invalid username or access code. Use your email or assigned username and the latest access code.";
+            message.hidden = false;
+          }
+          return;
+        }
+        if (user.active === false) {
+          if (message) {
+            message.textContent = "This user is inactive. Contact a Role Manager.";
+            message.hidden = false;
+          }
+          return;
+        }
+        if (message) message.hidden = true;
+        form.reset();
+        setSession(user);
+        logUserAction("login", { role: user.role }, { target_type: "user", target_id: user.username });
+      } catch (error) {
+        console.error("Login failed:", error);
+        if (message) {
+          const detail = error instanceof Error ? error.message : "Unknown login error.";
+          message.textContent = `Login check failed: ${detail}`;
+          message.hidden = false;
+        }
+      }
+    }
+
+    document.getElementById("loginForm")?.addEventListener("submit", handleLoginSubmit);
+
     function logout() {
       localStorage.removeItem(SESSION_KEY);
       currentUser = null;
@@ -5652,39 +5705,6 @@
         switchView(btn.dataset.jump);
         await refreshSharedDashboards();
       });
-    });
-
-    document.getElementById("loginForm").addEventListener("submit", async event => {
-      event.preventDefault();
-      const data = Object.fromEntries(new FormData(event.currentTarget).entries());
-      const message = document.getElementById("loginMessage");
-      message.textContent = "Checking access...";
-      message.hidden = false;
-      const loginIdentifier = normalizeLoginIdentifier(data.username);
-      const accessCode = accessCodeKey(data.password);
-      const systemUser = DEFAULT_USERS.find(candidate =>
-        normalizeLoginIdentifier(candidate.username) === loginIdentifier &&
-        accessCodeKey(candidate.password) === accessCode
-      );
-      const syncedUsers = systemUser ? [] : await syncUsersWithCloud();
-      const user = systemUser || syncedUsers.find(candidate =>
-        normalizeLoginIdentifier(candidate.username) === loginIdentifier &&
-        accessCodeKey(candidate.password) === accessCode
-      ) || teamFallbackUser(data.username, data.password);
-      if (!user) {
-        message.textContent = "Invalid username or access code.";
-        message.hidden = false;
-        return;
-      }
-      if (user.active === false) {
-        message.textContent = "This user is inactive. Contact a Role Manager.";
-        message.hidden = false;
-        return;
-      }
-      message.hidden = true;
-      event.currentTarget.reset();
-      setSession(user);
-      logUserAction("login", { role: user.role }, { target_type: "user", target_id: user.username });
     });
 
     document.addEventListener("click", event => {
