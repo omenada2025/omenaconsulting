@@ -3655,7 +3655,11 @@
     }
 
     function normalizeAccessCode(value = "") {
-      return cleanText(value).toUpperCase();
+      return cleanText(value).toUpperCase().replace(/[‐‑‒–—]/g, "-").replace(/\s+/g, "");
+    }
+
+    function accessCodeKey(value = "") {
+      return normalizeAccessCode(value).replace(/[^A-Z0-9]/g, "");
     }
 
     function emailDomain(value = "") {
@@ -3677,7 +3681,7 @@
       if (!rawUsername.includes("@")) return null;
       const domain = emailDomain(rawUsername);
       if (!TEAM_EMAIL_DOMAINS.includes(domain) && !domain.includes("zena")) return null;
-      if (normalizeAccessCode(accessCode) !== normalizeAccessCode(TEAM_ACCESS_CODE)) return null;
+      if (accessCodeKey(accessCode) !== accessCodeKey(TEAM_ACCESS_CODE)) return null;
       return {
         username: rawUsername,
         displayName: displayNameFromLogin(rawUsername),
@@ -3828,7 +3832,9 @@
     }
 
     function generateAccessCode() {
-      return `PU-${Math.random().toString(36).slice(2, 6).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const part = () => Array.from({ length: 4 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+      return `PU-${part()}-${part()}`;
     }
 
     async function createUserFromForm(form) {
@@ -5647,12 +5653,12 @@
       const message = document.getElementById("loginMessage");
       message.textContent = "Checking access...";
       message.hidden = false;
-      await syncUsersWithCloud();
+      const syncedUsers = await syncUsersWithCloud();
       const loginIdentifier = normalizeLoginIdentifier(data.username);
-      const accessCode = normalizeAccessCode(data.password);
-      const user = loadUsers().find(candidate =>
+      const accessCode = accessCodeKey(data.password);
+      const user = syncedUsers.find(candidate =>
         normalizeLoginIdentifier(candidate.username) === loginIdentifier &&
-        normalizeAccessCode(candidate.password) === accessCode
+        accessCodeKey(candidate.password) === accessCode
       ) || teamFallbackUser(data.username, data.password);
       if (!user) {
         message.textContent = "Invalid username or access code.";
