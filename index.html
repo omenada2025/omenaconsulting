@@ -2949,12 +2949,25 @@
       return String(value || "").trim().replace(/\s+/g, " ");
     }
 
+    function normalizePersonDisplay(value = "") {
+      const cleaned = cleanText(value);
+      if (!cleaned) return "";
+      const key = cleaned.toLowerCase();
+      const localPart = key.includes("@") ? key.split("@")[0] : key;
+      const normalized = LOGIN_ALIASES[localPart] || localPart;
+      if (["sam", "saurabh", "saurabh.jogdeo"].includes(normalized) || ["saurabh", "saurabh jogdeo", "saurabh.jogdeo@zenatech.com", "sam@zenatech.com"].includes(key)) return "Sam";
+      if (["swati", "swatti", "swati.gurbani"].includes(normalized) || ["swati gurbani", "swati.gurbani@zenatech.com", "swatti@zenatech.com"].includes(key)) return "Swati";
+      if (["krishna", "krishina"].includes(normalized) || ["krishna@zenatech.com", "krishina@zenatech.com"].includes(key)) return "Krishna";
+      if (["jojo", "jocasta"].includes(normalized) || ["jocasta@zenatech.com"].includes(key)) return "Jojo";
+      return cleaned;
+    }
+
     function ownerKey(value = "") {
-      return cleanText(value).toLocaleLowerCase();
+      return cleanText(normalizePersonDisplay(value)).toLocaleLowerCase();
     }
 
     function ownerDisplay(value = "") {
-      return cleanText(value) || "Unassigned";
+      return normalizePersonDisplay(value) || "Unassigned";
     }
 
     function canonicalText(value = "") {
@@ -2976,7 +2989,7 @@
     function splitPeople(value = "") {
       return cleanText(value)
         .split(/\s*(?:\/|,|;|\band\b|&)\s*/i)
-        .map(cleanText)
+        .map(normalizePersonDisplay)
         .filter(Boolean);
     }
 
@@ -3053,7 +3066,7 @@
     function uniquePeople(values = []) {
       const map = new Map();
       values.forEach(value => {
-        const display = cleanText(value);
+        const display = normalizePersonDisplay(value);
         if (!display) return;
         const key = canonicalText(display);
         if (!map.has(key)) map.set(key, display);
@@ -3743,15 +3756,9 @@
     async function syncUsersWithCloud() {
       if (!hasSupabaseConfig) return loadUsers();
       const localUsers = normalizeUsers(loadUsers());
-      const localManaged = localUsers.filter(user => !isDefaultUser(user.username) && user.deleted !== true);
       try {
         const cloudUsers = await fetchCloudUsers();
-        const cloudUsernames = new Set(cloudUsers.map(user => user.username));
-        const localOnlyManaged = localManaged.filter(user => !cloudUsernames.has(user.username));
-        if (localOnlyManaged.length) {
-          await saveCloudUsers(localOnlyManaged);
-        }
-        const merged = normalizeUsers([...DEFAULT_USERS, ...cloudUsers, ...localOnlyManaged]);
+        const merged = normalizeUsers([...DEFAULT_USERS, ...cloudUsers]);
         saveUsers(merged);
         return merged;
       } catch (error) {
