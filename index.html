@@ -3005,6 +3005,37 @@
       return splitPeople(value).some(item => ownerKey(item) === target);
     }
 
+    function personMatchKeys(value = "") {
+      const cleaned = cleanText(value);
+      if (!cleaned) return [];
+      const lower = cleaned.toLowerCase();
+      const localPart = lower.includes("@") ? lower.split("@")[0] : lower;
+      const normalized = normalizeLoginIdentifier(lower);
+      const keys = [cleaned, lower, localPart, normalized, canonicalUsername(lower), displayNameFromLogin(lower)];
+      if (normalized === "saurabh.jogdeo") keys.push("Sam", "Saurabh", "Saurabh Jogdeo");
+      if (normalized === "swati.gurbani") keys.push("Swati", "Swatti", "Swati Gurbani");
+      if (normalized === "krishna") keys.push("Krishna", "Krishina");
+      if (normalized === "jocasta") keys.push("Jojo", "Jocasta");
+      return [...new Set(keys.map(ownerKey).filter(Boolean))];
+    }
+
+    function currentUserOwnerKeys() {
+      if (!currentUser?.username) return new Set();
+      return new Set([
+        ...personMatchKeys(currentUser.username),
+        ...personMatchKeys(currentUser.displayName)
+      ]);
+    }
+
+    function isCurrentUserReportOwner(report) {
+      const userKeys = currentUserOwnerKeys();
+      return splitPeople(report?.owner || "").some(owner => userKeys.has(ownerKey(owner)));
+    }
+
+    function canDeleteReport(report) {
+      return Boolean(report?.id && isCurrentUserReportOwner(report));
+    }
+
     function loadCustomPeople() {
       try {
         const parsed = JSON.parse(localStorage.getItem(PEOPLE_KEY) || "[]");
@@ -3523,6 +3554,9 @@
 
     async function deleteReportById(id) {
       const deletedReport = reports.find(r => r.id === id);
+      if (!canDeleteReport(deletedReport)) {
+        throw new Error("Only the report owner can delete this status.");
+      }
       if (!hasSupabaseConfig) {
         reports = reports.filter(r => r.id !== id);
         selectedReportId = reports[0]?.id || null;
@@ -5486,7 +5520,7 @@
           <div class="form-actions detail-actions">
             <button class="btn" type="button" id="reportHistoryBtn">History</button>
             <button class="btn" type="button" id="cancelEditReport">Cancel</button>
-            <button class="btn danger" type="button" id="deleteReport">Delete Report</button>
+            <button class="btn danger" type="button" id="deleteReport" ${canDeleteReport(report) ? "" : "disabled title=\"Only the report owner can delete this status.\""}>Delete Report</button>
             <button class="btn primary" type="submit" id="updateReportBtn">Save Changes</button>
           </div>
           <div id="reportHistoryPanel" ${reportHistoryOpen ? "" : "hidden"}>${renderReportHistory(report)}</div>
@@ -5525,6 +5559,10 @@
       });
       document.getElementById("deleteReport").addEventListener("click", async () => {
         hideReportMessage();
+        if (!canDeleteReport(report)) {
+          showReportMessage("Only the report owner can delete this status.", "danger");
+          return;
+        }
         if (!confirm("Are you sure you want to delete the report?")) return;
         try {
           await deleteReportById(report.id);
@@ -5533,7 +5571,7 @@
           detail.innerHTML = `<div class="inline-message success">Your report was deleted.</div>`;
         } catch (error) {
           console.error(error);
-          showReportMessage("Could not delete this report. Check Supabase permissions or connection.", "danger");
+          showReportMessage(error.message || "Could not delete this report. Check Supabase permissions or connection.", "danger");
         }
       });
       document.getElementById("editReportForm").addEventListener("submit", async event => {
