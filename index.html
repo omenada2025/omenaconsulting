@@ -2528,15 +2528,7 @@
     const DEFAULT_USERS = [
       { username: "admin", displayName: "Admin User", role: "admin", password: "admin2026", active: true },
       { username: "roles", displayName: "Role Manager", role: "roles", password: "roles2026", active: true },
-      { username: "master", displayName: "Master Admin", role: "master", password: "master2026", active: true },
-      { username: "deepa", displayName: "Deepa", role: "admin", password: TEAM_ACCESS_CODE, active: true },
-      { username: "faran", displayName: "Faran", role: "admin", password: TEAM_ACCESS_CODE, active: true },
-      { username: "jocasta", displayName: "Jocasta", role: "admin", password: TEAM_ACCESS_CODE, active: true },
-      { username: "krishna@zenatech.com", displayName: "Krishna", role: "admin", password: TEAM_ACCESS_CODE, active: true },
-      { username: "nadishani", displayName: "Nadishani", role: "admin", password: TEAM_ACCESS_CODE, active: true },
-      { username: "riya", displayName: "Riya", role: "admin", password: TEAM_ACCESS_CODE, active: true },
-      { username: "saurabh.jogdeo@zenatech.com", displayName: "Sam", role: "admin", password: TEAM_ACCESS_CODE, active: true },
-      { username: "swati.gurbani@zenatech.com", displayName: "Swati", role: "admin", password: TEAM_ACCESS_CODE, active: true }
+      { username: "master", displayName: "Master Admin", role: "master", password: "master2026", active: true }
     ];
     const ROLE_LABELS = {
       admin: "Admin",
@@ -3569,7 +3561,13 @@
 
     function canonicalUsername(value = "") {
       const username = cleanText(value).toLowerCase();
-      return USERNAME_ALIASES[username] || username;
+      if (USERNAME_ALIASES[username]) return USERNAME_ALIASES[username];
+      if (username.includes("@")) return username;
+      const alias = LOGIN_ALIASES[username] || username;
+      if (["krishna", "saurabh.jogdeo", "swati.gurbani"].includes(alias)) {
+        return `${alias}@zenatech.com`;
+      }
+      return alias;
     }
 
     function canonicalDisplayName(username = "", displayName = "") {
@@ -3921,11 +3919,11 @@
     }
 
     function canManageRoles() {
-      return normalizeRole(currentProfile) === "roles";
+      return ["roles", "master"].includes(normalizeRole(currentProfile));
     }
 
     function canAccessView(id) {
-      if (isMasterAdmin()) return ["dashboard", "executive", "incidents", "intake", "reports"].includes(id);
+      if (isMasterAdmin()) return ["dashboard", "executive", "incidents", "intake", "reports", "users"].includes(id);
       if (canManageRoles()) return ["dashboard", "executive", "users", "incidents"].includes(id);
       return ["dashboard", "executive", "incidents"].includes(id);
     }
