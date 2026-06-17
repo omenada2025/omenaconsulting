@@ -2511,6 +2511,8 @@
       krishina: "krishna",
       krishna: "krishna",
       krish: "krishna",
+      jojo: "jocasta",
+      jocasta: "jocasta",
       nadishni: "nadishani",
       nadish: "nadishani",
       sam: "saurabh.jogdeo",
@@ -3573,6 +3575,7 @@
     function canonicalDisplayName(username = "", displayName = "") {
       const canonical = canonicalUsername(username);
       if (canonical === "krishna@zenatech.com") return "Krishna";
+      if (canonical === "jocasta") return "Jojo";
       if (canonical === "saurabh.jogdeo@zenatech.com") return "Sam";
       if (canonical === "swati.gurbani@zenatech.com") return "Swati";
       return cleanText(displayName) || canonical;
