@@ -1887,9 +1887,9 @@
             <label>
               Initial role
               <select name="role">
-                <option value="admin">Admin - dashboard view only</option>
-                <option value="roles">Role Manager - users and incident report</option>
-                <option value="master">Master admin - reports and status</option>
+                <option value="admin">Admin - dashboards and incidents only</option>
+                <option value="roles">Role Manager - full access and users</option>
+                <option value="master">Master admin - dashboards, incidents, and status center</option>
               </select>
             </label>
             <label>
@@ -3919,18 +3919,22 @@
     }
 
     function canManageRoles() {
-      return ["roles", "master"].includes(normalizeRole(currentProfile));
+      return normalizeRole(currentProfile) === "roles";
+    }
+
+    function canManageReports() {
+      return ["master", "roles"].includes(normalizeRole(currentProfile));
     }
 
     function canAccessView(id) {
-      if (isMasterAdmin()) return ["dashboard", "executive", "incidents", "intake", "reports", "users"].includes(id);
-      if (canManageRoles()) return ["dashboard", "executive", "users", "incidents"].includes(id);
+      if (canManageRoles()) return ["dashboard", "executive", "incidents", "intake", "reports", "users"].includes(id);
+      if (isMasterAdmin()) return ["dashboard", "executive", "incidents", "intake", "reports"].includes(id);
       return ["dashboard", "executive", "incidents"].includes(id);
     }
 
     function requireMasterAdmin(action = "manage reports") {
-      if (isMasterAdmin()) return true;
-      alert(`${ROLE_LABELS[currentProfile] || "Admin"} profile cannot ${action}. Use Master admin for report management.`);
+      if (canManageReports()) return true;
+      alert(`${ROLE_LABELS[currentProfile] || "Admin"} profile cannot ${action}. Use Master admin or Role Manager for report management.`);
       switchView("dashboard");
       return false;
     }
@@ -3945,10 +3949,10 @@
     function applyProfileAccess() {
       updateSignedInIdentity();
       document.querySelectorAll("[data-master-only]").forEach(element => {
-        element.hidden = !isMasterAdmin();
+        element.hidden = !canManageReports();
       });
       document.querySelectorAll("[data-master-view]").forEach(element => {
-        element.hidden = !isMasterAdmin();
+        element.hidden = !canManageReports();
       });
       document.querySelectorAll("[data-role-manager-only]").forEach(element => {
         element.hidden = !canManageRoles();
@@ -3993,9 +3997,9 @@
             <label class="user-role-control">
               Assigned role
               <select data-role-user="${escapeHtml(user.username)}">
-                <option value="admin" ${user.role === "admin" ? "selected" : ""}>Admin - dashboards only</option>
-                <option value="roles" ${user.role === "roles" ? "selected" : ""}>Role Manager - users, roles, incidents</option>
-                <option value="master" ${user.role === "master" ? "selected" : ""}>Master admin - reports and status</option>
+                <option value="admin" ${user.role === "admin" ? "selected" : ""}>Admin - dashboards and incidents only</option>
+                <option value="roles" ${user.role === "roles" ? "selected" : ""}>Role Manager - full access and users</option>
+                <option value="master" ${user.role === "master" ? "selected" : ""}>Master admin - dashboards, incidents, and status center</option>
               </select>
             </label>
           </header>
