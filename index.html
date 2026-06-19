@@ -3604,7 +3604,6 @@
       }
 
       let data;
-      let usedReplaceFallback = false;
       try {
         data = await supabaseWrite(`?id=eq.${encodeURIComponent(reportWithHistory.id)}&select=*`, {
           method: "PATCH",
@@ -3614,29 +3613,20 @@
           data = await patchReportAndFetch(reportWithHistory);
         }
         if (!Array.isArray(data) || data.length === 0) {
-          throw new Error("Supabase update could not find this report. Falling back to replace.");
+          throw new Error("Supabase update could not find this report. Refresh the status list and try again.");
         }
         if (!reportPersistedMatches(data[0], reportWithHistory)) {
-          throw new Error("Supabase update did not persist values. Falling back to replace.");
+          throw new Error("Supabase accepted the update but did not persist all fields. Check the database columns and policies.");
         }
       } catch (error) {
-        console.warn("Retrying update via delete and insert:", error);
-        await supabaseRequest(`?id=eq.${encodeURIComponent(reportWithHistory.id)}`, {
-          method: "DELETE",
-          prefer: "return=minimal"
-        });
-        data = await supabaseWrite("?select=*", {
-          method: "POST",
-          body: reportWithHistory
-        });
-        usedReplaceFallback = true;
+        console.error("Report update failed:", error);
+        throw error;
       }
       const updated = Array.isArray(data) ? data[0] : data;
       if (!updated) throw new Error("Supabase did not return the updated report.");
-      const stableId = usedReplaceFallback ? (updated.id || reportWithHistory.id) : reportWithHistory.id;
       const updatedReport = normalizeReport({
         ...updated,
-        id: stableId,
+        id: reportWithHistory.id,
         product: reportWithHistory.product,
         feature_workstream: reportWithHistory.feature_workstream,
         owner: reportWithHistory.owner,
@@ -5916,7 +5906,7 @@
         } catch (error) {
           console.error(error);
           btn.textContent = "Save Changes";
-          showReportMessage("Could not update this report. Check Supabase permissions or connection.", "danger");
+          showReportMessage(error?.message ? `Could not update this report: ${error.message}` : "Could not update this report. Check Supabase permissions or connection.", "danger");
         } finally {
           btn.disabled = false;
         }
