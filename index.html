@@ -2515,6 +2515,7 @@
     const PROFILE_KEY = "product-uiux-pulse-profile-v1";
     const USERS_KEY = "product-uiux-pulse-users-v1";
     const PEOPLE_KEY = "product-uiux-pulse-people-v1";
+    const PRODUCTS_KEY = "product-uiux-pulse-products-v1";
     const SESSION_KEY = "product-uiux-pulse-session-v1";
     const TEAM_ACCESS_CODE = "PU-SOEN-2FSO";
     const TEAM_EMAIL_DOMAINS = ["zenatech.com", "zena.tech", "zenadrone.com", "epazz.com"];
@@ -2563,7 +2564,7 @@
     const PRODUCT_OPTIONS = [
       "AeroPass", "Ameritek Ventures", "Augmum", "DaaS360", "DAAS", "DeskFlex", "DittoMask", "Ecker Capital", "Epazz",
       "ESM Software", "FlexFridge", "Galaxy Batteries", "Interactive System", "InterlinkOne", "Jadian",
-      "K9sky", "Now Solutions", "NightSun", "PacePlus", "Passleys", "PhantomXmotors", "Provitrac",
+      "K9sky", "Now Solutions", "NightSun", "Othership", "PacePlus", "Passleys", "PhantomXmotors", "Provitrac",
       "PsPortals", "QReate & Track", "Spider Vision", "Strantin", "StreamPay", "Survey software", "SystemView", "TillerStack",
       "Twinpeaksweb", "Webbeeo", "WorkAware", "ZenaDrone", "ZenaPay", "ZenaTech", "Zigvoice", "Zinergy"
     ].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
@@ -3085,6 +3086,42 @@
       return [...map.values()].sort((a, b) => a.localeCompare(b));
     }
 
+    function uniqueProducts(values = []) {
+      const map = new Map();
+      values.forEach(value => {
+        const display = cleanText(value);
+        if (!display) return;
+        const key = canonicalText(display);
+        if (!map.has(key)) map.set(key, display);
+      });
+      return [...map.values()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+    }
+
+    function loadCustomProducts() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(PRODUCTS_KEY) || "[]");
+        return Array.isArray(parsed) ? uniqueProducts(parsed) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveCustomProducts(values) {
+      localStorage.setItem(PRODUCTS_KEY, JSON.stringify(uniqueProducts(values)));
+    }
+
+    function addProductToDirectory(name) {
+      const product = cleanText(name);
+      if (!product) return "";
+      saveCustomProducts([...loadCustomProducts(), product]);
+      return product;
+    }
+
+    function productDirectory() {
+      const reportProducts = reports.map(report => report.product).filter(Boolean);
+      return uniqueProducts([...PRODUCT_OPTIONS, ...reportProducts, ...loadCustomProducts()]);
+    }
+
     function peopleDirectory() {
       const defaultPeople = DEFAULT_USERS
         .filter(user => !["admin", "roles", "master"].includes(user.username))
@@ -3191,8 +3228,7 @@
     function renderProductPicker(picker) {
       const selected = cleanText(picker.dataset.selected || "");
       const selectedTitle = selected || picker.dataset.placeholder || "Select product";
-      const values = [...new Set([selected, ...PRODUCT_OPTIONS].filter(Boolean))]
-        .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+      const values = uniqueProducts([selected, ...productDirectory()].filter(Boolean));
       picker.innerHTML = `
         <input type="hidden" name="${escapeHtml(picker.dataset.name || "product")}" value="${escapeHtml(selected)}" />
         <button class="people-picker-btn" type="button" aria-haspopup="listbox" aria-expanded="false" title="${escapeHtml(selectedTitle)}">
@@ -3207,6 +3243,10 @@
                 <span>${escapeHtml(product)}</span>
               </label>
             `).join("")}
+          </div>
+          <div class="people-add">
+            <input type="text" data-new-product placeholder="Add product" />
+            <button class="btn" type="button" data-add-product>Add</button>
           </div>
         </div>
       `;
@@ -3248,7 +3288,7 @@
         empty.className = "empty";
         empty.dataset.pickerEmpty = "true";
         empty.innerHTML = menu.closest("[data-product-picker]")
-          ? "<strong>No matches</strong>Try another letter."
+          ? "<strong>No matches</strong>Try another letter or add the product below."
           : "<strong>No matches</strong>Try another letter or add the person below.";
         menu.querySelector(".people-options")?.appendChild(empty);
       }
@@ -5420,8 +5460,7 @@
     }
 
     function productOptionsMarkup(current = "") {
-      const values = [...new Set([current, ...PRODUCT_OPTIONS].filter(Boolean))]
-        .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+      const values = uniqueProducts([current, ...productDirectory()].filter(Boolean));
       return [
         `<option value="" ${current ? "" : "selected"} disabled>Select product</option>`,
         ...values.map(product => `<option value="${escapeHtml(product)}" ${product === current ? "selected" : ""}>${escapeHtml(product)}</option>`)
@@ -5981,6 +6020,7 @@
     document.addEventListener("click", event => {
       const pickerButton = event.target.closest(".people-picker-btn");
       const addButton = event.target.closest("[data-add-person]");
+      const addProductButton = event.target.closest("[data-add-product]");
       const option = event.target.closest(".people-option input");
       const activePicker = event.target.closest("[data-people-picker], [data-product-picker]");
 
@@ -6016,6 +6056,18 @@
         if (!person) return;
         const selected = (picker.dataset.selected || "").split("|").map(cleanText).filter(Boolean);
         updatePeoplePickerSelection(picker, picker.dataset.multiple === "true" ? [...selected, person] : [person], { keepOpen: picker.dataset.multiple === "true" });
+        return;
+      }
+
+      if (addProductButton) {
+        event.stopPropagation();
+        const picker = addProductButton.closest("[data-product-picker]");
+        const input = picker.querySelector("[data-new-product]");
+        const product = addProductToDirectory(input.value);
+        if (!product) return;
+        updateProductPickerSelection(picker, product, { keepOpen: false });
+        picker.querySelector(".people-menu").hidden = true;
+        picker.querySelector(".people-picker-btn").setAttribute("aria-expanded", "false");
         return;
       }
 
