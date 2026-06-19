@@ -1689,6 +1689,17 @@
 
         <div class="grid summary-grid" id="metrics"></div>
 
+        <div class="panel" id="dashboardDrilldownPanel" hidden>
+          <div class="panel-title">
+            <div>
+              <h3 id="dashboardDrilldownTitle">Dashboard details</h3>
+              <p class="muted small" id="dashboardDrilldownSubtitle"></p>
+            </div>
+            <button class="btn" type="button" id="dashboardDrilldownClose">Back to dashboard overview</button>
+          </div>
+          <div class="report-list" id="dashboardDrilldownList"></div>
+        </div>
+
         <div class="panel end-date-monitor">
           <div class="panel-title">
             <div>
@@ -1814,6 +1825,17 @@
         </div>
 
         <div class="grid exec-metrics" id="executiveMetrics"></div>
+
+        <div class="panel" id="executiveDrilldownPanel" hidden>
+          <div class="panel-title">
+            <div>
+              <h3 id="executiveDrilldownTitle">Executive details</h3>
+              <p class="muted small" id="executiveDrilldownSubtitle"></p>
+            </div>
+            <button class="btn" type="button" id="executiveDrilldownClose">Back to executive overview</button>
+          </div>
+          <div class="report-list" id="executiveDrilldownList"></div>
+        </div>
 
         <div class="panel end-date-monitor">
           <div class="panel-title">
@@ -2588,6 +2610,8 @@
     let selectedPortfolioHealthId = null;
     let selectedExecutiveHealth = "red";
     let selectedExecutiveProjectId = null;
+    let selectedDashboardMetric = "";
+    let selectedExecutiveMetric = "";
     let selectedIncidentMetric = "";
     let useLegacySupabasePayload = false;
     let actionLoggingDisabled = false;
@@ -5063,6 +5087,122 @@
       return uniqueCount(source.filter(report => report.health === "red" || report.priority === "Critical"), "product");
     }
 
+    function isRiskReport(report) {
+      return report.health === "red" || report.priority === "Critical";
+    }
+
+    function dashboardMetricRows(source, metric) {
+      if (metric === "products" || metric === "workstreams") return [...source];
+      if (metric === "risk") return source.filter(isRiskReport);
+      if (metric === "delayed") return source.filter(report => incidentFlags(report).delayed);
+      if (metric === "progress") return [...source].sort((a, b) => Number(a.progress || 0) - Number(b.progress || 0));
+      return [];
+    }
+
+    function productGroupsForMetric(source) {
+      return [...source.reduce((acc, report) => {
+        const product = cleanText(report.product) || "No product";
+        if (!acc.has(product)) acc.set(product, []);
+        acc.get(product).push(report);
+        return acc;
+      }, new Map()).entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    }
+
+    function portfolioDetailCard(report) {
+      const tone = healthClass(report);
+      return `
+        <div class="report-card">
+          <div class="panel-title">
+            <div>
+              <span class="product-label">${escapeHtml(report.product || "No product")}</span>
+              <h3>${escapeHtml(reportTitle(report))}</h3>
+              <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.role || "No role")} - Reporting week ${escapeHtml(report.week || "No date")}${reportEndDate(report) ? ` - ${endDateMarkup(report)}` : ""}</p>
+            </div>
+            <span class="chip ${tone}">${escapeHtml(labels[report.health] || report.health || "No health")}</span>
+          </div>
+          <p>${escapeHtml(report.summary || "No summary captured.")}</p>
+          <div class="report-card-detail">
+            <div><strong>Win</strong><p class="muted small">${escapeHtml(report.win || "No win captured.")}</p></div>
+            <div><strong>Blocker or risk</strong><p class="muted small">${escapeHtml(report.blocker || "No blocker captured.")}</p></div>
+            <div><strong>Next action</strong><p class="muted small">${escapeHtml(report.next || "No next action captured.")}</p></div>
+            <div><strong>Stage</strong><p class="muted small">${escapeHtml(report.stage || "No stage")}</p></div>
+            <div><strong>Progress</strong><p class="muted small">${escapeHtml(report.progress || 0)}%</p></div>
+            <div><strong>Priority</strong><p class="muted small">${escapeHtml(report.priority || "Normal")}</p></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderPortfolioMetricDrilldown(config) {
+      const panel = document.getElementById(config.panelId);
+      const title = document.getElementById(config.titleId);
+      const subtitle = document.getElementById(config.subtitleId);
+      const list = document.getElementById(config.listId);
+      const metric = config.metric;
+      if (!panel || !title || !subtitle || !list) return;
+      if (!metric) {
+        panel.hidden = true;
+        list.innerHTML = "";
+        return;
+      }
+
+      const copy = {
+        products: {
+          title: "Products",
+          subtitle: "Products represented in the current filters, with their related workstreams."
+        },
+        workstreams: {
+          title: "Workstreams",
+          subtitle: "All workstreams included in the current filters."
+        },
+        risk: {
+          title: "Products at Risk",
+          subtitle: "Workstreams marked At Risk or Critical in the current filters."
+        },
+        delayed: {
+          title: "Delayed",
+          subtitle: "Workstreams with an end date that has already passed."
+        },
+        progress: {
+          title: "Progress details",
+          subtitle: "Workstreams sorted from lowest progress to highest."
+        }
+      };
+
+      const groups = productGroupsForMetric(config.source);
+      const rows = dashboardMetricRows(config.source, metric);
+      panel.hidden = false;
+      title.textContent = metric === "products"
+        ? `${copy.products.title} (${groups.length})`
+        : `${copy[metric]?.title || "Details"} (${rows.length})`;
+      subtitle.textContent = copy[metric]?.subtitle || "Filtered dashboard details.";
+
+      if (metric === "products") {
+        list.innerHTML = groups.length ? groups.map(([product, productRows]) => {
+          const riskCount = productRows.filter(isRiskReport).length;
+          const delayedCount = productRows.filter(report => incidentFlags(report).delayed).length;
+          const avg = Math.round(productRows.reduce((sum, report) => sum + Number(report.progress || 0), 0) / productRows.length);
+          return `
+            <div class="report-card">
+              <div class="panel-title">
+                <div>
+                  <span class="product-label">${escapeHtml(product)}</span>
+                  <h3>${escapeHtml(product)}</h3>
+                  <p class="muted small">${productRows.length} workstream${productRows.length === 1 ? "" : "s"} - average progress ${avg}% - ${riskCount} risky - ${delayedCount} delayed</p>
+                </div>
+              </div>
+              <div class="report-list">${productRows.map(portfolioDetailCard).join("")}</div>
+            </div>
+          `;
+        }).join("") : `<div class="empty"><strong>No products available</strong>No records match the current filters.</div>`;
+        return;
+      }
+
+      list.innerHTML = rows.length
+        ? rows.map(portfolioDetailCard).join("")
+        : `<div class="empty"><strong>No details available</strong>No records match this indicator and the current filters.</div>`;
+    }
+
     function renderMetrics() {
       const source = getDashboardReports();
       fillSelect("dashboardTypeFilter", PRODUCT_TYPE_OPTIONS, "All product types", dashboardFilters.productType);
@@ -5076,20 +5216,29 @@
       const riskyProducts = productsNeedingAttention(source);
       const dateCounts = endDateCounts(source);
       const metrics = [
-        ["Products", products, "blue", "With active workstreams", `${pm.total} PM items`, `${ux.total} UI/UX items`],
-        ["Workstreams", total, "blue", "Features or workstreams tracked", `${pm.total} PM`, `${ux.total} UI/UX`],
-        ["Products at Risk", riskyProducts, riskyProducts ? "red" : "green", `${atRisk} workstreams need attention`, `${pm.atRisk} PM`, `${ux.atRisk} UI/UX`],
-        ["Delayed", dateCounts.delayed, dateCounts.delayed ? "red" : "green", "Past end date", `${dateCounts.dueSoon} due soon`, `${dateCounts.postponed} postponed`],
-        ["Avg Progress", `${avg}%`, avg < 50 ? "red" : avg < 75 ? "amber" : "green", "Across filtered reports", `${pm.avg}% PM`, `${ux.avg}% UI/UX`],
+        ["products", "Products", products, "blue", "With active workstreams", `${pm.total} PM items`, `${ux.total} UI/UX items`],
+        ["workstreams", "Workstreams", total, "blue", "Features or workstreams tracked", `${pm.total} PM`, `${ux.total} UI/UX`],
+        ["risk", "Products at Risk", riskyProducts, riskyProducts ? "red" : "green", `${atRisk} workstreams need attention`, `${pm.atRisk} PM`, `${ux.atRisk} UI/UX`],
+        ["delayed", "Delayed", dateCounts.delayed, dateCounts.delayed ? "red" : "green", "Past end date", `${dateCounts.dueSoon} due soon`, `${dateCounts.postponed} postponed`],
+        ["progress", "Avg Progress", `${avg}%`, avg < 50 ? "red" : avg < 75 ? "amber" : "green", "Across filtered reports", `${pm.avg}% PM`, `${ux.avg}% UI/UX`],
       ];
-      document.getElementById("metrics").innerHTML = metrics.map(([name, value, tone, note, pmNote, uxNote]) => `
-        <div class="panel metric">
-          <span class="chip ${tone}">${name}</span>
-          <strong>${value}</strong>
-          <span class="muted small">${note}</span>
-          <div class="metric-split"><span>${pmNote}</span><span>${uxNote}</span></div>
-        </div>
+      document.getElementById("metrics").innerHTML = metrics.map(([key, name, value, tone, note, pmNote, uxNote]) => `
+        <button class="panel metric metric-button ${selectedDashboardMetric === key ? "selected" : ""}" type="button" data-dashboard-metric="${escapeHtml(key)}" aria-pressed="${selectedDashboardMetric === key ? "true" : "false"}">
+          <span class="chip ${tone}">${escapeHtml(name)}</span>
+          <strong>${escapeHtml(value)}</strong>
+          <span class="muted small">${escapeHtml(note)}</span>
+          <div class="metric-split"><span>${escapeHtml(pmNote)}</span><span>${escapeHtml(uxNote)}</span></div>
+          <span class="muted small">Click to view details</span>
+        </button>
       `).join("");
+      renderPortfolioMetricDrilldown({
+        panelId: "dashboardDrilldownPanel",
+        titleId: "dashboardDrilldownTitle",
+        subtitleId: "dashboardDrilldownSubtitle",
+        listId: "dashboardDrilldownList",
+        metric: selectedDashboardMetric,
+        source
+      });
       renderEndDateMonitor("dashboardEndDateMonitor", source, "No delayed, due soon, or postponed end dates for the current filters.");
     }
 
@@ -5119,19 +5268,28 @@
         : `No reports match these filters. Try changing Reporting week, Type of product, Role / Portfolio view, or Delivery health.`;
 
       const metricRows = [
-        ["Products", products, "blue", "Active product portfolio"],
-        ["Workstreams", total, "blue", `${onTrack} healthy delivery`],
-        ["Products at Risk", riskyProducts, riskyProducts ? "red" : "green", `${atRisk} risky workstreams`],
-        ["Delayed", dateCounts.delayed, dateCounts.delayed ? "red" : "green", `${dateCounts.dueSoon} due soon / ${dateCounts.postponed} postponed`],
-        ["Avg Progress", `${avg}%`, avg < 50 ? "red" : avg < 75 ? "amber" : "green", "Across filtered workstreams"],
+        ["products", "Products", products, "blue", "Active product portfolio"],
+        ["workstreams", "Workstreams", total, "blue", `${onTrack} healthy delivery`],
+        ["risk", "Products at Risk", riskyProducts, riskyProducts ? "red" : "green", `${atRisk} risky workstreams`],
+        ["delayed", "Delayed", dateCounts.delayed, dateCounts.delayed ? "red" : "green", `${dateCounts.dueSoon} due soon / ${dateCounts.postponed} postponed`],
+        ["progress", "Avg Progress", `${avg}%`, avg < 50 ? "red" : avg < 75 ? "amber" : "green", "Across filtered workstreams"],
       ];
-      document.getElementById("executiveMetrics").innerHTML = metricRows.map(([name, value, tone, note]) => `
-        <div class="panel metric">
-          <span class="chip ${tone}">${name}</span>
-          <strong>${value}</strong>
-          <span class="muted small">${note}</span>
-        </div>
+      document.getElementById("executiveMetrics").innerHTML = metricRows.map(([key, name, value, tone, note]) => `
+        <button class="panel metric metric-button ${selectedExecutiveMetric === key ? "selected" : ""}" type="button" data-executive-metric="${escapeHtml(key)}" aria-pressed="${selectedExecutiveMetric === key ? "true" : "false"}">
+          <span class="chip ${tone}">${escapeHtml(name)}</span>
+          <strong>${escapeHtml(value)}</strong>
+          <span class="muted small">${escapeHtml(note)}</span>
+          <span class="muted small">Click to view details</span>
+        </button>
       `).join("");
+      renderPortfolioMetricDrilldown({
+        panelId: "executiveDrilldownPanel",
+        titleId: "executiveDrilldownTitle",
+        subtitleId: "executiveDrilldownSubtitle",
+        listId: "executiveDrilldownList",
+        metric: selectedExecutiveMetric,
+        source
+      });
       renderEndDateMonitor("executiveEndDateMonitor", source, "No delivery date alerts need attention.");
 
       const healthRows = [
@@ -6346,6 +6504,22 @@
       renderExecutiveDashboard();
     });
 
+    document.getElementById("executiveMetrics").addEventListener("click", event => {
+      const card = event.target.closest("[data-executive-metric]");
+      if (!card) return;
+      selectedExecutiveMetric = card.dataset.executiveMetric || "";
+      logUserAction("executive_metric_opened", { metric: selectedExecutiveMetric }, { target_type: "executive_metric", target_id: selectedExecutiveMetric });
+      renderExecutiveDashboard();
+      document.getElementById("executiveDrilldownPanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    document.getElementById("executiveDrilldownClose").addEventListener("click", () => {
+      selectedExecutiveMetric = "";
+      logUserAction("executive_metric_closed", {}, { target_type: "executive_metric", target_id: "overview" });
+      renderExecutiveDashboard();
+      document.getElementById("executiveMetrics")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
     document.getElementById("executiveHealth").addEventListener("click", event => {
       const card = event.target.closest("[data-executive-health]");
       if (!card) return;
@@ -6374,6 +6548,22 @@
       dashboardFilters.health = event.target.value;
       logFilterChange("dashboard", "health", event.target.value);
       renderAll();
+    });
+
+    document.getElementById("metrics").addEventListener("click", event => {
+      const card = event.target.closest("[data-dashboard-metric]");
+      if (!card) return;
+      selectedDashboardMetric = card.dataset.dashboardMetric || "";
+      logUserAction("dashboard_metric_opened", { metric: selectedDashboardMetric }, { target_type: "dashboard_metric", target_id: selectedDashboardMetric });
+      renderMetrics();
+      document.getElementById("dashboardDrilldownPanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    document.getElementById("dashboardDrilldownClose").addEventListener("click", () => {
+      selectedDashboardMetric = "";
+      logUserAction("dashboard_metric_closed", {}, { target_type: "dashboard_metric", target_id: "overview" });
+      renderMetrics();
+      document.getElementById("metrics")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
     document.getElementById("healthList").addEventListener("click", event => {
