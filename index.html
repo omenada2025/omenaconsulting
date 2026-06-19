@@ -815,6 +815,29 @@
       gap: 6px;
     }
 
+    .metric-button {
+      width: 100%;
+      text-align: left;
+      border: 1px solid var(--line);
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+      transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+    }
+
+    .metric-button:hover,
+    .metric-button:focus-visible {
+      transform: translateY(-2px);
+      border-color: rgba(23, 83, 108, .34);
+      box-shadow: 0 16px 34px rgba(31, 42, 51, .13);
+      outline: none;
+    }
+
+    .metric-button.selected {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(69, 132, 161, .16), var(--shadow-soft);
+    }
+
     .metric strong {
       font-size: 34px;
       line-height: 1;
@@ -2006,6 +2029,17 @@
 
         <div class="grid summary-grid" id="incidentMetrics"></div>
 
+        <div class="panel" id="incidentDrilldownPanel" hidden>
+          <div class="panel-title">
+            <div>
+              <h3 id="incidentDrilldownTitle">Incident details</h3>
+              <p class="muted small" id="incidentDrilldownSubtitle"></p>
+            </div>
+            <button class="btn" type="button" id="incidentDrilldownClose">Back to incident overview</button>
+          </div>
+          <div class="report-list" id="incidentDrilldownList"></div>
+        </div>
+
         <div class="grid two-col" style="margin-top:16px">
           <div class="panel">
             <div class="panel-title">
@@ -2554,6 +2588,7 @@
     let selectedPortfolioHealthId = null;
     let selectedExecutiveHealth = "red";
     let selectedExecutiveProjectId = null;
+    let selectedIncidentMetric = "";
     let useLegacySupabasePayload = false;
     let actionLoggingDisabled = false;
     let currentUser = null;
@@ -4834,6 +4869,101 @@
         .sort((a, b) => incidentSortRank(a).localeCompare(incidentSortRank(b)));
     }
 
+    function incidentMetricMatches(report, metric) {
+      const flags = incidentFlags(report);
+      if (metric === "projects") return isIncidentReport(report);
+      if (metric === "blocker") return flags.blocker;
+      return Boolean(flags[metric]);
+    }
+
+    function incidentDetailCard(report) {
+      const tone = incidentTone(report);
+      return `
+        <div class="report-card">
+          <div class="panel-title">
+            <div>
+              <span class="product-label">${escapeHtml(report.product || "No product")}</span>
+              <h3>${escapeHtml(reportTitle(report))}</h3>
+              <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.role || "No role")} - Reporting week ${escapeHtml(report.week || "No date")}${reportEndDate(report) ? ` - ${endDateMarkup(report)}` : ""}</p>
+            </div>
+            <span class="chip ${tone}">${escapeHtml(incidentLabel(report))}</span>
+          </div>
+          <p>${escapeHtml(report.summary || "No summary captured.")}</p>
+          <div class="report-card-detail">
+            <div><strong>Blocker or risk</strong><p class="muted small">${escapeHtml(report.blocker || "No blocker captured.")}</p></div>
+            <div><strong>Next action</strong><p class="muted small">${escapeHtml(report.next || "No next action captured.")}</p></div>
+            <div><strong>Priority</strong><p class="muted small">${escapeHtml(report.priority || "Normal")} - ${escapeHtml(labels[report.health] || report.health || "No health")}</p></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderIncidentDrilldown(source, projectGroups) {
+      const panel = document.getElementById("incidentDrilldownPanel");
+      const title = document.getElementById("incidentDrilldownTitle");
+      const subtitle = document.getElementById("incidentDrilldownSubtitle");
+      const list = document.getElementById("incidentDrilldownList");
+      if (!panel || !title || !subtitle || !list) return;
+      if (!selectedIncidentMetric) {
+        panel.hidden = true;
+        list.innerHTML = "";
+        return;
+      }
+
+      const metricCopy = {
+        projects: {
+          title: `Projects impacted (${projectGroups.length})`,
+          subtitle: "Projects with delayed, due soon, postponed, blocker, At Risk, or Critical signals."
+        },
+        delayed: {
+          title: "Delayed workstreams",
+          subtitle: "End date has already passed."
+        },
+        dueSoon: {
+          title: "Due soon workstreams",
+          subtitle: "End date is within the next 5 days."
+        },
+        postponed: {
+          title: "Postponed workstreams",
+          subtitle: "End date was moved later than a prior saved value."
+        },
+        blocker: {
+          title: "Blockers / Risks",
+          subtitle: "At Risk, Critical priority, or blocker/risk text is present."
+        }
+      };
+
+      panel.hidden = false;
+      title.textContent = metricCopy[selectedIncidentMetric]?.title || "Incident details";
+      subtitle.textContent = metricCopy[selectedIncidentMetric]?.subtitle || "Filtered incident details.";
+
+      if (selectedIncidentMetric === "projects") {
+        list.innerHTML = projectGroups.length ? projectGroups.map(([product, rows]) => {
+          const dateCounts = endDateCounts(rows);
+          const blockerCount = rows.filter(hasBlockerSignal).length;
+          return `
+            <div class="report-card">
+              <div class="panel-title">
+                <div>
+                  <span class="product-label">${escapeHtml(product)}</span>
+                  <h3>${escapeHtml(product)}</h3>
+                  <p class="muted small">${rows.length} impacted workstream${rows.length === 1 ? "" : "s"} - ${dateCounts.delayed} delayed - ${dateCounts.dueSoon} due soon - ${dateCounts.postponed} postponed - ${blockerCount} blockers / risks</p>
+                </div>
+              </div>
+              <div class="report-list">${rows.map(incidentDetailCard).join("")}</div>
+            </div>
+          `;
+        }).join("") : `<div class="empty"><strong>No impacted projects</strong>No incident signals match the current filters.</div>`;
+        return;
+      }
+
+      const rows = source.filter(report => incidentMetricMatches(report, selectedIncidentMetric));
+      title.textContent = `${metricCopy[selectedIncidentMetric]?.title || "Incident details"} (${rows.length})`;
+      list.innerHTML = rows.length
+        ? rows.map(incidentDetailCard).join("")
+        : `<div class="empty"><strong>No details available</strong>No records match this indicator and the current filters.</div>`;
+    }
+
     function renderIncidentReport() {
       const metricsTarget = document.getElementById("incidentMetrics");
       const projectsTarget = document.getElementById("incidentProjectList");
@@ -4872,19 +5002,21 @@
       }
 
       const metrics = [
-        ["Projects impacted", projectGroups.length, projectGroups.length ? "red" : "green", "Projects with incident signals"],
-        ["Delayed", counts.delayed, counts.delayed ? "red" : "green", "End date already passed"],
-        ["Due soon", counts.dueSoon, counts.dueSoon ? "amber" : "green", "Due in the next 5 days"],
-        ["Postponed", counts.postponed, counts.postponed ? "orange" : "green", "End date moved later"],
-        ["Blockers / Risks", counts.blocker, counts.blocker ? "red" : "green", "At Risk, Critical, or blocker text"],
+        ["projects", "Projects impacted", projectGroups.length, projectGroups.length ? "red" : "green", "Projects with incident signals"],
+        ["delayed", "Delayed", counts.delayed, counts.delayed ? "red" : "green", "End date already passed"],
+        ["dueSoon", "Due soon", counts.dueSoon, counts.dueSoon ? "amber" : "green", "Due in the next 5 days"],
+        ["postponed", "Postponed", counts.postponed, counts.postponed ? "orange" : "green", "End date moved later"],
+        ["blocker", "Blockers / Risks", counts.blocker, counts.blocker ? "red" : "green", "At Risk, Critical, or blocker text"],
       ];
-      metricsTarget.innerHTML = metrics.map(([name, value, tone, note]) => `
-        <div class="panel metric">
+      metricsTarget.innerHTML = metrics.map(([key, name, value, tone, note]) => `
+        <button class="panel metric metric-button ${selectedIncidentMetric === key ? "selected" : ""}" type="button" data-incident-metric="${escapeHtml(key)}" aria-pressed="${selectedIncidentMetric === key ? "true" : "false"}">
           <span class="chip ${tone}">${escapeHtml(name)}</span>
           <strong>${escapeHtml(value)}</strong>
           <span class="muted small">${escapeHtml(note)}</span>
-        </div>
+          <span class="muted small">Click to view details</span>
+        </button>
       `).join("");
+      renderIncidentDrilldown(source, projectGroups);
 
       projectsTarget.innerHTML = projectGroups.length ? projectGroups.map(([product, rows]) => {
         const dateCounts = endDateCounts(rows);
@@ -4910,27 +5042,9 @@
         `;
       }).join("") : `<div class="empty"><strong>No incident indicators</strong>No delayed, due soon, postponed, blocked, At Risk, or Critical items match the current filters.</div>`;
 
-      detailsTarget.innerHTML = source.length ? source.map(report => {
-        const tone = incidentTone(report);
-        return `
-          <div class="report-card">
-            <div class="panel-title">
-              <div>
-                <span class="product-label">${escapeHtml(report.product || "No product")}</span>
-                <h3>${escapeHtml(reportTitle(report))}</h3>
-                <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.role || "No role")} - Reporting week ${escapeHtml(report.week || "No date")}${reportEndDate(report) ? ` - ${endDateMarkup(report)}` : ""}</p>
-              </div>
-              <span class="chip ${tone}">${escapeHtml(incidentLabel(report))}</span>
-            </div>
-            <p>${escapeHtml(report.summary || "No summary captured.")}</p>
-            <div class="report-card-detail">
-              <div><strong>Blocker or risk</strong><p class="muted small">${escapeHtml(report.blocker || "No blocker captured.")}</p></div>
-              <div><strong>Next action</strong><p class="muted small">${escapeHtml(report.next || "No next action captured.")}</p></div>
-              <div><strong>Priority</strong><p class="muted small">${escapeHtml(report.priority || "Normal")} - ${escapeHtml(labels[report.health] || report.health || "No health")}</p></div>
-            </div>
-          </div>
-        `;
-      }).join("") : `<div class="empty"><strong>No details available</strong>Change the filters to review incident and delay details.</div>`;
+      detailsTarget.innerHTML = source.length
+        ? source.map(incidentDetailCard).join("")
+        : `<div class="empty"><strong>No details available</strong>Change the filters to review incident and delay details.</div>`;
     }
 
     function roleStats(role, source) {
@@ -6342,6 +6456,22 @@
       incidentFilters.productType = event.target.value;
       logFilterChange("incident_report", "product_type", event.target.value);
       renderIncidentReport();
+    });
+
+    document.getElementById("incidentMetrics").addEventListener("click", event => {
+      const card = event.target.closest("[data-incident-metric]");
+      if (!card) return;
+      selectedIncidentMetric = card.dataset.incidentMetric || "";
+      logUserAction("incident_metric_opened", { metric: selectedIncidentMetric }, { target_type: "incident_metric", target_id: selectedIncidentMetric });
+      renderIncidentReport();
+      document.getElementById("incidentDrilldownPanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    document.getElementById("incidentDrilldownClose").addEventListener("click", () => {
+      selectedIncidentMetric = "";
+      logUserAction("incident_metric_closed", {}, { target_type: "incident_metric", target_id: "overview" });
+      renderIncidentReport();
+      document.getElementById("incidentMetrics")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
     document.getElementById("exportCsvBtn").addEventListener("click", exportReportsCsv);
