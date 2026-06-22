@@ -6022,7 +6022,7 @@
         btn.textContent = "Saving...";
         hideReportMessage();
         try {
-          await updateReport(readReportForm(event.currentTarget, report.id));
+          await updateReport(readReportForm(event.currentTarget, report.id, { requireProduct: false }));
           btn.textContent = "Save Changes";
           showReportMessage("Your report has been successfully updated.");
         } catch (error) {
@@ -6120,10 +6120,34 @@
       `;
     }
 
-    function readReportForm(form, id = crypto.randomUUID()) {
+    function pickerFormValue(form, name) {
+      const productPicker = form.querySelector(`[data-product-picker][data-name="${CSS.escape(name)}"]`);
+      if (productPicker) {
+        return cleanText(productPicker.dataset.selected || productPicker.querySelector(`input[name="${CSS.escape(name)}"]`)?.value || "");
+      }
+      const peoplePicker = form.querySelector(`[data-people-picker][data-name="${CSS.escape(name)}"]`);
+      if (peoplePicker) {
+        const selected = (peoplePicker.dataset.selected || "")
+          .split("|")
+          .map(cleanText)
+          .filter(Boolean);
+        if (selected.length) return selected.join(" / ");
+        return cleanText(peoplePicker.querySelector(`input[name="${CSS.escape(name)}"]`)?.value || "");
+      }
+      return "";
+    }
+
+    function readReportForm(form, id = crypto.randomUUID(), { requireProduct = true } = {}) {
       const data = Object.fromEntries(new FormData(form).entries());
+      ["product", "owner", "participants"].forEach(name => {
+        const value = pickerFormValue(form, name);
+        if (value || name === "product") data[name] = value;
+      });
       if (!cleanText(data.product)) {
-        throw new Error("Select a product before saving.");
+        if (requireProduct) {
+          throw new Error("Select a product before saving.");
+        }
+        data.product = "";
       }
       if (isWeekend(data.week)) {
         throw new Error("Reporting week cannot be Saturday or Sunday.");
