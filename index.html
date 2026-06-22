@@ -1040,6 +1040,28 @@
     .bar.amber { background: var(--amber); }
     .bar.red { background: var(--red); }
 
+    .workload-card {
+      display: grid;
+      gap: 12px;
+    }
+
+    .workload-card .progress {
+      margin-top: 0;
+    }
+
+    .workload-insight {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .workload-products {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
     .risk-matrix {
       position: relative;
       height: 360px;
@@ -4267,16 +4289,51 @@
               role: report.role,
               owner,
               workstreams: 0,
-              products: new Set()
+              products: new Set(),
+              atRisk: 0,
+              delayed: 0,
+              progressTotal: 0
             });
           }
           const item = stats.get(key);
           item.workstreams += 1;
           if (report.product) item.products.add(report.product);
+          if (isRiskReport(report)) item.atRisk += 1;
+          if (incidentFlags(report).delayed) item.delayed += 1;
+          item.progressTotal += Number(report.progress || 0);
         });
-      return [...stats.values()].sort((a, b) =>
-        a.role.localeCompare(b.role) || b.workstreams - a.workstreams || a.owner.localeCompare(b.owner)
-      );
+      return [...stats.values()]
+        .map(item => ({
+          ...item,
+          avgProgress: item.workstreams ? Math.round(item.progressTotal / item.workstreams) : 0
+        }))
+        .sort((a, b) =>
+          a.role.localeCompare(b.role) ||
+          b.workstreams - a.workstreams ||
+          b.atRisk - a.atRisk ||
+          a.owner.localeCompare(b.owner)
+        );
+    }
+
+    function workloadTone(item, roleAverage) {
+      if (!item) return "gray";
+      if (item.workstreams >= Math.max(6, roleAverage * 1.35) || item.atRisk >= 3 || item.delayed >= 2) return "red";
+      if (item.workstreams >= Math.max(4, roleAverage * 1.1) || item.atRisk || item.delayed) return "amber";
+      return "green";
+    }
+
+    function workloadLabel(item, roleAverage) {
+      const tone = workloadTone(item, roleAverage);
+      if (tone === "red") return "Needs rebalance";
+      if (tone === "amber") return "Watch capacity";
+      return "Balanced";
+    }
+
+    function workloadRecommendation(item, roleAverage) {
+      const tone = workloadTone(item, roleAverage);
+      if (tone === "red") return "Review ownership and consider moving a workstream or adding support.";
+      if (tone === "amber") return "Monitor blockers, delays, and progress before assigning more work.";
+      return "Capacity looks manageable under the current report mix.";
     }
 
     function renderWorkBalance() {
@@ -4289,9 +4346,15 @@
       const totalProducts = new Set(reports.map(report => report.product).filter(Boolean)).size;
       const totalWorkstreams = reports.filter(report => ["Product Manager", "UI/UX"].includes(report.role)).length;
       const heaviest = ownershipRows[0];
+      const pmTotal = pmRows.reduce((sum, item) => sum + item.workstreams, 0);
+      const uxTotal = uxRows.reduce((sum, item) => sum + item.workstreams, 0);
+      const pmAverage = pmRows.length ? pmTotal / pmRows.length : 0;
+      const uxAverage = uxRows.length ? uxTotal / uxRows.length : 0;
+      const attentionCount = ownershipRows.filter(item => workloadTone(item, item.role === "UI/UX" ? uxAverage : pmAverage) !== "green").length;
       const cardData = [
-        ["PM workload", pmRows.reduce((sum, item) => sum + item.workstreams, 0), "blue", `${pmRows.length} owner${pmRows.length === 1 ? "" : "s"}`],
-        ["UI/UX workload", uxRows.reduce((sum, item) => sum + item.workstreams, 0), "amber", `${uxRows.length} owner${uxRows.length === 1 ? "" : "s"}`],
+        ["PM workload", pmTotal, "blue", `${pmRows.length} owner${pmRows.length === 1 ? "" : "s"} - avg ${pmAverage ? pmAverage.toFixed(1) : 0}`],
+        ["UI/UX workload", uxTotal, "amber", `${uxRows.length} owner${uxRows.length === 1 ? "" : "s"} - avg ${uxAverage ? uxAverage.toFixed(1) : 0}`],
+        ["Needs attention", attentionCount, attentionCount ? "red" : "green", "Overload, risk, or delay signal"],
         ["Products tracked", totalProducts, "green", `${totalWorkstreams} workstream${totalWorkstreams === 1 ? "" : "s"}`],
         ["Highest load", heaviest ? heaviest.workstreams : 0, heaviest?.role === "UI/UX" ? "amber" : "blue", heaviest ? heaviest.owner : "No owner yet"]
       ];
@@ -4304,16 +4367,26 @@
       `).join("");
 
       ownershipTarget.innerHTML = ownershipRows.length ? ownershipRows.map(item => `
-        <div class="report-card">
+        <div class="report-card workload-card">
           <header>
             <div>
               <span class="product-label">${escapeHtml(item.role)}</span>
               <h3>${escapeHtml(item.owner)}</h3>
-              <p class="muted small">${item.products.size} project${item.products.size === 1 ? "" : "s"} - ${item.workstreams} workstream${item.workstreams === 1 ? "" : "s"}</p>
+              <p class="muted small">${item.products.size} project${item.products.size === 1 ? "" : "s"} - ${item.workstreams} workstream${item.workstreams === 1 ? "" : "s"} - ${item.avgProgress}% avg progress</p>
             </div>
-            <span class="chip ${item.role === "UI/UX" ? "amber" : "blue"}">${item.workstreams}</span>
+            <span class="chip ${workloadTone(item, item.role === "UI/UX" ? uxAverage : pmAverage)}">${escapeHtml(workloadLabel(item, item.role === "UI/UX" ? uxAverage : pmAverage))}</span>
           </header>
-          <p class="muted small">${escapeHtml([...item.products].sort((a, b) => a.localeCompare(b)).join(", ") || "No product assigned")}</p>
+          <div class="progress" aria-label="${escapeHtml(item.owner)} workload compared with the highest current load">
+            <div class="bar ${workloadTone(item, item.role === "UI/UX" ? uxAverage : pmAverage)}" style="width:${Math.min(100, Math.round((item.workstreams / Math.max(heaviest?.workstreams || 1, 1)) * 100))}%"></div>
+          </div>
+          <div class="workload-insight">
+            <span class="chip blue">${item.workstreams} workstreams</span>
+            <span class="chip green">${item.products.size} projects</span>
+            <span class="chip ${item.atRisk ? "red" : "green"}">${item.atRisk} at risk</span>
+            <span class="chip ${item.delayed ? "red" : "green"}">${item.delayed} delayed</span>
+          </div>
+          <p class="workload-products">${escapeHtml([...item.products].sort((a, b) => a.localeCompare(b)).join(", ") || "No product assigned")}</p>
+          <p class="muted small"><strong>PM recommendation:</strong> ${escapeHtml(workloadRecommendation(item, item.role === "UI/UX" ? uxAverage : pmAverage))}</p>
         </div>
       `).join("") : `<div class="empty"><strong>No workload yet</strong>Add status reports with PM or UI/UX roles to populate this view.</div>`;
     }
