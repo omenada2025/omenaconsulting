@@ -1702,7 +1702,7 @@
         <button class="tab" data-view="incidents" title="Delayed, due soon, postponed, blocked, at-risk, and critical workstreams">Incidents & Delays</button>
         <button class="tab" data-view="reports" data-master-only>Status Center</button>
         <div class="nav-section" data-role-manager-only>Admin</div>
-        <button class="tab" data-view="roles" data-role-manager-only>Roles</button>
+        <button class="tab" data-view="workload" data-role-manager-only>Work Balance</button>
         <button class="tab" data-view="users" data-role-manager-only>User Access</button>
       </nav>
       <div class="signed-in-card" id="signedInCard" hidden>
@@ -2005,53 +2005,41 @@
         </div>
       </section>
 
-      <section class="view" id="roles" data-role-manager-view>
+      <section class="view" id="workload" data-role-manager-view>
         <div class="header">
           <div>
-            <span class="page-kicker">Access design</span>
-            <h2>Roles</h2>
-            <p class="muted">Review role permissions, current assignments, and project ownership by PM and UI/UX.</p>
+            <span class="page-kicker">Capacity view</span>
+            <h2>Work Balance</h2>
+            <p class="muted">See how many projects and workstreams each PM and UI/UX owner is carrying.</p>
           </div>
           <button class="btn" type="button" data-logout>Logout</button>
         </div>
 
         <div class="guide-grid">
           <div class="guide-card">
-            <strong>1. Check permissions</strong>
-            <p class="muted small">Each role has a clear access scope so users only see what they need.</p>
+            <strong>1. Compare workload</strong>
+            <p class="muted small">Use project and workstream counts to see who is carrying the most active work.</p>
           </div>
           <div class="guide-card">
-            <strong>2. Review workload</strong>
-            <p class="muted small">See how many products and workstreams each PM or UI/UX owner has.</p>
+            <strong>2. Separate PM and UI/UX</strong>
+            <p class="muted small">Counts are grouped by role so delivery and design capacity stay easy to read.</p>
           </div>
           <div class="guide-card">
-            <strong>3. Assign users</strong>
-            <p class="muted small">Use User Access to change a user's assigned role and resend credentials.</p>
+            <strong>3. Rebalance with context</strong>
+            <p class="muted small">Open the project list to understand which products are driving the load.</p>
           </div>
         </div>
 
-        <div class="grid summary-grid" id="roleCards"></div>
+        <div class="grid summary-grid" id="workloadCards"></div>
 
-        <div class="two-col">
-          <div class="panel">
-            <div class="panel-title">
-              <div>
-                <h3>Projects by PM / UI/UX</h3>
-                <p class="muted small">Counts are based on current live reports and grouped by report owner and role.</p>
-              </div>
+        <div class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>Projects by PM / UI/UX</h3>
+              <p class="muted small">Counts are based on current live reports and grouped by report owner and role.</p>
             </div>
-            <div class="report-list" id="roleOwnershipSummary"></div>
           </div>
-          <div class="panel">
-            <div class="panel-title">
-              <div>
-                <h3>Users by role</h3>
-                <p class="muted small">Role assignment is managed in User Access.</p>
-              </div>
-              <button class="btn soft" type="button" data-jump="users">Open User Access</button>
-            </div>
-            <div class="report-list" id="roleUsersByRole"></div>
-          </div>
+          <div class="report-list" id="workloadOwnershipSummary"></div>
         </div>
       </section>
 
@@ -2760,23 +2748,6 @@
       admin: "Admin",
       roles: "Role Manager",
       master: "Master admin"
-    };
-    const ROLE_DEFINITIONS = {
-      admin: {
-        title: "Admin",
-        summary: "Dashboard view only",
-        permissions: ["Portfolio Dashboard", "Executive View", "Incidents & Delays"]
-      },
-      master: {
-        title: "Master admin",
-        summary: "Reports and status management",
-        permissions: ["Portfolio Dashboard", "Executive View", "Incidents & Delays", "Status Center", "Add and edit status reports"]
-      },
-      roles: {
-        title: "Role Manager",
-        summary: "Access control and oversight",
-        permissions: ["Portfolio Dashboard", "Executive View", "Incidents & Delays", "Status Center", "Users", "Roles"]
-      }
     };
     let reports = [];
     let selectedReportId = null;
@@ -4244,7 +4215,7 @@
     }
 
     function canAccessView(id) {
-      if (canManageRoles()) return ["dashboard", "executive", "incidents", "intake", "reports", "roles", "users"].includes(id);
+      if (canManageRoles()) return ["dashboard", "executive", "incidents", "intake", "reports", "workload", "users"].includes(id);
       if (isMasterAdmin()) return ["dashboard", "executive", "incidents", "intake", "reports"].includes(id);
       return ["dashboard", "executive", "incidents"].includes(id);
     }
@@ -4278,18 +4249,13 @@
         element.hidden = !canManageRoles();
       });
       renderUserManagement();
-      renderRoleManagement();
+      renderWorkBalance();
       if (!canAccessView(getActiveView())) {
         switchView("dashboard");
       }
     }
 
-    function roleAccessList(role) {
-      const definition = ROLE_DEFINITIONS[role] || ROLE_DEFINITIONS.admin;
-      return definition.permissions.map(item => `<span class="chip blue">${escapeHtml(item)}</span>`).join("");
-    }
-
-    function roleOwnershipStats() {
+    function workBalanceStats() {
       const stats = new Map();
       reports
         .filter(report => ["Product Manager", "UI/UX"].includes(report.role))
@@ -4313,27 +4279,30 @@
       );
     }
 
-    function renderRoleManagement() {
-      const roleCards = document.getElementById("roleCards");
-      const ownershipTarget = document.getElementById("roleOwnershipSummary");
-      const usersTarget = document.getElementById("roleUsersByRole");
-      if (!roleCards || !ownershipTarget || !usersTarget) return;
-      const users = normalizeUsers(loadUsers()).filter(user => !isDefaultUser(user.username));
-      const roles = ["admin", "master", "roles"];
-      roleCards.innerHTML = roles.map(role => {
-        const definition = ROLE_DEFINITIONS[role];
-        const activeUsers = users.filter(user => user.role === role && user.active !== false).length;
-        return `
-          <div class="panel metric">
-            <span class="chip blue">${escapeHtml(definition.title)}</span>
-            <strong>${activeUsers}</strong>
-            <span class="muted small">${escapeHtml(definition.summary)}</span>
-            <div class="metric-split">${roleAccessList(role)}</div>
-          </div>
-        `;
-      }).join("");
+    function renderWorkBalance() {
+      const cardsTarget = document.getElementById("workloadCards");
+      const ownershipTarget = document.getElementById("workloadOwnershipSummary");
+      if (!cardsTarget || !ownershipTarget) return;
+      const ownershipRows = workBalanceStats();
+      const pmRows = ownershipRows.filter(item => item.role === "Product Manager");
+      const uxRows = ownershipRows.filter(item => item.role === "UI/UX");
+      const totalProducts = new Set(reports.map(report => report.product).filter(Boolean)).size;
+      const totalWorkstreams = reports.filter(report => ["Product Manager", "UI/UX"].includes(report.role)).length;
+      const heaviest = ownershipRows[0];
+      const cardData = [
+        ["PM workload", pmRows.reduce((sum, item) => sum + item.workstreams, 0), "blue", `${pmRows.length} owner${pmRows.length === 1 ? "" : "s"}`],
+        ["UI/UX workload", uxRows.reduce((sum, item) => sum + item.workstreams, 0), "amber", `${uxRows.length} owner${uxRows.length === 1 ? "" : "s"}`],
+        ["Products tracked", totalProducts, "green", `${totalWorkstreams} workstream${totalWorkstreams === 1 ? "" : "s"}`],
+        ["Highest load", heaviest ? heaviest.workstreams : 0, heaviest?.role === "UI/UX" ? "amber" : "blue", heaviest ? heaviest.owner : "No owner yet"]
+      ];
+      cardsTarget.innerHTML = cardData.map(([label, value, tone, note]) => `
+        <div class="panel metric">
+          <span class="chip ${tone}">${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
+          <span class="muted small">${escapeHtml(note)}</span>
+        </div>
+      `).join("");
 
-      const ownershipRows = roleOwnershipStats();
       ownershipTarget.innerHTML = ownershipRows.length ? ownershipRows.map(item => `
         <div class="report-card">
           <header>
@@ -4346,26 +4315,7 @@
           </header>
           <p class="muted small">${escapeHtml([...item.products].sort((a, b) => a.localeCompare(b)).join(", ") || "No product assigned")}</p>
         </div>
-      `).join("") : `<div class="empty"><strong>No role workload yet</strong>Add status reports with PM or UI/UX roles to populate this view.</div>`;
-
-      usersTarget.innerHTML = roles.map(role => {
-        const definition = ROLE_DEFINITIONS[role];
-        const roleUsers = users.filter(user => user.role === role);
-        return `
-          <div class="report-card">
-            <header>
-              <div>
-                <span class="product-label">${escapeHtml(definition.title)}</span>
-                <h3>${roleUsers.length} user${roleUsers.length === 1 ? "" : "s"}</h3>
-                <p class="muted small">${escapeHtml(definition.summary)}</p>
-              </div>
-            </header>
-            <div class="user-meta">
-              ${roleUsers.length ? roleUsers.map(user => `<span class="chip ${user.active === false ? "gray" : "green"}">${escapeHtml(user.displayName || user.username)}</span>`).join("") : `<span class="muted small">No users assigned.</span>`}
-            </div>
-          </div>
-        `;
-      }).join("");
+      `).join("") : `<div class="empty"><strong>No workload yet</strong>Add status reports with PM or UI/UX roles to populate this view.</div>`;
     }
 
     function renderUserManagement() {
@@ -4420,7 +4370,7 @@
           </div>
         </div>
       `).join("");
-      renderRoleManagement();
+      renderWorkBalance();
     }
 
     function generateAccessCode() {
@@ -6334,7 +6284,7 @@
       renderTimeline("nextList", "next", "No next actions captured yet.");
       renderReports();
       renderIncidentReport();
-      renderRoleManagement();
+      renderWorkBalance();
     }
 
     function escapeHtml(value = "") {
