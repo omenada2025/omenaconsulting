@@ -1724,6 +1724,7 @@
         <button class="tab" data-view="incidents" title="Delayed, due soon, postponed, blocked, at-risk, and critical workstreams">Incidents & Delays</button>
         <button class="tab" data-view="reports" data-master-only>Status Center</button>
         <div class="nav-section" data-role-manager-only>Admin</div>
+        <button class="tab" data-view="sourceProjects" data-role-manager-only>Source Project</button>
         <button class="tab" data-view="workload" data-role-manager-only>Work Balance</button>
         <button class="tab" data-view="users" data-role-manager-only>User Access</button>
       </nav>
@@ -2024,6 +2025,62 @@
             </div>
             <div class="exec-list" id="executiveActions"></div>
           </div>
+        </div>
+      </section>
+
+      <section class="view" id="sourceProjects" data-role-manager-view>
+        <div class="header">
+          <div>
+            <span class="page-kicker">Source portfolio</span>
+            <h2>Source Project</h2>
+            <p class="muted">Import and review the SharePoint project source list before comparing it with dashboard status reports.</p>
+          </div>
+          <div class="top-actions">
+            <a class="btn primary" id="sourceProjectLink" target="_blank" rel="noopener">Open source workbook</a>
+            <button class="btn" type="button" data-logout>Logout</button>
+          </div>
+        </div>
+
+        <div class="guide-grid">
+          <div class="guide-card theme-blue">
+            <strong>1. Open the source</strong>
+            <p class="muted small">Use the official SharePoint workbook as the source of truth.</p>
+          </div>
+          <div class="guide-card theme-green">
+            <strong>2. Paste the table</strong>
+            <p class="muted small">Copy rows from Excel, paste them here, and the page will organize the data.</p>
+          </div>
+          <div class="guide-card theme-amber">
+            <strong>3. Review gaps</strong>
+            <p class="muted small">Compare source projects with weekly reports to spot missing updates.</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>Import from SharePoint</h3>
+              <p class="muted small">Direct browser sync can be blocked by Microsoft authentication, so paste copied Excel rows or CSV content here.</p>
+            </div>
+            <div class="report-actions">
+              <button class="btn soft" type="button" id="importSourceProjectsBtn">Import pasted data</button>
+              <button class="btn" type="button" id="clearSourceProjectsBtn">Clear import</button>
+            </div>
+          </div>
+          <textarea id="sourceProjectImport" rows="7" placeholder="Paste copied Excel rows here. Include headers such as Project/Product, Owner/PM, Status, Priority, End date, Notes."></textarea>
+          <div class="inline-message success" id="sourceProjectMessage" hidden></div>
+        </div>
+
+        <div class="grid summary-grid" id="sourceProjectCards"></div>
+
+        <div class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>Source project list</h3>
+              <p class="muted small" id="sourceProjectSummary">No imported source projects yet.</p>
+            </div>
+          </div>
+          <div class="report-list" id="sourceProjectList"></div>
         </div>
       </section>
 
@@ -2525,6 +2582,8 @@
   <script>
     const STORAGE_KEY = "product-uiux-pulse-reports-v1";
     const FIELD_OVERRIDES_KEY = "product-uiux-pulse-field-overrides-v1";
+    const SOURCE_PROJECTS_KEY = "omena-source-projects-v1";
+    const SOURCE_PROJECTS_URL = "https://netorg14919417.sharepoint.com/:x:/r/sites/ProductManagers/_layouts/15/Doc.aspx?action=edit&sourcedoc=%7B001b27fc-5254-480f-bf98-1ee6c319fcaf%7D&wdExp=TEAMS-TREATMENT&web=1&TeamsCID=9245405c-61c3-49b5-8c31-6275fa488860";
     const labels = {
       green: "On Track",
       amber: "In Progress",
@@ -4237,7 +4296,7 @@
     }
 
     function canAccessView(id) {
-      if (canManageRoles()) return ["dashboard", "executive", "incidents", "intake", "reports", "workload", "users"].includes(id);
+      if (canManageRoles()) return ["dashboard", "executive", "incidents", "intake", "reports", "sourceProjects", "workload", "users"].includes(id);
       if (isMasterAdmin()) return ["dashboard", "executive", "incidents", "intake", "reports"].includes(id);
       return ["dashboard", "executive", "incidents"].includes(id);
     }
@@ -4271,10 +4330,144 @@
         element.hidden = !canManageRoles();
       });
       renderUserManagement();
+      renderSourceProjects();
       renderWorkBalance();
       if (!canAccessView(getActiveView())) {
         switchView("dashboard");
       }
+    }
+
+    function sourceProjects() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(SOURCE_PROJECTS_KEY) || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveSourceProjects(rows) {
+      localStorage.setItem(SOURCE_PROJECTS_KEY, JSON.stringify(rows));
+    }
+
+    function splitDelimitedLine(line, delimiter) {
+      const values = [];
+      let current = "";
+      let quoted = false;
+      for (let index = 0; index < line.length; index += 1) {
+        const char = line[index];
+        if (char === '"') {
+          if (quoted && line[index + 1] === '"') {
+            current += '"';
+            index += 1;
+          } else {
+            quoted = !quoted;
+          }
+        } else if (char === delimiter && !quoted) {
+          values.push(current.trim());
+          current = "";
+        } else {
+          current += char;
+        }
+      }
+      values.push(current.trim());
+      return values;
+    }
+
+    function parseSourceProjectRows(text = "") {
+      const lines = String(text || "").split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+      if (lines.length < 2) return [];
+      const delimiter = lines[0].includes("\t") ? "\t" : ",";
+      const headers = splitDelimitedLine(lines[0], delimiter).map(header => canonicalText(header));
+      const findIndex = (...needles) => headers.findIndex(header => needles.some(needle => header.includes(needle)));
+      const indexes = {
+        product: findIndex("product", "project", "workstream", "application", "app"),
+        owner: findIndex("owner", "pm", "manager", "responsible"),
+        role: findIndex("role", "function", "area"),
+        status: findIndex("status", "health", "state"),
+        priority: findIndex("priority", "criticality"),
+        start: findIndex("start"),
+        end: findIndex("end", "due", "target", "deadline"),
+        notes: findIndex("note", "summary", "description", "comment")
+      };
+      return lines.slice(1).map((line, rowIndex) => {
+        const cells = splitDelimitedLine(line, delimiter);
+        const read = key => indexes[key] >= 0 ? cleanText(cells[indexes[key]] || "") : "";
+        return {
+          id: crypto.randomUUID(),
+          sourceRow: rowIndex + 2,
+          product: read("product") || `Source row ${rowIndex + 2}`,
+          owner: normalizePersonDisplay(read("owner") || "Unassigned"),
+          role: read("role") || "Not classified",
+          status: read("status") || "Not provided",
+          priority: read("priority") || "Not provided",
+          start: read("start"),
+          end: read("end"),
+          notes: read("notes")
+        };
+      }).filter(row => cleanText(row.product));
+    }
+
+    function sourceProjectHasReport(project) {
+      const sourceName = canonicalText(project.product);
+      if (!sourceName) return false;
+      return reports.some(report => {
+        const product = canonicalText(report.product || "");
+        const workstream = canonicalText(report.feature_workstream || "");
+        return (product && (product === sourceName || product.includes(sourceName) || sourceName.includes(product))) ||
+          (workstream && workstream.includes(sourceName));
+      });
+    }
+
+    function renderSourceProjects() {
+      const link = document.getElementById("sourceProjectLink");
+      const cards = document.getElementById("sourceProjectCards");
+      const list = document.getElementById("sourceProjectList");
+      const summary = document.getElementById("sourceProjectSummary");
+      if (link) link.href = SOURCE_PROJECTS_URL;
+      if (!cards || !list || !summary) return;
+      const rows = sourceProjects();
+      const owners = new Set(rows.map(row => row.owner).filter(Boolean));
+      const matched = rows.filter(sourceProjectHasReport).length;
+      const missing = rows.length - matched;
+      const highPriority = rows.filter(row => /high|critical|urgent/i.test(row.priority)).length;
+      const cardData = [
+        ["Source projects", rows.length, "blue", "Imported from workbook copy/paste"],
+        ["Owners", owners.size, "green", "People accountable in source"],
+        ["Missing reports", missing, missing ? "red" : "green", "No matching dashboard status found"],
+        ["High priority", highPriority, highPriority ? "amber" : "green", "Priority marked high/critical/urgent"]
+      ];
+      cards.innerHTML = cardData.map(([label, value, tone, note]) => `
+        <div class="panel metric">
+          <span class="chip ${tone}">${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
+          <span class="muted small">${escapeHtml(note)}</span>
+        </div>
+      `).join("");
+      summary.textContent = rows.length
+        ? `${rows.length} source project${rows.length === 1 ? "" : "s"} imported. ${matched} matched to dashboard reports, ${missing} need review.`
+        : "No imported source projects yet. Open the SharePoint workbook, copy the table, and paste it above.";
+      list.innerHTML = rows.length ? rows.map(row => {
+        const matchedStatus = sourceProjectHasReport(row);
+        return `
+          <div class="report-card">
+            <header>
+              <div>
+                <span class="product-label">Row ${escapeHtml(row.sourceRow)}</span>
+                <h3>${escapeHtml(row.product)}</h3>
+                <p class="muted small">${escapeHtml(row.owner || "Unassigned")} - ${escapeHtml(row.role || "No role")} - ${escapeHtml(row.status || "No status")}</p>
+              </div>
+              <span class="chip ${matchedStatus ? "green" : "red"}">${matchedStatus ? "Reported" : "Needs status"}</span>
+            </header>
+            <div class="report-card-detail">
+              <div><strong>Priority</strong><p class="muted small">${escapeHtml(row.priority || "Not provided")}</p></div>
+              <div><strong>Start</strong><p class="muted small">${escapeHtml(row.start || "Not provided")}</p></div>
+              <div><strong>End / deadline</strong><p class="muted small">${escapeHtml(row.end || "Not provided")}</p></div>
+            </div>
+            <p class="muted small">${escapeHtml(row.notes || "No notes captured from source.")}</p>
+          </div>
+        `;
+      }).join("") : `<div class="empty"><strong>No source projects imported</strong>Open the SharePoint workbook, copy the table including headers, then paste and import it here.</div>`;
     }
 
     function workBalanceStats() {
@@ -6357,6 +6550,7 @@
       renderTimeline("nextList", "next", "No next actions captured yet.");
       renderReports();
       renderIncidentReport();
+      renderSourceProjects();
       renderWorkBalance();
     }
 
@@ -6558,6 +6752,42 @@
 
     document.getElementById("refreshUsersBtn")?.addEventListener("click", async () => {
       await refreshUserManagementFromCloud();
+    });
+
+    document.getElementById("importSourceProjectsBtn")?.addEventListener("click", () => {
+      const input = document.getElementById("sourceProjectImport");
+      const message = document.getElementById("sourceProjectMessage");
+      const rows = parseSourceProjectRows(input?.value || "");
+      if (!rows.length) {
+        if (message) {
+          message.className = "inline-message danger";
+          message.textContent = "Could not read the pasted table. Include a header row and at least one project row.";
+          message.hidden = false;
+        }
+        return;
+      }
+      saveSourceProjects(rows);
+      if (message) {
+        message.className = "inline-message success";
+        message.textContent = `Imported ${rows.length} source project${rows.length === 1 ? "" : "s"}.`;
+        message.hidden = false;
+      }
+      renderSourceProjects();
+      logUserAction("source_projects_imported", { rows: rows.length }, { target_type: "source_projects", target_id: "sharepoint" });
+    });
+
+    document.getElementById("clearSourceProjectsBtn")?.addEventListener("click", () => {
+      saveSourceProjects([]);
+      const input = document.getElementById("sourceProjectImport");
+      const message = document.getElementById("sourceProjectMessage");
+      if (input) input.value = "";
+      if (message) {
+        message.className = "inline-message success";
+        message.textContent = "Source project import cleared.";
+        message.hidden = false;
+      }
+      renderSourceProjects();
+      logUserAction("source_projects_cleared", {}, { target_type: "source_projects", target_id: "sharepoint" });
     });
 
     document.getElementById("userList").addEventListener("click", async event => {
