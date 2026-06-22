@@ -4927,6 +4927,23 @@
       return { start, end };
     }
 
+    function formatDateRange(range) {
+      return range ? { start: formatDate(range.start), end: formatDate(range.end) } : { start: "", end: "" };
+    }
+
+    function customRangeForFilter(filters) {
+      if (filters.period === "monthly") return formatDateRange(monthRange(filters.week));
+      const range = workweekRange(filters.week);
+      return range ? formatDateRange(range) : { start: filters.week || "", end: filters.week || "" };
+    }
+
+    function syncCustomDateInputs(prefix, filters) {
+      const startInput = document.getElementById(`${prefix}StartFilter`);
+      const endInput = document.getElementById(`${prefix}EndFilter`);
+      if (startInput) startInput.value = filters.start || "";
+      if (endInput) endInput.value = filters.end || "";
+    }
+
     function matchesDateFilter(value, filters) {
       if (!filters) return true;
       const reportRange = reportDateRange(value);
@@ -6168,6 +6185,12 @@
       const weekField = button?.closest(".week-field");
       if (period) period.value = filters.period || "weekly";
       const custom = filters.period === "custom";
+      if (!custom) {
+        const range = customRangeForFilter(filters);
+        filters.start = range.start;
+        filters.end = range.end;
+      }
+      syncCustomDateInputs(prefix, filters);
       if (weekField) weekField.hidden = custom;
       if (picker) picker.hidden = true;
       customFields.forEach(field => { field.hidden = !custom; });
@@ -6764,20 +6787,16 @@
     document.getElementById("exportPdfBtn").addEventListener("click", exportReportsPdf);
 
     const defaultReportingMonday = mondayForDate();
-    const defaultReportingRange = workweekRange(defaultReportingMonday);
-    const defaultReportingFriday = defaultReportingRange ? formatDate(defaultReportingRange.end) : defaultReportingMonday;
     [
       [dashboardFilters, "dashboard"],
       [executiveFilters, "executive"],
       [incidentFilters, "incident"]
     ].forEach(([filters, prefix]) => {
       filters.week = defaultReportingMonday;
-      filters.start = defaultReportingMonday;
-      filters.end = defaultReportingFriday;
-      const startInput = document.getElementById(`${prefix}StartFilter`);
-      const endInput = document.getElementById(`${prefix}EndFilter`);
-      if (startInput) startInput.value = filters.start;
-      if (endInput) endInput.value = filters.end;
+      const range = customRangeForFilter(filters);
+      filters.start = range.start;
+      filters.end = range.end;
+      syncCustomDateInputs(prefix, filters);
     });
     initWeekPicker(document.getElementById("statusWeekFilter"), document.getElementById("statusWeekPicker"), value => {
       document.querySelector('#statusForm input[name="week"]').value = value;
