@@ -1720,6 +1720,7 @@
         <div class="nav-section">Dashboards</div>
         <button class="tab active" data-view="dashboard" title="Portfolio health, workstreams, dates, risks, wins, blockers, and next actions">Portfolio Dashboard</button>
         <button class="tab" data-view="executive" title="Leadership summary focused on attention items and decisions">Executive View</button>
+        <button class="tab" data-view="workflow" title="End-to-end workflow guide for using the dashboard">Workflow Guide</button>
         <div class="nav-section">Monitor</div>
         <button class="tab" data-view="incidents" title="Delayed, due soon, postponed, blocked, at-risk, and critical workstreams">Incidents & Delays</button>
         <button class="tab" data-view="reports" data-master-only>Status Center</button>
@@ -1876,6 +1877,47 @@
             <h3>Next Actions</h3>
             <div class="timeline" id="nextList"></div>
           </div>
+        </div>
+      </section>
+
+      <section class="view" id="workflow">
+        <div class="header">
+          <div>
+            <span class="page-kicker">Operating model</span>
+            <h2>Workflow Guide</h2>
+            <p class="muted">Use this map to understand what each workspace does, who owns it, and where to go next. Available actions adapt to your assigned profile.</p>
+          </div>
+          <div class="top-actions">
+            <button class="btn primary" data-jump="reports" data-master-only>Open Status Center</button>
+            <button class="btn" type="button" data-logout>Logout</button>
+          </div>
+        </div>
+
+        <div class="guide-grid">
+          <div class="guide-card theme-blue">
+            <strong>1. Capture work</strong>
+            <p class="muted small">Source projects and weekly status reports create the operating record.</p>
+          </div>
+          <div class="guide-card theme-green">
+            <strong>2. Review signals</strong>
+            <p class="muted small">Dashboards turn updates into health, dates, blockers, progress, and ownership signals.</p>
+          </div>
+          <div class="guide-card theme-amber">
+            <strong>3. Act with context</strong>
+            <p class="muted small">Open the right detail page, review history, and follow up with owners.</p>
+          </div>
+        </div>
+
+        <div class="grid summary-grid" id="workflowMetrics"></div>
+
+        <div class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>End-to-end workflow</h3>
+              <p class="muted small">Follow these steps in order during weekly operations, or jump directly to the area you need.</p>
+            </div>
+          </div>
+          <div class="report-list" id="workflowStepList"></div>
         </div>
       </section>
 
@@ -4296,9 +4338,9 @@
     }
 
     function canAccessView(id) {
-      if (canManageRoles()) return ["dashboard", "executive", "incidents", "intake", "reports", "sourceProjects", "workload", "users"].includes(id);
-      if (isMasterAdmin()) return ["dashboard", "executive", "incidents", "intake", "reports"].includes(id);
-      return ["dashboard", "executive", "incidents"].includes(id);
+      if (canManageRoles()) return ["dashboard", "executive", "workflow", "incidents", "intake", "reports", "sourceProjects", "workload", "users"].includes(id);
+      if (isMasterAdmin()) return ["dashboard", "executive", "workflow", "incidents", "intake", "reports"].includes(id);
+      return ["dashboard", "executive", "workflow", "incidents"].includes(id);
     }
 
     function requireMasterAdmin(action = "manage reports") {
@@ -4332,6 +4374,7 @@
       renderUserManagement();
       renderSourceProjects();
       renderWorkBalance();
+      renderWorkflowGuide();
       if (!canAccessView(getActiveView())) {
         switchView("dashboard");
       }
@@ -4637,6 +4680,138 @@
         </div>
       `).join("");
       renderWorkBalance();
+    }
+
+    function workflowVisibleSteps() {
+      const dashboardCount = typeof getDashboardReports === "function" ? getDashboardReports().length : reports.length;
+      const incidentCount = typeof getIncidentReports === "function" ? getIncidentReports().length : reports.filter(report => incidentFlags(report).delayed || incidentFlags(report).dueSoon || incidentFlags(report).postponed || isRiskReport(report)).length;
+      const managedUsers = normalizeUsers(loadUsers()).filter(user => !isDefaultUser(user.username));
+      const sourceCount = sourceProjects().length;
+      const workloadOwners = workBalanceStats().length;
+      const steps = [
+        {
+          number: "01",
+          view: "sourceProjects",
+          title: "Source Project",
+          audience: "Role Manager",
+          metric: `${sourceCount} imported`,
+          purpose: "Import or paste the source project workbook so missing status coverage is visible before weekly reporting.",
+          outcome: "A clean project source list connected to dashboard follow-up.",
+          action: "Open Source Project"
+        },
+        {
+          number: "02",
+          view: "reports",
+          title: "Status Center",
+          audience: "Master Admin / Role Manager",
+          metric: `${reports.length} saved reports`,
+          purpose: "Create new weekly updates, edit saved reports, review history, and export report data.",
+          outcome: "Current status, owner, dates, risks, wins, blockers, and next action are saved in one place.",
+          action: "Open Status Center"
+        },
+        {
+          number: "03",
+          view: "dashboard",
+          title: "Portfolio Dashboard",
+          audience: "All profiles",
+          metric: `${dashboardCount} visible now`,
+          purpose: "Review health, progress, product mix, date alerts, risk radar, wins, blockers, and next actions.",
+          outcome: "A portfolio-level view for weekly operating review.",
+          action: "Open Dashboard"
+        },
+        {
+          number: "04",
+          view: "executive",
+          title: "Executive View",
+          audience: "All profiles",
+          metric: "Leadership ready",
+          purpose: "Focus on attention items, owner follow-up, high-risk workstreams, and decisions needed.",
+          outcome: "A concise leadership review without digging through every report.",
+          action: "Open Executive View"
+        },
+        {
+          number: "05",
+          view: "incidents",
+          title: "Incidents & Delays",
+          audience: "All profiles",
+          metric: `${incidentCount} signals`,
+          purpose: "Monitor delayed, due soon, postponed, blocked, at-risk, and critical workstreams.",
+          outcome: "A clear action list for delivery risk and date management.",
+          action: "Open Incidents"
+        },
+        {
+          number: "06",
+          view: "workload",
+          title: "Work Balance",
+          audience: "Role Manager",
+          metric: `${workloadOwners} owners`,
+          purpose: "Understand how many products and workstreams each PM or UI/UX owner has.",
+          outcome: "Capacity signals for rebalancing ownership before risks build up.",
+          action: "Open Work Balance"
+        },
+        {
+          number: "07",
+          view: "users",
+          title: "User Access",
+          audience: "Role Manager",
+          metric: `${managedUsers.length} managed users`,
+          purpose: "Create users, assign roles, reset codes, resend access, activate or deactivate access, and delete users.",
+          outcome: "People can sign in with the correct role and only see the areas they should use.",
+          action: "Open User Access"
+        }
+      ];
+      return steps.filter(step => canAccessView(step.view));
+    }
+
+    function renderWorkflowGuide() {
+      const metrics = document.getElementById("workflowMetrics");
+      const list = document.getElementById("workflowStepList");
+      if (!metrics || !list) return;
+      const steps = workflowVisibleSteps();
+      const incidentCount = typeof getIncidentReports === "function" ? getIncidentReports().length : 0;
+      const managedUsers = normalizeUsers(loadUsers()).filter(user => !isDefaultUser(user.username));
+      const metricCards = [
+        ["Available modules", steps.length, "blue", "Based on your current profile"],
+        ["Reports saved", reports.length, "green", "Used by dashboards and exports"],
+        ["Incident signals", incidentCount, incidentCount ? "red" : "green", "Delayed, blocked, at-risk, or critical"],
+        ["Managed users", canManageRoles() ? managedUsers.length : "Hidden", canManageRoles() ? "amber" : "gray", canManageRoles() ? "Role Manager access" : "Visible only to Role Manager"]
+      ];
+      metrics.innerHTML = metricCards.map(([label, value, tone, note]) => `
+        <div class="panel metric">
+          <span class="chip ${tone}">${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
+          <span class="muted small">${escapeHtml(note)}</span>
+        </div>
+      `).join("");
+      list.innerHTML = steps.map(step => `
+        <article class="report-card">
+          <header>
+            <div>
+              <span class="product-label">Step ${escapeHtml(step.number)} - ${escapeHtml(step.audience)}</span>
+              <h3>${escapeHtml(step.title)}</h3>
+              <p class="muted small">${escapeHtml(step.purpose)}</p>
+            </div>
+            <span class="chip blue">${escapeHtml(step.metric)}</span>
+          </header>
+          <div class="report-card-detail">
+            <div><strong>Best used for</strong><p class="muted small">${escapeHtml(step.purpose)}</p></div>
+            <div><strong>Expected outcome</strong><p class="muted small">${escapeHtml(step.outcome)}</p></div>
+            <div><strong>Primary action</strong><p class="muted small">${escapeHtml(step.action)}</p></div>
+          </div>
+          <div class="report-actions">
+            <button class="btn primary" type="button" data-jump="${escapeHtml(step.view)}">${escapeHtml(step.action)}</button>
+          </div>
+        </article>
+      `).join("");
+      list.querySelectorAll("[data-jump]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          switchView(btn.dataset.jump);
+          if (btn.dataset.jump === "users") {
+            await refreshUserManagementFromCloud();
+          }
+          await refreshSharedDashboards();
+        });
+      });
     }
 
     function generateAccessCode() {
@@ -6552,6 +6727,7 @@
       renderIncidentReport();
       renderSourceProjects();
       renderWorkBalance();
+      renderWorkflowGuide();
     }
 
     function escapeHtml(value = "") {
