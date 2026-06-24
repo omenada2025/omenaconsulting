@@ -3163,6 +3163,7 @@
         participants: report.participants || null,
         start_date: report.start_date || null,
         due_date: report.due_date || null,
+        history: Array.isArray(report.history) ? report.history.slice(-50) : [],
       };
     }
 
@@ -3385,6 +3386,10 @@
 
     function canDeleteReport(report) {
       return Boolean(report?.id && isCurrentUserReportOwner(report));
+    }
+
+    function canEditReport(report) {
+      return Boolean(report?.id && (canManageReports() || isCurrentUserReportOwner(report)));
     }
 
     function loadCustomPeople() {
@@ -3686,10 +3691,16 @@
       });
     }
 
-    async function fetchReports() {
+    async function fetchReports({ preserveSelectedId = false } = {}) {
+      const previousSelectedId = selectedReportId;
+      const preserveSelection = () => {
+        selectedReportId = preserveSelectedId && reports.some(report => report.id === previousSelectedId)
+          ? previousSelectedId
+          : reports[0]?.id || null;
+      };
       if (!hasSupabaseConfig) {
         reports = loadReports();
-        selectedReportId = reports[0]?.id || null;
+        preserveSelection();
         setSyncStatus("Local browser storage");
         renderAll();
         return;
@@ -3716,7 +3727,7 @@
         setSyncStatus("Synced with Supabase");
       }
 
-      selectedReportId = reports[0]?.id || null;
+      preserveSelection();
       renderAll();
     }
 
@@ -3865,8 +3876,10 @@
       if (!hasSupabaseConfig) {
         reports = reports.map(existing => existing.id === reportWithHistory.id ? reportWithHistory : existing);
         selectedReportId = reportWithHistory.id;
+        reportHistoryOpen = true;
         saveReports();
         renderAll();
+        renderDetail();
         return;
       }
 
@@ -3922,8 +3935,10 @@
         reportIdentityKey(existing) !== reportIdentityKey(updatedReport)
       )]);
       selectedReportId = updatedReport.id;
+      reportHistoryOpen = true;
       setSyncStatus(useLegacySupabasePayload ? "Saved with Supabase legacy schema" : "Saved to Supabase");
       renderAll();
+      renderDetail();
       logUserAction("report_updated", {
         health: updatedReport.health,
         week: updatedReport.week,
@@ -5174,7 +5189,7 @@
 
     async function refreshSharedDashboards() {
       if (!hasSupabaseConfig || getActiveView() === "intake") return;
-      await fetchReports();
+      await fetchReports({ preserveSelectedId: true });
     }
 
     function healthClass(report) {
@@ -6507,7 +6522,7 @@
             <button class="btn" type="button" id="reportHistoryBtn">History</button>
             <button class="btn" type="button" id="cancelEditReport">Cancel</button>
             <button class="btn danger" type="button" id="deleteReport" ${canDeleteReport(report) ? "" : "disabled title=\"Only the report owner can delete this status.\""}>Delete Report</button>
-            <button class="btn primary" type="submit" id="updateReportBtn">Save Changes</button>
+            <button class="btn primary" type="submit" id="updateReportBtn" ${canEditReport(report) ? "" : "disabled title=\"Only the report owner, Master admin, or Role Manager can edit this status.\""}>Save Changes</button>
           </div>
           <div id="reportHistoryPanel" ${reportHistoryOpen ? "" : "hidden"}>${renderReportHistory(report)}</div>
         </form>
@@ -6562,6 +6577,10 @@
       });
       document.getElementById("editReportForm").addEventListener("submit", async event => {
         event.preventDefault();
+        if (!canEditReport(report)) {
+          showReportMessage("Only the report owner, Master admin, or Role Manager can edit this status.", "danger");
+          return;
+        }
         const btn = document.getElementById("updateReportBtn");
         btn.disabled = true;
         btn.textContent = "Saving...";
