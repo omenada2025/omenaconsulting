@@ -3847,6 +3847,59 @@
       };
     }
 
+    function auditLogHasActor(log = {}) {
+      const details = log.details && typeof log.details === "object" ? log.details : {};
+      return Boolean(details.user_display_name || details.username);
+    }
+
+    function loginActorFromLog(log = {}) {
+      const details = log.details && typeof log.details === "object" ? log.details : {};
+      const username = canonicalUsername(details.username || log.target_id || "");
+      const displayName = canonicalDisplayName(username, details.user_display_name || displayNameFromLogin(username));
+      return {
+        username,
+        displayName,
+        role: details.user_role || details.role ? normalizeRole(details.user_role || details.role) : ""
+      };
+    }
+
+    async function enrichAuditLogsWithLoginActors(logs = []) {
+      const sessionIds = [...new Set(logs
+        .filter(log => !auditLogHasActor(log) && log.session_id)
+        .map(log => log.session_id))];
+      if (!sessionIds.length) return logs;
+      try {
+        const sessionQuery = sessionIds.map(id => encodeURIComponent(id)).join(",");
+        const loginRows = await supabaseTableRequest(actionLogTable, `?select=session_id,target_id,details,created_at&action=eq.login&session_id=in.(${sessionQuery})&order=created_at.desc&limit=100`, {
+          prefer: "",
+          timeoutMs: 6000
+        });
+        const actorsBySession = new Map();
+        (Array.isArray(loginRows) ? loginRows : []).forEach(row => {
+          if (row.session_id && !actorsBySession.has(row.session_id)) {
+            actorsBySession.set(row.session_id, loginActorFromLog(row));
+          }
+        });
+        return logs.map(log => {
+          if (auditLogHasActor(log)) return log;
+          const actor = actorsBySession.get(log.session_id);
+          if (!actor?.username) return log;
+          return {
+            ...log,
+            details: {
+              ...(log.details && typeof log.details === "object" ? log.details : {}),
+              username: actor.username,
+              user_display_name: actor.displayName,
+              user_role: actor.role
+            }
+          };
+        });
+      } catch (error) {
+        console.warn("Could not infer report history actor from login sessions:", error);
+        return logs;
+      }
+    }
+
     async function fetchReportAuditLogs(report) {
       if (!hasSupabaseConfig || !report?.id || actionLoggingDisabled) return [];
       if (reportAuditLogsById.has(report.id)) return reportAuditLogsById.get(report.id);
@@ -3863,7 +3916,7 @@
             timeoutMs: 6000
           });
         }
-        const logs = Array.isArray(rows) ? rows : [];
+        const logs = await enrichAuditLogsWithLoginActors(Array.isArray(rows) ? rows : []);
         reportAuditLogsById.set(report.id, logs);
         return logs;
       } catch (error) {
@@ -6580,7 +6633,7 @@
             </section>
           </div>
           <div class="form-actions detail-actions">
-            <button class="btn" type="button" id="reportHistoryBtn">History</button>
+            <button class="btn" type="button" id="reportHistoryBtn">${reportHistoryOpen ? "Hide History" : "History"}</button>
             <button class="btn" type="button" id="cancelEditReport">Cancel</button>
             <button class="btn danger" type="button" id="deleteReport" ${canDeleteReport(report) ? "" : "disabled title=\"Only the report owner can delete this status.\""}>Delete Report</button>
             <button class="btn primary" type="submit" id="updateReportBtn" ${canEditReport(report) ? "" : "disabled title=\"Only the report owner, Master admin, or Role Manager can edit this status.\""}>Save Changes</button>
@@ -7239,15 +7292,16 @@
       }, 0);
     });
 
-    document.getElementById("reportList").addEventListener("click", event => {
+    document.getElementById("reportList").addEventListener("click", async event => {
       if (!requireMasterAdmin("edit source reports")) return;
       const card = event.target.closest("[data-report-card]");
       if (!card) return;
       selectedReportId = card.dataset.reportCard;
-      reportHistoryOpen = false;
+      reportHistoryOpen = true;
       reportHistoryDate = "";
       const report = reports.find(r => r.id === selectedReportId);
       logUserAction("report_selected", { source: "source_reports" }, { target_type: "report", target_id: selectedReportId, ...reportLogFields(report) });
+      await fetchReportAuditLogs(report);
       renderReports();
       renderDetail();
     });
