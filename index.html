@@ -2935,6 +2935,8 @@
     };
     let reportHistoryOpen = false;
     let reportHistoryDate = "";
+    let reportAuditLoadingId = "";
+    const reportAuditLogsById = new Map();
 
     function loadReports() {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -3669,7 +3671,12 @@
         report_id: target.report_id || null,
         product: target.product || null,
         owner: target.owner || null,
-        details,
+        details: {
+          ...details,
+          username: currentUser?.username || null,
+          user_display_name: currentUser?.displayName || currentUser?.username || null,
+          user_role: currentUser?.role || currentProfile || null
+        },
         page_url: window.location.href,
         user_agent: navigator.userAgent
       };
@@ -3816,6 +3823,58 @@
       return comparisons.every(([left, right]) => sameValue(left, right));
     }
 
+    function auditLogToHistoryEntry(log = {}) {
+      const details = log.details && typeof log.details === "object" ? log.details : {};
+      const actor = details.user_display_name || details.username || "Unknown user";
+      const actionLabels = {
+        report_created: "Report created",
+        report_updated: "Report saved",
+        report_deleted: "Report deleted",
+        report_selected: "Report opened"
+      };
+      return {
+        id: log.id || crypto.randomUUID(),
+        changed_at: log.created_at || log.inserted_at || log.timestamp || "",
+        changed_date: (log.created_at || log.inserted_at || log.timestamp || "").slice(0, 10),
+        auditOnly: true,
+        changes: [
+          {
+            label: actionLabels[log.action] || log.action || "User action",
+            before: actor,
+            after: details.user_role ? `${actor} (${ROLE_LABELS[details.user_role] || details.user_role})` : actor
+          }
+        ]
+      };
+    }
+
+    async function fetchReportAuditLogs(report) {
+      if (!hasSupabaseConfig || !report?.id || actionLoggingDisabled) return [];
+      if (reportAuditLogsById.has(report.id)) return reportAuditLogsById.get(report.id);
+      reportAuditLoadingId = report.id;
+      try {
+        const targetId = encodeURIComponent(report.id);
+        let rows = await supabaseTableRequest(actionLogTable, `?select=*&target_type=eq.report&target_id=eq.${targetId}&order=created_at.desc&limit=50`, {
+          prefer: "",
+          timeoutMs: 6000
+        });
+        if (!Array.isArray(rows) || !rows.length) {
+          rows = await supabaseTableRequest(actionLogTable, `?select=*&report_id=eq.${targetId}&order=created_at.desc&limit=50`, {
+            prefer: "",
+            timeoutMs: 6000
+          });
+        }
+        const logs = Array.isArray(rows) ? rows : [];
+        reportAuditLogsById.set(report.id, logs);
+        return logs;
+      } catch (error) {
+        console.warn("Report audit history unavailable:", error);
+        reportAuditLogsById.set(report.id, []);
+        return [];
+      } finally {
+        reportAuditLoadingId = "";
+      }
+    }
+
     const HISTORY_FIELDS = [
       ["product", "Product"],
       ["feature_workstream", "Feature / workstream"],
@@ -3877,6 +3936,7 @@
         reports = reports.map(existing => existing.id === reportWithHistory.id ? reportWithHistory : existing);
         selectedReportId = reportWithHistory.id;
         reportHistoryOpen = true;
+        reportAuditLogsById.delete(reportWithHistory.id);
         saveReports();
         renderAll();
         renderDetail();
@@ -3936,6 +3996,7 @@
       )]);
       selectedReportId = updatedReport.id;
       reportHistoryOpen = true;
+      reportAuditLogsById.delete(updatedReport.id);
       setSyncStatus(useLegacySupabasePayload ? "Saved with Supabase legacy schema" : "Saved to Supabase");
       renderAll();
       renderDetail();
@@ -6533,8 +6594,11 @@
       initProductPickers(detail);
       initPeoplePickers(detail);
       initWeekPicker(editWeekButton, editWeekPicker, () => {}, report.week || mondayForDate(), editWeekInput);
-      document.getElementById("reportHistoryBtn").addEventListener("click", () => {
+      document.getElementById("reportHistoryBtn").addEventListener("click", async () => {
         reportHistoryOpen = !reportHistoryOpen;
+        if (reportHistoryOpen) {
+          await fetchReportAuditLogs(report);
+        }
         renderDetail();
       });
       const historyDateInput = document.getElementById("reportHistoryDate");
@@ -6613,17 +6677,22 @@
     }
 
     function renderReportHistory(report) {
-      const history = Array.isArray(report.history) ? [...report.history] : [];
+      const nativeHistory = Array.isArray(report.history) ? [...report.history] : [];
+      const auditHistory = (reportAuditLogsById.get(report.id) || [])
+        .filter(log => ["report_created", "report_updated", "report_deleted"].includes(log.action))
+        .map(auditLogToHistoryEntry);
+      const history = [...nativeHistory, ...auditHistory];
       const filtered = reportHistoryDate
         ? history.filter(entry => (entry.changed_date || (entry.changed_at || "").slice(0, 10)) === reportHistoryDate)
         : history;
       const items = filtered.sort((a, b) => Date.parse(b.changed_at || 0) - Date.parse(a.changed_at || 0));
+      const isLoading = reportAuditLoadingId === report.id;
       return `
         <section class="history-panel">
           <div class="history-toolbar">
             <div>
               <h3>Report History</h3>
-              <p class="muted small">Every saved change for this report, newest first. ${items.length > 5 ? `${items.length} records - scroll to see more.` : `${items.length} ${items.length === 1 ? "record" : "records"}.`}</p>
+              <p class="muted small">Every saved change and audit event for this report, newest first. ${isLoading ? "Loading audit log..." : items.length > 5 ? `${items.length} records - scroll to see more.` : `${items.length} ${items.length === 1 ? "record" : "records"}.`}</p>
             </div>
             <label>Filter by date
               <input id="reportHistoryDate" type="date" value="${escapeHtml(reportHistoryDate)}" />
@@ -6636,11 +6705,13 @@
                 ${(entry.changes || []).map(change => `
                   <div class="history-change">
                     <strong>${escapeHtml(change.label || change.field || "Field")}</strong>
-                    <span><span class="muted">From:</span> ${escapeHtml(change.before || "Blank")}<br><span class="muted">To:</span> ${escapeHtml(change.after || "Blank")}</span>
+                    <span>${entry.auditOnly
+                      ? `<span class="muted">By:</span> ${escapeHtml(change.after || change.before || "Unknown user")}`
+                      : `<span class="muted">From:</span> ${escapeHtml(change.before || "Blank")}<br><span class="muted">To:</span> ${escapeHtml(change.after || "Blank")}`}</span>
                   </div>
                 `).join("")}
               </article>
-            `).join("")}</div>` : `<div class="empty"><strong>${history.length ? "No history for this date" : "No history yet"}</strong>${history.length ? "Try another date or show all dates." : "Saved edits for this report will appear here."}</div>`}
+            `).join("")}</div>` : `<div class="empty"><strong>${history.length ? "No history for this date" : isLoading ? "Loading history" : "No history yet"}</strong>${history.length ? "Try another date or show all dates." : isLoading ? "Checking saved report history and audit logs." : "Saved edits and audit events for this report will appear here."}</div>`}
         </section>
       `;
     }
