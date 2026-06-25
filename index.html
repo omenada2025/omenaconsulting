@@ -1720,7 +1720,7 @@
         <div class="nav-section">Dashboards</div>
         <button class="tab active" data-view="dashboard" title="Portfolio health, workstreams, dates, risks, wins, blockers, and next actions">Portfolio Dashboard</button>
         <button class="tab" data-view="executive" title="Leadership summary focused on attention items and decisions">Executive View</button>
-        <button class="tab" data-view="workflow" title="End-to-end workflow guide for using the dashboard">Workflow Guide</button>
+        <button class="tab" data-view="workflow" data-role-manager-only title="End-to-end workflow guide for using the dashboard">Workflow Guide</button>
         <div class="nav-section">Monitor</div>
         <button class="tab" data-view="incidents" title="Major delays, minor delays, blockers, at-risk, and critical workstreams">Incidents & Delays</button>
         <button class="tab" data-view="reports" data-master-only>Status Center</button>
@@ -4467,8 +4467,8 @@
 
     function canAccessView(id) {
       if (canManageRoles()) return ["dashboard", "executive", "workflow", "incidents", "intake", "reports", "sourceProjects", "workload", "users"].includes(id);
-      if (isMasterAdmin()) return ["dashboard", "executive", "workflow", "incidents", "intake", "reports"].includes(id);
-      return ["dashboard", "executive", "workflow", "incidents"].includes(id);
+      if (isMasterAdmin()) return ["dashboard", "executive", "incidents", "intake", "reports"].includes(id);
+      return ["dashboard", "executive", "incidents"].includes(id);
     }
 
     function requireMasterAdmin(action = "manage reports") {
