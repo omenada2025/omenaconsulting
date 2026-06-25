@@ -1722,7 +1722,7 @@
         <button class="tab" data-view="executive" title="Leadership summary focused on attention items and decisions">Executive View</button>
         <button class="tab" data-view="workflow" title="End-to-end workflow guide for using the dashboard">Workflow Guide</button>
         <div class="nav-section">Monitor</div>
-        <button class="tab" data-view="incidents" title="Delayed, due soon, postponed, blocked, at-risk, and critical workstreams">Incidents & Delays</button>
+        <button class="tab" data-view="incidents" title="Major delays, minor delays, blockers, at-risk, and critical workstreams">Incidents & Delays</button>
         <button class="tab" data-view="reports" data-master-only>Status Center</button>
         <div class="nav-section" data-role-manager-only>Admin</div>
         <button class="tab" data-view="sourceProjects" data-role-manager-only>Source Project</button>
@@ -1834,7 +1834,7 @@
           <div class="panel-title">
             <div>
               <h3>End Date Monitor</h3>
-              <p class="muted small">Delayed, due soon, and postponed workstreams across the current filters.</p>
+              <p class="muted small">Major delays, minor delays, and schedule risk across the current filters.</p>
             </div>
           </div>
           <div class="monitor-list" id="dashboardEndDateMonitor"></div>
@@ -2012,7 +2012,7 @@
           <div class="panel-title">
             <div>
               <h3>Delivery Date Watch</h3>
-              <p class="muted small">Executive view of delayed, due soon, and postponed workstreams.</p>
+              <p class="muted small">Executive view of major delays, minor delays, blockers, and critical workstreams.</p>
             </div>
           </div>
           <div class="monitor-list" id="executiveEndDateMonitor"></div>
@@ -2248,19 +2248,19 @@
           <div>
             <span class="page-kicker">Incident indicators</span>
             <h2>Incidents & Delays by Project</h2>
-            <p class="muted" id="incidentReportSubtitle">Monitor delayed workstreams, due-soon dates, postponed reports, blockers, and critical items grouped by project.</p>
+            <p class="muted" id="incidentReportSubtitle">Monitor major delays, minor delays, blockers, and critical items grouped by project.</p>
           </div>
           <button class="btn" type="button" data-logout>Logout</button>
         </div>
 
         <div class="guide-grid">
           <div class="guide-card theme-red">
-            <strong>Delayed</strong>
-            <p class="muted small">End date has already passed.</p>
+            <strong>Major Delay</strong>
+            <p class="muted small">More than 10% later than the planned schedule.</p>
           </div>
           <div class="guide-card theme-amber">
-            <strong>Due soon</strong>
-            <p class="muted small">End date is within the next 5 days.</p>
+            <strong>Minor Delay</strong>
+            <p class="muted small">Up to 10% later than the planned schedule.</p>
           </div>
           <div class="guide-card theme-blue">
             <strong>Incident signal</strong>
@@ -2302,9 +2302,8 @@
             Alert type
             <select id="incidentTypeFilter">
               <option value="all">All incident signals</option>
-              <option value="delayed">Delayed</option>
-              <option value="dueSoon">Due soon</option>
-              <option value="postponed">Postponed</option>
+              <option value="delayed">Major Delay</option>
+              <option value="dueSoon">Minor Delay</option>
               <option value="blocker">Blocker / At Risk</option>
             </select>
           </label>
@@ -2423,7 +2422,7 @@
               <div class="form-section-title">
                 <div>
                   <h3>2. Timing and delivery health</h3>
-                  <p class="muted small">Use end date to power delayed, due soon, and postponed alerts.</p>
+                  <p class="muted small">Use end date to classify Ahead of Schedule, On Time, Minor Delay, or Major Delay.</p>
                 </div>
               </div>
               <div class="form-grid">
@@ -4864,7 +4863,7 @@
           title: "Incidents & Delays",
           audience: "All profiles",
           metric: `${incidentCount} signals`,
-          purpose: "Monitor delayed, due soon, postponed, blocked, at-risk, and critical workstreams.",
+          purpose: "Monitor major delays, minor delays, blocked, at-risk, and critical workstreams.",
           outcome: "A clear action list for delivery risk and date management.",
           action: "Open Incidents"
         },
@@ -4902,7 +4901,7 @@
       const metricCards = [
         ["Available modules", steps.length, "blue", "Based on your current profile"],
         ["Reports saved", reports.length, "green", "Used by dashboards and exports"],
-        ["Incident signals", incidentCount, incidentCount ? "red" : "green", "Delayed, blocked, at-risk, or critical"],
+        ["Incident signals", incidentCount, incidentCount ? "red" : "green", "Delay, blocked, at-risk, or critical"],
         ["Managed users", canManageRoles() ? managedUsers.length : "Hidden", canManageRoles() ? "amber" : "gray", canManageRoles() ? "Role Manager access" : "Visible only to Role Manager"]
       ];
       metrics.innerHTML = metricCards.map(([label, value, tone, note]) => `
@@ -5432,14 +5431,80 @@
       return Math.ceil((date - today) / 86400000);
     }
 
-    function endDateWasPostponed(report) {
+    function endDateHistoryChanges(report) {
       const history = Array.isArray(report.history) ? report.history : [];
-      return history.some(entry => (entry.changes || []).some(change => {
-        if (!["due_date", "end_date", "endDate", "dueDate"].includes(change.field)) return false;
-        const before = parseDate(change.before);
-        const after = parseDate(change.after);
-        return before && after && after > before;
-      }));
+      return history
+        .flatMap(entry => (entry.changes || []).map(change => ({ ...change, changed_at: entry.changed_at || "" })))
+        .filter(change => ["due_date", "end_date", "endDate", "dueDate"].includes(change.field))
+        .filter(change => historyValue(change.before) && historyValue(change.after))
+        .sort((a, b) => Date.parse(b.changed_at || 0) - Date.parse(a.changed_at || 0));
+    }
+
+    function currentEndDateChange(report) {
+      const currentEndDate = reportEndDate(report);
+      if (!currentEndDate) return null;
+      const dateChanges = endDateHistoryChanges(report);
+      const currentChange = dateChanges.find(change => historyValue(change.after) === currentEndDate) || dateChanges[0];
+      return currentChange && historyValue(currentChange.after) === currentEndDate ? currentChange : null;
+    }
+
+    function daysBetweenDates(start, end) {
+      const startDate = parseDate(start);
+      const endDate = parseDate(end);
+      if (!startDate || !endDate || Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return null;
+      return Math.ceil((endDate - startDate) / 86400000);
+    }
+
+    function scheduleDurationDays(report, plannedEndDate, deltaDays = 0) {
+      const startValue = firstValue(report?.start_date, report?.startDate, report?.week, report?.created_at?.slice?.(0, 10));
+      const plannedDuration = daysBetweenDates(startValue, plannedEndDate);
+      if (plannedDuration && plannedDuration > 0) return plannedDuration;
+      return Math.max(30, Math.abs(deltaDays), 1);
+    }
+
+    function endDateScheduleClassification(report) {
+      const currentEndDate = reportEndDate(report);
+      if (!currentEndDate) return null;
+      const change = currentEndDateChange(report);
+      if (change) {
+        const plannedEndDate = historyValue(change.before);
+        const deltaDays = daysBetweenDates(plannedEndDate, currentEndDate);
+        if (deltaDays === null) return null;
+        const duration = scheduleDurationDays(report, plannedEndDate, deltaDays);
+        const percent = Math.abs(deltaDays) / duration * 100;
+        if (deltaDays < 0) {
+          return percent > 5
+            ? { category: "ahead", tone: "green", label: "Ahead of Schedule", percent }
+            : { category: "onTime", tone: "blue", label: "On Time", percent };
+        }
+        if (deltaDays > 0) {
+          return percent <= 10
+            ? { category: "minorDelay", tone: "amber", label: "Minor Delay", percent }
+            : { category: "majorDelay", tone: "red", label: "Major Delay", percent };
+        }
+        return { category: "onTime", tone: "blue", label: "On Time", percent: 0 };
+      }
+
+      const days = daysUntilDate(currentEndDate);
+      if (days === null) return null;
+      if (days < 0) {
+        const overdueDays = Math.abs(days);
+        const duration = scheduleDurationDays(report, currentEndDate, overdueDays);
+        const percent = overdueDays / duration * 100;
+        return percent <= 10
+          ? { category: "minorDelay", tone: "amber", label: "Minor Delay", percent }
+          : { category: "majorDelay", tone: "red", label: "Major Delay", percent };
+      }
+      return { category: "onTime", tone: "blue", label: "On Time", percent: 0 };
+    }
+
+    function endDateWasPostponed(report) {
+      const status = endDateScheduleClassification(report);
+      return status?.category === "minorDelay" || status?.category === "majorDelay";
+    }
+
+    function endDateIsAheadOfSchedule(report) {
+      return endDateScheduleClassification(report)?.category === "ahead";
     }
 
     function reportEndDate(report) {
@@ -5447,16 +5512,7 @@
     }
 
     function endDateStatus(report) {
-      const dueDate = reportEndDate(report);
-      if (!dueDate) return null;
-      if (endDateWasPostponed(report)) {
-        return { tone: "orange", label: "Postponed" };
-      }
-      const days = daysUntilDate(dueDate);
-      if (days === null) return null;
-      if (days < 0) return { tone: "red", label: "Delayed" };
-      if (days <= 5) return { tone: "amber", label: "Due soon" };
-      return null;
+      return endDateScheduleClassification(report);
     }
 
     function endDateMarkup(report, prefix = "End") {
@@ -5468,7 +5524,7 @@
 
     function endDateRank(report) {
       const status = endDateStatus(report);
-      const rank = { red: 0, amber: 1, orange: 2 };
+      const rank = { red: 0, amber: 1, orange: 2, blue: 9, green: 9 };
       const dueDate = reportEndDate(report);
       return [
         status ? rank[status.tone] ?? 9 : 9,
@@ -5479,18 +5535,28 @@
 
     function getEndDateAlerts(source) {
       return source
-        .filter(report => reportEndDate(report) && endDateStatus(report))
+        .filter(report => {
+          const category = endDateStatus(report)?.category;
+          return reportEndDate(report) && (category === "minorDelay" || category === "majorDelay");
+        })
         .sort((a, b) => endDateRank(a).localeCompare(endDateRank(b)));
     }
 
     function endDateCounts(source) {
-      return getEndDateAlerts(source).reduce((acc, report) => {
+      return source.reduce((acc, report) => {
         const status = endDateStatus(report);
-        if (status?.tone === "red") acc.delayed += 1;
-        if (status?.tone === "amber") acc.dueSoon += 1;
-        if (status?.tone === "orange") acc.postponed += 1;
+        if (status?.category === "majorDelay") {
+          acc.majorDelay += 1;
+          acc.delayed += 1;
+        }
+        if (status?.category === "minorDelay") {
+          acc.minorDelay += 1;
+          acc.dueSoon += 1;
+        }
+        if (status?.category === "ahead") acc.ahead += 1;
+        if (status?.category === "onTime") acc.onTime += 1;
         return acc;
-      }, { delayed: 0, dueSoon: 0, postponed: 0 });
+      }, { delayed: 0, dueSoon: 0, postponed: 0, majorDelay: 0, minorDelay: 0, ahead: 0, onTime: 0 });
     }
 
     function hasBlockerSignal(report) {
@@ -5500,9 +5566,13 @@
     function incidentFlags(report) {
       const status = endDateStatus(report);
       return {
-        delayed: status?.tone === "red",
-        dueSoon: status?.tone === "amber",
-        postponed: status?.tone === "orange",
+        delayed: status?.category === "majorDelay",
+        dueSoon: status?.category === "minorDelay",
+        postponed: false,
+        majorDelay: status?.category === "majorDelay",
+        minorDelay: status?.category === "minorDelay",
+        ahead: status?.category === "ahead",
+        onTime: status?.category === "onTime",
         blocker: hasBlockerSignal(report)
       };
     }
@@ -5522,11 +5592,10 @@
 
     function incidentLabel(report) {
       const flags = incidentFlags(report);
-      if (flags.delayed) return "Delayed";
+      if (flags.delayed) return "Major Delay";
       if (report.priority === "Critical") return "Critical";
       if (report.health === "red") return "At Risk";
-      if (flags.dueSoon) return "Due soon";
-      if (flags.postponed) return "Postponed";
+      if (flags.dueSoon) return "Minor Delay";
       return "Blocker";
     }
 
@@ -5723,19 +5792,15 @@
       const metricCopy = {
         projects: {
           title: `Projects impacted (${projectGroups.length})`,
-          subtitle: "Projects with delayed, due soon, postponed, blocker, At Risk, or Critical signals."
+          subtitle: "Projects with major delay, minor delay, blocker, At Risk, or Critical signals."
         },
         delayed: {
-          title: "Delayed workstreams",
-          subtitle: "End date has already passed."
+          title: "Major Delay workstreams",
+          subtitle: "More than 10% later than the planned schedule."
         },
         dueSoon: {
-          title: "Due soon workstreams",
-          subtitle: "End date is within the next 5 days."
-        },
-        postponed: {
-          title: "Postponed workstreams",
-          subtitle: "End date was moved later than a prior saved value."
+          title: "Minor Delay workstreams",
+          subtitle: "Up to 10% later than the planned schedule."
         },
         blocker: {
           title: "Blockers / Risks",
@@ -5757,7 +5822,7 @@
                 <div>
                   <span class="product-label">${escapeHtml(product)}</span>
                   <h3>${escapeHtml(product)}</h3>
-                  <p class="muted small">${rows.length} impacted workstream${rows.length === 1 ? "" : "s"} - ${dateCounts.delayed} delayed - ${dateCounts.dueSoon} due soon - ${dateCounts.postponed} postponed - ${blockerCount} blockers / risks</p>
+                  <p class="muted small">${rows.length} impacted workstream${rows.length === 1 ? "" : "s"} - ${dateCounts.majorDelay} major delay - ${dateCounts.minorDelay} minor delay - ${blockerCount} blockers / risks</p>
                 </div>
               </div>
               <div class="report-list">${rows.map(incidentDetailCard).join("")}</div>
@@ -5787,12 +5852,18 @@
       const source = getIncidentReports();
       const counts = source.reduce((acc, report) => {
         const flags = incidentFlags(report);
-        if (flags.delayed) acc.delayed += 1;
-        if (flags.dueSoon) acc.dueSoon += 1;
+        if (flags.delayed) {
+          acc.delayed += 1;
+          acc.majorDelay += 1;
+        }
+        if (flags.dueSoon) {
+          acc.dueSoon += 1;
+          acc.minorDelay += 1;
+        }
         if (flags.postponed) acc.postponed += 1;
         if (flags.blocker) acc.blocker += 1;
         return acc;
-      }, { delayed: 0, dueSoon: 0, postponed: 0, blocker: 0 });
+      }, { delayed: 0, dueSoon: 0, postponed: 0, majorDelay: 0, minorDelay: 0, blocker: 0 });
       const projectGroups = [...source.reduce((acc, report) => {
         const product = cleanText(report.product) || "No product";
         if (!acc.has(product)) acc.set(product, []);
@@ -5813,9 +5884,8 @@
 
       const metrics = [
         ["projects", "Projects impacted", projectGroups.length, projectGroups.length ? "red" : "green", "Projects with incident signals"],
-        ["delayed", "Delayed", counts.delayed, counts.delayed ? "red" : "green", "End date already passed"],
-        ["dueSoon", "Due soon", counts.dueSoon, counts.dueSoon ? "amber" : "green", "Due in the next 5 days"],
-        ["postponed", "Postponed", counts.postponed, counts.postponed ? "orange" : "green", "End date moved later"],
+        ["delayed", "Major Delay", counts.majorDelay, counts.majorDelay ? "red" : "green", "More than 10% late"],
+        ["dueSoon", "Minor Delay", counts.minorDelay, counts.minorDelay ? "amber" : "green", "Up to 10% late"],
         ["blocker", "Blockers / Risks", counts.blocker, counts.blocker ? "red" : "green", "At Risk, Critical, or blocker text"],
       ];
       metricsTarget.innerHTML = metrics.map(([key, name, value, tone, note]) => `
@@ -5832,7 +5902,7 @@
         const dateCounts = endDateCounts(rows);
         const blockerCount = rows.filter(hasBlockerSignal).length;
         const avg = Math.round(rows.reduce((sum, report) => sum + Number(report.progress || 0), 0) / rows.length);
-        const tone = dateCounts.delayed || blockerCount ? "red" : dateCounts.dueSoon ? "amber" : "orange";
+        const tone = dateCounts.majorDelay || blockerCount ? "red" : dateCounts.minorDelay ? "amber" : "green";
         return `
           <div class="report-card">
             <div class="panel-title">
@@ -5841,16 +5911,15 @@
                 <h3>${escapeHtml(product)}</h3>
                 <p class="muted small">${rows.length} impacted workstream${rows.length === 1 ? "" : "s"} - average progress ${avg}%</p>
               </div>
-              <span class="chip ${tone}">${dateCounts.delayed} delayed</span>
+              <span class="chip ${tone}">${dateCounts.majorDelay} major delay</span>
             </div>
             <div class="metric-split">
-              <span>${dateCounts.dueSoon} due soon</span>
-              <span>${dateCounts.postponed} postponed</span>
-              <span>${blockerCount} blockers / risks</span>
+                  <span>${dateCounts.minorDelay} minor delay</span>
+                  <span>${blockerCount} blockers / risks</span>
             </div>
           </div>
         `;
-      }).join("") : `<div class="empty"><strong>No incident indicators</strong>No delayed, due soon, postponed, blocked, At Risk, or Critical items match the current filters.</div>`;
+      }).join("") : `<div class="empty"><strong>No incident indicators</strong>No major delay, minor delay, blocked, At Risk, or Critical items match the current filters.</div>`;
 
       detailsTarget.innerHTML = source.length
         ? source.map(incidentDetailCard).join("")
@@ -5880,7 +5949,7 @@
     function dashboardMetricRows(source, metric) {
       if (metric === "products" || metric === "workstreams") return [...source];
       if (metric === "risk") return source.filter(isRiskReport);
-      if (metric === "delayed") return source.filter(report => incidentFlags(report).delayed);
+      if (metric === "delayed") return source.filter(report => incidentFlags(report).delayed || incidentFlags(report).dueSoon);
       if (metric === "progress") return [...source].sort((a, b) => Number(a.progress || 0) - Number(b.progress || 0));
       return [];
     }
@@ -5946,8 +6015,8 @@
           subtitle: "Workstreams marked At Risk or Critical in the current filters."
         },
         delayed: {
-          title: "Delayed",
-          subtitle: "Workstreams with an end date that has already passed."
+          title: "Schedule delay",
+          subtitle: "Workstreams classified as Minor Delay or Major Delay."
         },
         progress: {
           title: "Progress details",
@@ -5966,7 +6035,7 @@
       if (metric === "products") {
         list.innerHTML = groups.length ? groups.map(([product, productRows]) => {
           const riskCount = productRows.filter(isRiskReport).length;
-          const delayedCount = productRows.filter(report => incidentFlags(report).delayed).length;
+          const delayedCount = productRows.filter(report => incidentFlags(report).delayed || incidentFlags(report).dueSoon).length;
           const avg = Math.round(productRows.reduce((sum, report) => sum + Number(report.progress || 0), 0) / productRows.length);
           return `
             <div class="report-card">
@@ -5974,7 +6043,7 @@
                 <div>
                   <span class="product-label">${escapeHtml(product)}</span>
                   <h3>${escapeHtml(product)}</h3>
-                  <p class="muted small">${productRows.length} workstream${productRows.length === 1 ? "" : "s"} - average progress ${avg}% - ${riskCount} risky - ${delayedCount} delayed</p>
+                  <p class="muted small">${productRows.length} workstream${productRows.length === 1 ? "" : "s"} - average progress ${avg}% - ${riskCount} risky - ${delayedCount} schedule delay</p>
                 </div>
               </div>
               <div class="report-list">${productRows.map(portfolioDetailCard).join("")}</div>
@@ -6005,7 +6074,7 @@
         ["products", "Products", products, "blue", "With active workstreams", `${pm.total} PM items`, `${ux.total} UI/UX items`],
         ["workstreams", "Workstreams", total, "blue", "Features or workstreams tracked", `${pm.total} PM`, `${ux.total} UI/UX`],
         ["risk", "Products at Risk", riskyProducts, riskyProducts ? "red" : "green", `${atRisk} workstreams need attention`, `${pm.atRisk} PM`, `${ux.atRisk} UI/UX`],
-        ["delayed", "Delayed", dateCounts.delayed, dateCounts.delayed ? "red" : "green", "Past end date", `${dateCounts.dueSoon} due soon`, `${dateCounts.postponed} postponed`],
+        ["delayed", "Schedule Delay", dateCounts.majorDelay + dateCounts.minorDelay, dateCounts.majorDelay ? "red" : dateCounts.minorDelay ? "amber" : "green", "Minor + major delay", `${dateCounts.majorDelay} major`, `${dateCounts.minorDelay} minor`],
         ["progress", "Avg Progress", `${avg}%`, avg < 50 ? "red" : avg < 75 ? "amber" : "green", "Across filtered reports", `${pm.avg}% PM`, `${ux.avg}% UI/UX`],
       ];
       document.getElementById("metrics").innerHTML = metrics.map(([key, name, value, tone, note, pmNote, uxNote]) => `
@@ -6025,7 +6094,7 @@
         metric: selectedDashboardMetric,
         source
       });
-      renderEndDateMonitor("dashboardEndDateMonitor", source, "No delayed, due soon, or postponed end dates for the current filters.");
+      renderEndDateMonitor("dashboardEndDateMonitor", source, "No minor or major schedule delays for the current filters.");
     }
 
     function renderExecutiveDashboard() {
@@ -6057,7 +6126,7 @@
         ["products", "Products", products, "blue", "Active product portfolio"],
         ["workstreams", "Workstreams", total, "blue", `${onTrack} healthy delivery`],
         ["risk", "Products at Risk", riskyProducts, riskyProducts ? "red" : "green", `${atRisk} risky workstreams`],
-        ["delayed", "Delayed", dateCounts.delayed, dateCounts.delayed ? "red" : "green", `${dateCounts.dueSoon} due soon / ${dateCounts.postponed} postponed`],
+        ["delayed", "Schedule Delay", dateCounts.majorDelay + dateCounts.minorDelay, dateCounts.majorDelay ? "red" : dateCounts.minorDelay ? "amber" : "green", `${dateCounts.majorDelay} major / ${dateCounts.minorDelay} minor`],
         ["progress", "Avg Progress", `${avg}%`, avg < 50 ? "red" : avg < 75 ? "amber" : "green", "Across filtered workstreams"],
       ];
       document.getElementById("executiveMetrics").innerHTML = metricRows.map(([key, name, value, tone, note]) => `
@@ -6597,7 +6666,7 @@
             <section class="edit-form-section">
               <div>
                 <h4>2. Timing and health</h4>
-                <p class="muted small">Dates feed the delayed, due soon, and postponed indicators across dashboards.</p>
+                <p class="muted small">Dates feed the Ahead of Schedule, On Time, Minor Delay, and Major Delay indicators across dashboards.</p>
               </div>
               <div class="form-grid">
                 ${editWeekField(report.week)}
