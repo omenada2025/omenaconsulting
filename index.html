@@ -1726,6 +1726,7 @@
         <button class="tab" data-view="reports" data-master-only>Status Center</button>
         <div class="nav-section" data-role-manager-only>Admin</div>
         <button class="tab" data-view="sourceProjects" data-role-manager-only>Source Project</button>
+        <button class="tab" data-view="reportAnalysis" data-role-manager-only>Report Analysis</button>
         <button class="tab" data-view="workload" data-role-manager-only>Work Balance</button>
         <button class="tab" data-view="users" data-role-manager-only>User Access</button>
       </nav>
@@ -2123,6 +2124,87 @@
             </div>
           </div>
           <div class="report-list" id="sourceProjectList"></div>
+        </div>
+      </section>
+
+      <section class="view" id="reportAnalysis" data-role-manager-view>
+        <div class="header">
+          <div>
+            <span class="page-kicker">Quality review</span>
+            <h2>Report Analysis</h2>
+            <p class="muted">Review each status report for gaps, suggested fixes, faster delivery options, and lessons learned.</p>
+          </div>
+          <button class="btn" type="button" data-logout>Logout</button>
+        </div>
+
+        <div class="guide-grid">
+          <div class="guide-card theme-blue">
+            <strong>1. Find gaps</strong>
+            <p class="muted small">Highlights missing context, unclear blockers, weak next actions, and schedule risk.</p>
+          </div>
+          <div class="guide-card theme-green">
+            <strong>2. Improve the update</strong>
+            <p class="muted small">Suggests how to make the report clearer and more useful for decisions.</p>
+          </div>
+          <div class="guide-card theme-amber">
+            <strong>3. Move faster</strong>
+            <p class="muted small">Recommends practical delivery actions and captures lessons learned.</p>
+          </div>
+        </div>
+
+        <div class="panel filter-bar report-filter-bar">
+          <label>
+            Owner
+            <select id="analysisOwnerFilter"></select>
+          </label>
+          <label>
+            Project
+            <select id="analysisProductFilter"></select>
+          </label>
+          <label>
+            Reporting week
+            <select id="analysisWeekFilter"></select>
+          </label>
+          <label>
+            Health
+            <select id="analysisHealthFilter">
+              <option value="all">All health</option>
+              <option value="green">On Track</option>
+              <option value="amber">In Progress</option>
+              <option value="red">At Risk</option>
+              <option value="gray">Paused</option>
+            </select>
+          </label>
+          <label>
+            Role
+            <select id="analysisRoleFilter">
+              <option value="all">All roles</option>
+              <option value="Product Manager">Product Manager</option>
+              <option value="UI/UX">UI/UX</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>Weekly Metrics Narrative</h3>
+              <p class="muted small">Executive narrative generated from the currently filtered reports.</p>
+            </div>
+          </div>
+          <div class="report-list" id="analysisNarrative"></div>
+        </div>
+
+        <div class="grid summary-grid" id="analysisCards"></div>
+
+        <div class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>Report quality analysis</h3>
+              <p class="muted small" id="analysisSummary">No reports analyzed yet.</p>
+            </div>
+          </div>
+          <div class="report-list" id="analysisReportList"></div>
         </div>
       </section>
 
@@ -2931,6 +3013,13 @@
       owner: "all",
       type: "all",
       productType: "all"
+    };
+    const analysisFilters = {
+      owner: "all",
+      product: "all",
+      week: "all",
+      health: "all",
+      role: "all"
     };
     let reportHistoryOpen = false;
     let reportHistoryDate = "";
@@ -4466,7 +4555,7 @@
     }
 
     function canAccessView(id) {
-      if (canManageRoles()) return ["dashboard", "executive", "workflow", "incidents", "intake", "reports", "sourceProjects", "workload", "users"].includes(id);
+      if (canManageRoles()) return ["dashboard", "executive", "workflow", "incidents", "intake", "reports", "sourceProjects", "reportAnalysis", "workload", "users"].includes(id);
       if (isMasterAdmin()) return ["dashboard", "executive", "incidents", "intake", "reports"].includes(id);
       return ["dashboard", "executive", "incidents"].includes(id);
     }
@@ -4501,6 +4590,7 @@
       });
       renderUserManagement();
       renderSourceProjects();
+      renderReportAnalysis();
       renderWorkBalance();
       renderWorkflowGuide();
       if (!canAccessView(getActiveView())) {
@@ -4639,6 +4729,217 @@
           </div>
         `;
       }).join("") : `<div class="empty"><strong>No source projects imported</strong>Open the SharePoint workbook, copy the table including headers, then paste and import it here.</div>`;
+    }
+
+    function reportAnalysisRows() {
+      return reports
+        .filter(report =>
+          reportHasPerson(report.owner, analysisFilters.owner) &&
+          (analysisFilters.product === "all" || report.product === analysisFilters.product) &&
+          (analysisFilters.week === "all" || report.week === analysisFilters.week) &&
+          (analysisFilters.health === "all" || report.health === analysisFilters.health) &&
+          (analysisFilters.role === "all" || report.role === analysisFilters.role)
+        )
+        .map(report => ({ report, analysis: analyzeReportQuality(report) }))
+        .sort((a, b) =>
+          b.analysis.score - a.analysis.score ||
+          (reportEndDate(a.report) || "9999-12-31").localeCompare(reportEndDate(b.report) || "9999-12-31") ||
+          reportTitle(a.report).localeCompare(reportTitle(b.report))
+        );
+    }
+
+    function analyzeReportQuality(report) {
+      const gaps = [];
+      const suggestions = [];
+      const fastTrack = [];
+      const lessons = [];
+      const summary = cleanText(report.summary);
+      const blocker = cleanText(report.blocker);
+      const next = cleanText(report.next);
+      const win = cleanText(report.win);
+      const progress = Number(report.progress || 0);
+      const scheduleStatus = endDateStatus(report);
+
+      if (!cleanText(report.product)) {
+        gaps.push("Project/product is missing.");
+        suggestions.push("Select the correct product so dashboards group the report in the right portfolio.");
+      }
+      if (!cleanText(report.feature_workstream)) {
+        gaps.push("Feature/workstream is not defined.");
+        suggestions.push("Name the exact feature, workflow, or delivery stream being reported.");
+      }
+      if (!cleanText(report.owner)) {
+        gaps.push("Owner is missing.");
+        suggestions.push("Assign one accountable owner for follow-up and escalation.");
+      }
+      if (summary.length < 45) {
+        gaps.push("Summary is too short to understand the business context.");
+        suggestions.push("Rewrite the summary with what changed, why it matters, and current confidence.");
+      }
+      if (!win) {
+        gaps.push("Win is missing.");
+        suggestions.push("Add the clearest progress signal leadership should notice this week.");
+      }
+      if ((report.health === "red" || report.priority === "Critical") && !blocker) {
+        gaps.push("Report is risky but blocker/risk detail is missing.");
+        suggestions.push("Describe the blocker, owner, dependency, and decision needed.");
+      }
+      if (!next) {
+        gaps.push("Next action is missing.");
+        suggestions.push("Add a next action with an owner, target date, and expected outcome.");
+      }
+      if (!reportEndDate(report)) {
+        gaps.push("End date is missing.");
+        suggestions.push("Add an end date so schedule risk and delivery classification are visible.");
+      }
+      if (progress < 30 && report.health !== "green") {
+        gaps.push("Progress is low while delivery is not clearly on track.");
+        suggestions.push("Clarify whether scope, staffing, or dependency constraints are slowing progress.");
+      }
+      if (scheduleStatus?.category === "minorDelay" || scheduleStatus?.category === "majorDelay") {
+        gaps.push(`Schedule is classified as ${scheduleStatus.label}.`);
+        suggestions.push("Update the recovery plan and confirm if scope, date, or resourcing needs to change.");
+      }
+
+      if (blocker) {
+        fastTrack.push("Turn the blocker into a named escalation with a decision owner and a 24-48 hour target.");
+      }
+      if (progress < 60) {
+        fastTrack.push("Split the next milestone into smaller deliverables that can be validated this week.");
+      }
+      if (report.priority === "Critical" || report.health === "red") {
+        fastTrack.push("Use a daily checkpoint until the risk moves out of critical/at-risk status.");
+      }
+      if (!fastTrack.length) {
+        fastTrack.push("Keep the current cadence, but make the next action measurable so progress is easy to verify.");
+      }
+
+      if (blocker) lessons.push("Blockers need earlier escalation and a named decision owner.");
+      if (scheduleStatus?.category === "majorDelay") lessons.push("Major delays should trigger scope review before the next reporting cycle.");
+      if (!next) lessons.push("Reports without next actions are harder to turn into decisions.");
+      if (summary.length >= 45 && next) lessons.push("Clear context plus a concrete next action makes the report easier to act on.");
+      if (!lessons.length) lessons.push("This report has enough structure to serve as a useful weekly status pattern.");
+
+      const score = gaps.length * 2 +
+        (report.health === "red" ? 3 : report.health === "amber" ? 1 : 0) +
+        (report.priority === "Critical" ? 3 : report.priority === "High" ? 1 : 0) +
+        (scheduleStatus?.category === "majorDelay" ? 3 : scheduleStatus?.category === "minorDelay" ? 1 : 0);
+      const tone = score >= 8 ? "red" : score >= 4 ? "amber" : "green";
+      const label = score >= 8 ? "Needs action" : score >= 4 ? "Needs refinement" : "Clear";
+
+      return { gaps, suggestions, fastTrack, lessons, score, tone, label, scheduleStatus };
+    }
+
+    function renderAnalysisList(items) {
+      return items.map(({ report, analysis }) => `
+        <div class="report-card">
+          <div class="panel-title">
+            <div>
+              <span class="product-label">${escapeHtml(report.product || "No product")}</span>
+              <h3>${escapeHtml(reportTitle(report))}</h3>
+              <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.role || "No role")} - ${escapeHtml(labels[report.health] || report.health || "No health")}${reportEndDate(report) ? ` - ${endDateMarkup(report)}` : ""}</p>
+            </div>
+            <span class="chip ${analysis.tone}">${escapeHtml(analysis.label)}</span>
+          </div>
+          <div class="report-card-detail">
+            <div><strong>Gaps</strong><p class="muted small">${escapeHtml(analysis.gaps.join(" ") || "No major gaps detected.")}</p></div>
+            <div><strong>Suggestions to fix</strong><p class="muted small">${escapeHtml(analysis.suggestions.join(" ") || "Keep the report structure and keep actions measurable.")}</p></div>
+            <div><strong>Deliver faster</strong><p class="muted small">${escapeHtml(analysis.fastTrack.join(" "))}</p></div>
+            <div><strong>Lessons learned</strong><p class="muted small">${escapeHtml(analysis.lessons.join(" "))}</p></div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function weeklyMetricsNarrative(items) {
+      if (!items.length) {
+        return {
+          tone: "gray",
+          headline: "No reports available for this analysis view.",
+          body: "Adjust the filters or add status reports to generate a weekly narrative.",
+          focus: "No action required until reports are available."
+        };
+      }
+      const reportsInView = items.map(item => item.report);
+      const total = items.length;
+      const products = new Set(reportsInView.map(report => report.product).filter(Boolean)).size;
+      const owners = new Set(reportsInView.flatMap(report => splitPeople(report.owner))).size;
+      const avgProgress = Math.round(reportsInView.reduce((sum, report) => sum + Number(report.progress || 0), 0) / total);
+      const healthCounts = reportsInView.reduce((acc, report) => {
+        acc[report.health || "unknown"] = (acc[report.health || "unknown"] || 0) + 1;
+        return acc;
+      }, {});
+      const needsAction = items.filter(item => item.analysis.tone === "red").length;
+      const needsRefinement = items.filter(item => item.analysis.tone === "amber").length;
+      const clear = items.filter(item => item.analysis.tone === "green").length;
+      const gaps = items.reduce((sum, item) => sum + item.analysis.gaps.length, 0);
+      const dateCounts = endDateCounts(reportsInView);
+      const blockers = reportsInView.filter(report => cleanText(report.blocker)).length;
+      const critical = reportsInView.filter(report => report.priority === "Critical" || report.health === "red").length;
+      const tone = needsAction || critical || dateCounts.majorDelay ? "red" : needsRefinement || dateCounts.minorDelay || blockers ? "amber" : "green";
+      const headline = `${total} report${total === 1 ? "" : "s"} reviewed across ${products} product${products === 1 ? "" : "s"} and ${owners} owner${owners === 1 ? "" : "s"}.`;
+      const period = analysisFilters.week === "all" ? "all reporting weeks in the current filters" : `reporting week ${reportingWeekGroupLabel(analysisFilters.week)}`;
+      const body = `For ${period}, average progress is ${avgProgress}%. ${healthCounts.green || 0} on track, ${healthCounts.amber || 0} in progress, ${healthCounts.red || 0} at risk, and ${healthCounts.gray || 0} paused. ${needsAction} report${needsAction === 1 ? "" : "s"} need action, ${needsRefinement} need refinement, and ${clear} look clear.`;
+      const riskLine = `${gaps} reporting gap${gaps === 1 ? "" : "s"} detected. Schedule signals show ${dateCounts.majorDelay} major delay${dateCounts.majorDelay === 1 ? "" : "s"}, ${dateCounts.minorDelay} minor delay${dateCounts.minorDelay === 1 ? "" : "s"}, and ${blockers} blocker/risk note${blockers === 1 ? "" : "s"}.`;
+      const focus = tone === "red"
+        ? "Recommended focus: resolve red-score reports first, confirm owners for blockers, and create recovery actions for schedule risk."
+        : tone === "amber"
+          ? "Recommended focus: tighten next actions, clarify blockers, and confirm near-term delivery checkpoints."
+          : "Recommended focus: keep the reporting cadence and preserve the current level of clarity.";
+      return { tone, headline, body: `${body} ${riskLine}`, focus };
+    }
+
+    function renderWeeklyMetricsNarrative(items) {
+      const target = document.getElementById("analysisNarrative");
+      if (!target) return;
+      const narrative = weeklyMetricsNarrative(items);
+      target.innerHTML = `
+        <div class="report-card">
+          <div class="panel-title">
+            <div>
+              <span class="chip ${narrative.tone}">Weekly narrative</span>
+              <h3>${escapeHtml(narrative.headline)}</h3>
+            </div>
+          </div>
+          <p>${escapeHtml(narrative.body)}</p>
+          <p class="muted small"><strong>Leadership focus:</strong> ${escapeHtml(narrative.focus)}</p>
+        </div>
+      `;
+    }
+
+    function renderReportAnalysis() {
+      const cards = document.getElementById("analysisCards");
+      const list = document.getElementById("analysisReportList");
+      const summary = document.getElementById("analysisSummary");
+      if (!cards || !list || !summary) return;
+      fillSelect("analysisOwnerFilter", uniqueOwners(), "All owners", analysisFilters.owner);
+      fillSelect("analysisProductFilter", reports.map(report => report.product), "All projects", analysisFilters.product);
+      fillSelect("analysisWeekFilter", reports.map(report => report.week), "All reporting weeks", analysisFilters.week);
+      const items = reportAnalysisRows();
+      const needsAction = items.filter(item => item.analysis.tone === "red").length;
+      const needsRefinement = items.filter(item => item.analysis.tone === "amber").length;
+      const clear = items.filter(item => item.analysis.tone === "green").length;
+      const gapCount = items.reduce((sum, item) => sum + item.analysis.gaps.length, 0);
+      renderWeeklyMetricsNarrative(items);
+      const cardData = [
+        ["Reports reviewed", items.length, "blue", "Current filter result"],
+        ["Needs action", needsAction, needsAction ? "red" : "green", "High gap or risk score"],
+        ["Needs refinement", needsRefinement, needsRefinement ? "amber" : "green", "Medium quality/risk score"],
+        ["Total gaps", gapCount, gapCount ? "amber" : "green", "Missing or unclear report signals"]
+      ];
+      cards.innerHTML = cardData.map(([label, value, tone, note]) => `
+        <div class="panel metric">
+          <span class="chip ${tone}">${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
+          <span class="muted small">${escapeHtml(note)}</span>
+        </div>
+      `).join("");
+      summary.textContent = items.length
+        ? `${items.length} report${items.length === 1 ? "" : "s"} analyzed. ${needsAction} need action, ${needsRefinement} need refinement, ${clear} look clear.`
+        : "No reports match the current analysis filters.";
+      list.innerHTML = items.length
+        ? renderAnalysisList(items)
+        : `<div class="empty"><strong>No reports to analyze</strong>Adjust filters or add status reports to populate this view.</div>`;
     }
 
     function workBalanceStats() {
@@ -4816,6 +5117,7 @@
       const managedUsers = normalizeUsers(loadUsers()).filter(user => !isDefaultUser(user.username));
       const sourceCount = sourceProjects().length;
       const workloadOwners = workBalanceStats().length;
+      const analysisCount = typeof reportAnalysisRows === "function" ? reportAnalysisRows().length : reports.length;
       const steps = [
         {
           number: "01",
@@ -4839,6 +5141,16 @@
         },
         {
           number: "03",
+          view: "reportAnalysis",
+          title: "Report Analysis",
+          audience: "Role Manager",
+          metric: `${analysisCount} analyzed`,
+          purpose: "Review report gaps, fix suggestions, faster delivery options, lessons learned, and weekly metrics narrative.",
+          outcome: "A practical quality review before the portfolio and executive dashboards are discussed.",
+          action: "Open Report Analysis"
+        },
+        {
+          number: "04",
           view: "dashboard",
           title: "Portfolio Dashboard",
           audience: "All profiles",
@@ -4848,7 +5160,7 @@
           action: "Open Dashboard"
         },
         {
-          number: "04",
+          number: "05",
           view: "executive",
           title: "Executive View",
           audience: "All profiles",
@@ -4858,7 +5170,7 @@
           action: "Open Executive View"
         },
         {
-          number: "05",
+          number: "06",
           view: "incidents",
           title: "Incidents & Delays",
           audience: "All profiles",
@@ -4868,7 +5180,7 @@
           action: "Open Incidents"
         },
         {
-          number: "06",
+          number: "07",
           view: "workload",
           title: "Work Balance",
           audience: "Role Manager",
@@ -4878,7 +5190,7 @@
           action: "Open Work Balance"
         },
         {
-          number: "07",
+          number: "08",
           view: "users",
           title: "User Access",
           audience: "Role Manager",
@@ -6583,6 +6895,9 @@
       if (id === "incidentProductFilter") incidentFilters.product = nextValue;
       if (id === "incidentOwnerFilter") incidentFilters.owner = nextValue;
       if (id === "incidentProductTypeFilter") incidentFilters.productType = nextValue;
+      if (id === "analysisOwnerFilter") analysisFilters.owner = nextValue;
+      if (id === "analysisProductFilter") analysisFilters.product = nextValue;
+      if (id === "analysisWeekFilter") analysisFilters.week = nextValue;
       return nextValue;
     }
 
@@ -6938,6 +7253,7 @@
       renderReports();
       renderIncidentReport();
       renderSourceProjects();
+      renderReportAnalysis();
       renderWorkBalance();
       renderWorkflowGuide();
     }
@@ -7585,6 +7901,36 @@
       incidentFilters.productType = event.target.value;
       logFilterChange("incident_report", "product_type", event.target.value);
       renderIncidentReport();
+    });
+
+    document.getElementById("analysisOwnerFilter").addEventListener("change", event => {
+      analysisFilters.owner = event.target.value;
+      logFilterChange("report_analysis", "owner", event.target.value);
+      renderReportAnalysis();
+    });
+
+    document.getElementById("analysisProductFilter").addEventListener("change", event => {
+      analysisFilters.product = event.target.value;
+      logFilterChange("report_analysis", "project", event.target.value);
+      renderReportAnalysis();
+    });
+
+    document.getElementById("analysisWeekFilter").addEventListener("change", event => {
+      analysisFilters.week = event.target.value;
+      logFilterChange("report_analysis", "reporting_week", event.target.value);
+      renderReportAnalysis();
+    });
+
+    document.getElementById("analysisHealthFilter").addEventListener("change", event => {
+      analysisFilters.health = event.target.value;
+      logFilterChange("report_analysis", "health", event.target.value);
+      renderReportAnalysis();
+    });
+
+    document.getElementById("analysisRoleFilter").addEventListener("change", event => {
+      analysisFilters.role = event.target.value;
+      logFilterChange("report_analysis", "role", event.target.value);
+      renderReportAnalysis();
     });
 
     document.getElementById("incidentMetrics").addEventListener("click", event => {
