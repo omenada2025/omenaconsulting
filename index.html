@@ -4927,18 +4927,7 @@
       return [];
     }
 
-    function renderAnalysisDrilldown(items) {
-      const panel = document.getElementById("analysisDrilldownPanel");
-      const title = document.getElementById("analysisDrilldownTitle");
-      const subtitle = document.getElementById("analysisDrilldownSubtitle");
-      const list = document.getElementById("analysisDrilldownList");
-      if (!panel || !title || !subtitle || !list) return;
-      if (!selectedAnalysisMetric) {
-        panel.hidden = true;
-        list.innerHTML = "";
-        return;
-      }
-
+    function analysisMetricCopy(metric) {
       const copy = {
         reviewed: {
           title: "Reports reviewed",
@@ -4957,15 +4946,41 @@
           subtitle: "Reports missing important information or showing unclear delivery signals."
         }
       };
+      return copy[metric] || {
+        title: "Report quality analysis",
+        subtitle: "All reports included in the current analysis filters."
+      };
+    }
+
+    function renderAnalysisDrilldown(items) {
+      const panel = document.getElementById("analysisDrilldownPanel");
+      const title = document.getElementById("analysisDrilldownTitle");
+      const subtitle = document.getElementById("analysisDrilldownSubtitle");
+      const list = document.getElementById("analysisDrilldownList");
+      if (!panel || !title || !subtitle || !list) return;
+      if (!selectedAnalysisMetric) {
+        panel.hidden = true;
+        list.innerHTML = "";
+        return;
+      }
 
       const rows = analysisMetricRows(items, selectedAnalysisMetric);
+      const copy = analysisMetricCopy(selectedAnalysisMetric);
       panel.hidden = false;
-      title.textContent = `${copy[selectedAnalysisMetric]?.title || "Analysis details"} (${rows.length})`;
-      subtitle.textContent = copy[selectedAnalysisMetric]?.subtitle || "Filtered report analysis details.";
+      title.textContent = `${copy.title} (${rows.length})`;
+      subtitle.textContent = copy.subtitle;
       list.innerHTML = rows.length
         ? renderAnalysisList(rows)
         : `<div class="empty"><strong>No matching reports</strong>No reports match this card and the current filters.</div>`;
     }
+
+    function openAnalysisMetric(metric) {
+      selectedAnalysisMetric = metric || "";
+      logUserAction("report_analysis_metric_opened", { metric: selectedAnalysisMetric }, { target_type: "report_analysis_metric", target_id: selectedAnalysisMetric });
+      renderReportAnalysis();
+      document.getElementById("analysisDrilldownPanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    window.openAnalysisMetric = openAnalysisMetric;
 
     function renderReportAnalysis() {
       const cards = document.getElementById("analysisCards");
@@ -4988,7 +5003,7 @@
         ["totalGaps", "Total gaps", gapCount, gapCount ? "amber" : "green", "Missing or unclear report signals"]
       ];
       cards.innerHTML = cardData.map(([key, label, value, tone, note]) => `
-        <button class="panel metric metric-button ${selectedAnalysisMetric === key ? "selected" : ""}" type="button" data-analysis-metric="${escapeHtml(key)}" aria-pressed="${selectedAnalysisMetric === key ? "true" : "false"}">
+        <button class="panel metric metric-button ${selectedAnalysisMetric === key ? "selected" : ""}" type="button" data-analysis-metric="${escapeHtml(key)}" onclick="event.stopPropagation(); openAnalysisMetric('${escapeHtml(key)}')" aria-pressed="${selectedAnalysisMetric === key ? "true" : "false"}">
           <span class="chip ${tone}">${escapeHtml(label)}</span>
           <strong>${escapeHtml(value)}</strong>
           <span class="muted small">${escapeHtml(note)}</span>
@@ -4996,11 +5011,13 @@
         </button>
       `).join("");
       renderAnalysisDrilldown(items);
+      const activeItems = selectedAnalysisMetric ? analysisMetricRows(items, selectedAnalysisMetric) : items;
+      const activeCopy = analysisMetricCopy(selectedAnalysisMetric);
       summary.textContent = items.length
-        ? `${items.length} report${items.length === 1 ? "" : "s"} analyzed. ${needsAction} need action, ${needsRefinement} need refinement, ${clear} look clear.`
+        ? `${activeCopy.title}: ${activeItems.length} of ${items.length} report${items.length === 1 ? "" : "s"} shown. ${needsAction} need action, ${needsRefinement} need refinement, ${clear} look clear.`
         : "No reports match the current analysis filters.";
-      list.innerHTML = items.length
-        ? renderAnalysisList(items)
+      list.innerHTML = activeItems.length
+        ? renderAnalysisList(activeItems)
         : `<div class="empty"><strong>No reports to analyze</strong>Adjust filters or add status reports to populate this view.</div>`;
     }
 
