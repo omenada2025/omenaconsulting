@@ -4757,7 +4757,8 @@
           b.analysis.score - a.analysis.score ||
           (reportEndDate(a.report) || "9999-12-31").localeCompare(reportEndDate(b.report) || "9999-12-31") ||
           reportTitle(a.report).localeCompare(reportTitle(b.report))
-        );
+        )
+        .map((item, index) => ({ ...item, rank: index + 1 }));
     }
 
     function analyzeReportQuality(report) {
@@ -4838,12 +4839,13 @@
         (scheduleStatus?.category === "majorDelay" ? 3 : scheduleStatus?.category === "minorDelay" ? 1 : 0);
       const tone = score >= 8 ? "red" : score >= 4 ? "amber" : "green";
       const label = score >= 8 ? "Needs action" : score >= 4 ? "Needs refinement" : "Clear";
+      const priorityLabel = score >= 8 ? "High priority" : score >= 4 ? "Medium priority" : "Low priority";
 
-      return { gaps, suggestions, fastTrack, lessons, score, tone, label, scheduleStatus };
+      return { gaps, suggestions, fastTrack, lessons, score, tone, label, priorityLabel, scheduleStatus };
     }
 
     function renderAnalysisList(items) {
-      return items.map(({ report, analysis }) => `
+      return items.map(({ report, analysis, rank }) => `
         <div class="report-card">
           <div class="panel-title">
             <div>
@@ -4851,9 +4853,13 @@
               <h3>${escapeHtml(reportTitle(report))}</h3>
               <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.role || "No role")} - ${escapeHtml(labels[report.health] || report.health || "No health")}${reportEndDate(report) ? ` - ${endDateMarkup(report)}` : ""}</p>
             </div>
-            <span class="chip ${analysis.tone}">${escapeHtml(analysis.label)}</span>
+            <div class="report-actions">
+              <span class="chip blue">Rank #${escapeHtml(rank || "-")}</span>
+              <span class="chip ${analysis.tone}">${escapeHtml(analysis.priorityLabel)}</span>
+            </div>
           </div>
           <div class="report-card-detail">
+            <div><strong>Review rank</strong><p class="muted small">#${escapeHtml(rank || "-")} - ${escapeHtml(analysis.label)}. Based on gaps, risk, blockers, schedule, progress, and missing actions.</p></div>
             <div><strong>Gaps</strong><p class="muted small">${escapeHtml(analysis.gaps.join(" ") || "No major gaps detected.")}</p></div>
             <div><strong>Suggestions to fix</strong><p class="muted small">${escapeHtml(analysis.suggestions.join(" ") || "Keep the report structure and keep actions measurable.")}</p></div>
             <div><strong>Deliver faster</strong><p class="muted small">${escapeHtml(analysis.fastTrack.join(" "))}</p></div>
@@ -4888,13 +4894,15 @@
       const dateCounts = endDateCounts(reportsInView);
       const blockers = reportsInView.filter(report => cleanText(report.blocker)).length;
       const critical = reportsInView.filter(report => report.priority === "Critical" || report.health === "red").length;
+      const topItem = items[0];
+      const topLine = topItem ? ` Top review rank is #${topItem.rank}: ${reportTitle(topItem.report)} (${topItem.analysis.priorityLabel}).` : "";
       const tone = needsAction || critical || dateCounts.majorDelay ? "red" : needsRefinement || dateCounts.minorDelay || blockers ? "amber" : "green";
       const headline = `${total} report${total === 1 ? "" : "s"} reviewed across ${products} product${products === 1 ? "" : "s"} and ${owners} owner${owners === 1 ? "" : "s"}.`;
       const period = analysisFilters.week === "all" ? "all reporting weeks in the current filters" : `reporting week ${reportingWeekGroupLabel(analysisFilters.week)}`;
       const body = `For ${period}, average progress is ${avgProgress}%. ${healthCounts.green || 0} on track, ${healthCounts.amber || 0} in progress, ${healthCounts.red || 0} at risk, and ${healthCounts.gray || 0} paused. ${needsAction} report${needsAction === 1 ? "" : "s"} need action, ${needsRefinement} need refinement, and ${clear} look clear.`;
-      const riskLine = `${gaps} reporting gap${gaps === 1 ? "" : "s"} detected. Schedule signals show ${dateCounts.majorDelay} major delay${dateCounts.majorDelay === 1 ? "" : "s"}, ${dateCounts.minorDelay} minor delay${dateCounts.minorDelay === 1 ? "" : "s"}, and ${blockers} blocker/risk note${blockers === 1 ? "" : "s"}.`;
+      const riskLine = `${gaps} reporting gap${gaps === 1 ? "" : "s"} detected. Schedule signals show ${dateCounts.majorDelay} major delay${dateCounts.majorDelay === 1 ? "" : "s"}, ${dateCounts.minorDelay} minor delay${dateCounts.minorDelay === 1 ? "" : "s"}, and ${blockers} blocker/risk note${blockers === 1 ? "" : "s"}.${topLine}`;
       const focus = tone === "red"
-        ? "Recommended focus: resolve red-score reports first, confirm owners for blockers, and create recovery actions for schedule risk."
+        ? "Recommended focus: resolve the highest-ranked reports first, confirm owners for blockers, and create recovery actions for schedule risk."
         : tone === "amber"
           ? "Recommended focus: tighten next actions, clarify blockers, and confirm near-term delivery checkpoints."
           : "Recommended focus: keep the reporting cadence and preserve the current level of clarity.";
@@ -4921,6 +4929,7 @@
 
     function analysisMetricRows(items, metric) {
       if (metric === "reviewed") return [...items];
+      if (metric === "topPriority") return items.slice(0, 5);
       if (metric === "needsAction") return items.filter(item => item.analysis.tone === "red");
       if (metric === "needsRefinement") return items.filter(item => item.analysis.tone === "amber");
       if (metric === "totalGaps") return items.filter(item => item.analysis.gaps.length > 0);
@@ -4932,6 +4941,10 @@
         reviewed: {
           title: "Reports reviewed",
           subtitle: "All reports included in the current analysis filters."
+        },
+        topPriority: {
+          title: "Top review rank",
+          subtitle: "The highest-ranked reports to review first, based on gaps, risk, schedule, blockers, and missing actions."
         },
         needsAction: {
           title: "Needs action",
@@ -4995,9 +5008,11 @@
       const needsRefinement = items.filter(item => item.analysis.tone === "amber").length;
       const clear = items.filter(item => item.analysis.tone === "green").length;
       const gapCount = items.reduce((sum, item) => sum + item.analysis.gaps.length, 0);
+      const topItem = items[0];
       renderWeeklyMetricsNarrative(items);
       const cardData = [
         ["reviewed", "Reports reviewed", items.length, "blue", "Current filter result"],
+        ["topPriority", "Top priority", topItem ? `#${topItem.rank}` : "None", topItem ? topItem.analysis.tone : "green", topItem ? reportTitle(topItem.report) : "No ranked reports"],
         ["needsAction", "Needs action", needsAction, needsAction ? "red" : "green", "High gap or risk score"],
         ["needsRefinement", "Needs refinement", needsRefinement, needsRefinement ? "amber" : "green", "Medium quality/risk score"],
         ["totalGaps", "Total gaps", gapCount, gapCount ? "amber" : "green", "Missing or unclear report signals"]
