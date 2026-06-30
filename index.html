@@ -2132,24 +2132,9 @@
           <div>
             <span class="page-kicker">Quality review</span>
             <h2>Report Analysis</h2>
-            <p class="muted">Review each status report for gaps, suggested fixes, faster delivery options, and lessons learned.</p>
+            <p class="muted">Prioritize reports that need action, see what is missing, and export the filtered analysis.</p>
           </div>
           <button class="btn" type="button" data-logout>Logout</button>
-        </div>
-
-        <div class="guide-grid">
-          <div class="guide-card theme-blue">
-            <strong>1. Find gaps</strong>
-            <p class="muted small">Highlights missing context, unclear blockers, weak next actions, and schedule risk.</p>
-          </div>
-          <div class="guide-card theme-green">
-            <strong>2. Improve the update</strong>
-            <p class="muted small">Suggests how to make the report clearer and more useful for decisions.</p>
-          </div>
-          <div class="guide-card theme-amber">
-            <strong>3. Move faster</strong>
-            <p class="muted small">Recommends practical delivery actions and captures lessons learned.</p>
-          </div>
         </div>
 
         <div class="panel filter-bar report-filter-bar">
@@ -2183,13 +2168,10 @@
               <option value="UI/UX">UI/UX</option>
             </select>
           </label>
-        </div>
-
-        <div class="panel">
-          <div class="panel-title">
+          <div class="full panel-title">
             <div>
-              <h3>Extract analysis report</h3>
-              <p class="muted small">Export uses the current Date, Project, Owner, Health, and Role filters.</p>
+              <strong>Export filtered analysis</strong>
+              <p class="muted small">Includes rank, priority, gaps, suggestions, faster delivery actions, and lessons learned.</p>
             </div>
             <div class="report-actions">
               <button class="btn" type="button" id="exportAnalysisCsvBtn">Export CSV</button>
@@ -2202,8 +2184,8 @@
         <div class="panel">
           <div class="panel-title">
             <div>
-              <h3>Weekly Metrics Narrative</h3>
-              <p class="muted small">Executive narrative generated from the currently filtered reports.</p>
+              <h3>Executive summary</h3>
+              <p class="muted small">Generated from the currently filtered reports.</p>
             </div>
           </div>
           <div class="report-list" id="analysisNarrative"></div>
@@ -4872,12 +4854,12 @@
               <span class="chip ${analysis.tone}">${escapeHtml(analysis.priorityLabel)}</span>
             </div>
           </div>
+          <p class="muted small">${escapeHtml(cleanText(report.summary) || "No summary captured.")}</p>
           <div class="report-card-detail">
-            <div><strong>Review rank</strong><p class="muted small">#${escapeHtml(rank || "-")} - ${escapeHtml(analysis.label)}. Based on gaps, risk, blockers, schedule, progress, and missing actions.</p></div>
-            <div><strong>Gaps</strong><p class="muted small">${escapeHtml(analysis.gaps.join(" ") || "No major gaps detected.")}</p></div>
-            <div><strong>Suggestions to fix</strong><p class="muted small">${escapeHtml(analysis.suggestions.join(" ") || "Keep the report structure and keep actions measurable.")}</p></div>
-            <div><strong>Deliver faster</strong><p class="muted small">${escapeHtml(analysis.fastTrack.join(" "))}</p></div>
-            <div><strong>Lessons learned</strong><p class="muted small">${escapeHtml(analysis.lessons.join(" "))}</p></div>
+            <div><strong>What needs attention</strong><p class="muted small">${escapeHtml(analysis.gaps.slice(0, 2).join(" ") || "No major gaps detected.")}</p></div>
+            <div><strong>Do this next</strong><p class="muted small">${escapeHtml(analysis.suggestions[0] || "Keep actions measurable and easy to verify.")}</p></div>
+            <div><strong>Faster delivery</strong><p class="muted small">${escapeHtml(analysis.fastTrack[0] || "Keep the current cadence.")}</p></div>
+            <div><strong>Lesson learned</strong><p class="muted small">${escapeHtml(analysis.lessons[0] || "This report is clear enough to support decisions.")}</p></div>
           </div>
         </div>
       `).join("");
@@ -4914,12 +4896,12 @@
       const headline = `${total} report${total === 1 ? "" : "s"} reviewed across ${products} product${products === 1 ? "" : "s"} and ${owners} owner${owners === 1 ? "" : "s"}.`;
       const period = analysisFilters.week === "all" ? "all reporting weeks in the current filters" : `reporting week ${reportingWeekGroupLabel(analysisFilters.week)}`;
       const body = `For ${period}, average progress is ${avgProgress}%. ${healthCounts.green || 0} on track, ${healthCounts.amber || 0} in progress, ${healthCounts.red || 0} at risk, and ${healthCounts.gray || 0} paused. ${needsAction} report${needsAction === 1 ? "" : "s"} need action, ${needsRefinement} need refinement, and ${clear} look clear.`;
-      const riskLine = `${gaps} reporting gap${gaps === 1 ? "" : "s"} detected. Schedule signals show ${dateCounts.majorDelay} major delay${dateCounts.majorDelay === 1 ? "" : "s"}, ${dateCounts.minorDelay} minor delay${dateCounts.minorDelay === 1 ? "" : "s"}, and ${blockers} blocker/risk note${blockers === 1 ? "" : "s"}.${topLine}`;
+      const riskLine = `${gaps} missing or unclear signal${gaps === 1 ? "" : "s"} found. Schedule signals show ${dateCounts.majorDelay} major delay${dateCounts.majorDelay === 1 ? "" : "s"}, ${dateCounts.minorDelay} minor delay${dateCounts.minorDelay === 1 ? "" : "s"}, and ${blockers} blocker/risk note${blockers === 1 ? "" : "s"}.${topLine}`;
       const focus = tone === "red"
-        ? "Recommended focus: resolve the highest-ranked reports first, confirm owners for blockers, and create recovery actions for schedule risk."
+        ? "Start with the highest-ranked reports, confirm blocker owners, and create recovery actions for schedule risk."
         : tone === "amber"
-          ? "Recommended focus: tighten next actions, clarify blockers, and confirm near-term delivery checkpoints."
-          : "Recommended focus: keep the reporting cadence and preserve the current level of clarity.";
+          ? "Tighten next actions, clarify blockers, and confirm near-term delivery checkpoints."
+          : "Keep the reporting cadence and preserve the current level of clarity.";
       return { tone, headline, body: `${body} ${riskLine}`, focus };
     }
 
@@ -4953,11 +4935,11 @@
     function analysisMetricCopy(metric) {
       const copy = {
         reviewed: {
-          title: "Reports reviewed",
+          title: "Review queue",
           subtitle: "All reports included in the current analysis filters."
         },
         topPriority: {
-          title: "Top review rank",
+          title: "Start here",
           subtitle: "The highest-ranked reports to review first, based on gaps, risk, schedule, blockers, and missing actions."
         },
         needsAction: {
@@ -4965,11 +4947,11 @@
           subtitle: "Reports with the highest combination of gaps, risk, priority, and schedule pressure."
         },
         needsRefinement: {
-          title: "Needs refinement",
+          title: "Improve",
           subtitle: "Reports that are usable but need clearer context, next actions, or delivery signals."
         },
         totalGaps: {
-          title: "Reports with gaps",
+          title: "Missing info",
           subtitle: "Reports missing important information or showing unclear delivery signals."
         }
       };
@@ -5025,11 +5007,11 @@
       const topItem = items[0];
       renderWeeklyMetricsNarrative(items);
       const cardData = [
-        ["reviewed", "Reports reviewed", items.length, "blue", "Current filter result"],
-        ["topPriority", "Top priority", topItem ? `#${topItem.rank}` : "None", topItem ? topItem.analysis.tone : "green", topItem ? reportTitle(topItem.report) : "No ranked reports"],
+        ["reviewed", "Review queue", items.length, "blue", "Filtered reports"],
+        ["topPriority", "Start here", topItem ? `#${topItem.rank}` : "None", topItem ? topItem.analysis.tone : "green", topItem ? reportTitle(topItem.report) : "No ranked reports"],
         ["needsAction", "Needs action", needsAction, needsAction ? "red" : "green", "High gap or risk score"],
-        ["needsRefinement", "Needs refinement", needsRefinement, needsRefinement ? "amber" : "green", "Medium quality/risk score"],
-        ["totalGaps", "Total gaps", gapCount, gapCount ? "amber" : "green", "Missing or unclear report signals"]
+        ["needsRefinement", "Improve", needsRefinement, needsRefinement ? "amber" : "green", "Needs clearer signals"],
+        ["totalGaps", "Missing info", gapCount, gapCount ? "amber" : "green", "Fields or actions to clarify"]
       ];
       cards.innerHTML = cardData.map(([key, label, value, tone, note]) => `
         <button class="panel metric metric-button ${selectedAnalysisMetric === key ? "selected" : ""}" type="button" data-analysis-metric="${escapeHtml(key)}" onclick="event.stopPropagation(); openAnalysisMetric('${escapeHtml(key)}')" aria-pressed="${selectedAnalysisMetric === key ? "true" : "false"}">
@@ -5043,7 +5025,7 @@
       const activeItems = selectedAnalysisMetric ? analysisMetricRows(items, selectedAnalysisMetric) : items;
       const activeCopy = analysisMetricCopy(selectedAnalysisMetric);
       summary.textContent = items.length
-        ? `${activeCopy.title}: ${activeItems.length} of ${items.length} report${items.length === 1 ? "" : "s"} shown. ${needsAction} need action, ${needsRefinement} need refinement, ${clear} look clear.`
+        ? `${activeCopy.title}: ${activeItems.length} of ${items.length} report${items.length === 1 ? "" : "s"} shown. ${needsAction} need action, ${needsRefinement} need improvement, ${clear} look clear.`
         : "No reports match the current analysis filters.";
       list.innerHTML = activeItems.length
         ? renderAnalysisList(activeItems)
