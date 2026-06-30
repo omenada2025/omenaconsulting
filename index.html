@@ -2162,7 +2162,7 @@
             <select id="analysisProductFilter"></select>
           </label>
           <label>
-            Reporting week
+            Date / reporting week
             <select id="analysisWeekFilter"></select>
           </label>
           <label>
@@ -2183,6 +2183,20 @@
               <option value="UI/UX">UI/UX</option>
             </select>
           </label>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>Extract analysis report</h3>
+              <p class="muted small">Export uses the current Date, Project, Owner, Health, and Role filters.</p>
+            </div>
+            <div class="report-actions">
+              <button class="btn" type="button" id="exportAnalysisCsvBtn">Export CSV</button>
+              <button class="btn" type="button" id="exportAnalysisExcelBtn">Export Excel</button>
+              <button class="btn" type="button" id="exportAnalysisPdfBtn">Export PDF</button>
+            </div>
+          </div>
         </div>
 
         <div class="panel">
@@ -5002,7 +5016,7 @@
       if (!cards || !list || !summary) return;
       fillSelect("analysisOwnerFilter", uniqueOwners(), "All owners", analysisFilters.owner);
       fillSelect("analysisProductFilter", reports.map(report => report.product), "All projects", analysisFilters.product);
-      fillSelect("analysisWeekFilter", reports.map(report => report.week), "All reporting weeks", analysisFilters.week);
+      fillSelect("analysisWeekFilter", reports.map(report => report.week), "All dates", analysisFilters.week);
       const items = reportAnalysisRows();
       const needsAction = items.filter(item => item.analysis.tone === "red").length;
       const needsRefinement = items.filter(item => item.analysis.tone === "amber").length;
@@ -6962,6 +6976,115 @@
       logUserAction("reports_exported", { format: "pdf", row_count: rows.length, filters: { ...reportFilters } }, { target_type: "export", target_id: "pdf" });
     }
 
+    const analysisExportColumns = [
+      ["rank", "Review rank"],
+      ["priorityLabel", "Action priority"],
+      ["label", "Analysis status"],
+      ["score", "Analysis score"],
+      ["product", "Project"],
+      ["feature_workstream", "Feature / workstream"],
+      ["owner", "Owner"],
+      ["role", "Role"],
+      ["week", "Date / reporting week"],
+      ["health", "Health"],
+      ["progress", "Progress"],
+      ["stage", "Stage"],
+      ["due_date", "End date"],
+      ["scheduleStatus", "Schedule status"],
+      ["priority", "Delivery priority"],
+      ["summary", "Summary"],
+      ["win", "Win"],
+      ["blocker", "Blocker or risk"],
+      ["next", "Next action"],
+      ["gaps", "Gaps"],
+      ["suggestions", "Suggestions to fix"],
+      ["fastTrack", "Deliver faster"],
+      ["lessons", "Lessons learned"]
+    ];
+
+    function analysisExportFilename(extension) {
+      const date = new Date().toISOString().slice(0, 10);
+      return `report-analysis-${date}.${extension}`;
+    }
+
+    function analysisExportValue(item, key) {
+      const report = item.report;
+      const analysis = item.analysis;
+      if (key === "rank") return item.rank || "";
+      if (key === "priorityLabel") return analysis.priorityLabel || "";
+      if (key === "label") return analysis.label || "";
+      if (key === "score") return analysis.score ?? "";
+      if (key === "health") return labels[report.health] || report.health || "";
+      if (key === "scheduleStatus") return analysis.scheduleStatus?.label || "";
+      if (key === "gaps") return analysis.gaps.join(" ");
+      if (key === "suggestions") return analysis.suggestions.join(" ");
+      if (key === "fastTrack") return analysis.fastTrack.join(" ");
+      if (key === "lessons") return analysis.lessons.join(" ");
+      return report[key] ?? "";
+    }
+
+    function exportAnalysisCsv() {
+      const rows = reportAnalysisRows();
+      const header = analysisExportColumns.map(([, label]) => csvEscape(label)).join(",");
+      const body = rows.map(item => analysisExportColumns.map(([key]) => csvEscape(analysisExportValue(item, key))).join(",")).join("\n");
+      downloadBlob(analysisExportFilename("csv"), [header, body].filter(Boolean).join("\n"), "text/csv;charset=utf-8");
+      logUserAction("report_analysis_exported", { format: "csv", row_count: rows.length, filters: { ...analysisFilters } }, { target_type: "export", target_id: "report_analysis_csv" });
+    }
+
+    function analysisExportTable(rows) {
+      return `
+        <table>
+          <thead><tr>${analysisExportColumns.map(([, label]) => `<th>${escapeHtml(label)}</th>`).join("")}</tr></thead>
+          <tbody>
+            ${rows.map(item => `<tr>${analysisExportColumns.map(([key]) => `<td>${escapeHtml(analysisExportValue(item, key))}</td>`).join("")}</tr>`).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function exportAnalysisExcel() {
+      const rows = reportAnalysisRows();
+      const workbook = `<!doctype html><html><head><meta charset="utf-8"></head><body>${analysisExportTable(rows)}</body></html>`;
+      downloadBlob(analysisExportFilename("xls"), workbook, "application/vnd.ms-excel;charset=utf-8");
+      logUserAction("report_analysis_exported", { format: "excel", row_count: rows.length, filters: { ...analysisFilters } }, { target_type: "export", target_id: "report_analysis_excel" });
+    }
+
+    function exportAnalysisPdf() {
+      const rows = reportAnalysisRows();
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) {
+        alert("Please allow pop-ups to export PDF.");
+        return;
+      }
+      printWindow.document.write(`
+        <!doctype html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Report Analysis</title>
+            <style>
+              body { font-family: Arial, sans-serif; color: #17212b; padding: 24px; }
+              h1 { font-size: 22px; margin: 0 0 6px; }
+              p { color: #64717d; margin: 0 0 18px; }
+              table { border-collapse: collapse; width: 100%; font-size: 9px; }
+              th, td { border: 1px solid #d8e0e5; padding: 5px; text-align: left; vertical-align: top; }
+              th { background: #eef3f4; }
+              @media print { body { padding: 0; } }
+            </style>
+          </head>
+          <body>
+            <h1>Report Analysis</h1>
+            <p>${rows.length} filtered report${rows.length === 1 ? "" : "s"} exported from Omena Consulting. Filters: date ${escapeHtml(analysisFilters.week === "all" ? "all" : reportingWeekGroupLabel(analysisFilters.week))}, project ${escapeHtml(analysisFilters.product)}, owner ${escapeHtml(analysisFilters.owner)}, role ${escapeHtml(analysisFilters.role)}.</p>
+            ${analysisExportTable(rows)}
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      logUserAction("report_analysis_exported", { format: "pdf", row_count: rows.length, filters: { ...analysisFilters } }, { target_type: "export", target_id: "report_analysis_pdf" });
+    }
+
     function populateReportFilters() {
       fillSelect("reportOwnerFilter", uniqueOwners(), "All owners", reportFilters.owner);
       fillSelect("reportTypeFilter", PRODUCT_TYPE_OPTIONS, "All product types", reportFilters.productType);
@@ -8014,7 +8137,7 @@
     document.getElementById("analysisWeekFilter").addEventListener("change", event => {
       analysisFilters.week = event.target.value;
       selectedAnalysisMetric = "";
-      logFilterChange("report_analysis", "reporting_week", event.target.value);
+      logFilterChange("report_analysis", "date", event.target.value);
       renderReportAnalysis();
     });
 
@@ -8047,6 +8170,10 @@
       renderReportAnalysis();
       document.getElementById("analysisCards")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
+
+    document.getElementById("exportAnalysisCsvBtn").addEventListener("click", exportAnalysisCsv);
+    document.getElementById("exportAnalysisExcelBtn").addEventListener("click", exportAnalysisExcel);
+    document.getElementById("exportAnalysisPdfBtn").addEventListener("click", exportAnalysisPdf);
 
     document.getElementById("incidentMetrics").addEventListener("click", event => {
       const card = event.target.closest("[data-incident-metric]");
