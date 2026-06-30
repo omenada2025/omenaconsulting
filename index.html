@@ -2197,6 +2197,17 @@
 
         <div class="grid summary-grid" id="analysisCards"></div>
 
+        <div class="panel" id="analysisDrilldownPanel" hidden>
+          <div class="panel-title">
+            <div>
+              <h3 id="analysisDrilldownTitle">Analysis details</h3>
+              <p class="muted small" id="analysisDrilldownSubtitle"></p>
+            </div>
+            <button class="btn" type="button" id="analysisDrilldownClose">Back to analysis overview</button>
+          </div>
+          <div class="report-list" id="analysisDrilldownList"></div>
+        </div>
+
         <div class="panel">
           <div class="panel-title">
             <div>
@@ -2961,6 +2972,7 @@
     let selectedDashboardMetric = "";
     let selectedExecutiveMetric = "";
     let selectedIncidentMetric = "";
+    let selectedAnalysisMetric = "";
     let useLegacySupabasePayload = false;
     let actionLoggingDisabled = false;
     let currentUser = null;
@@ -4907,6 +4919,54 @@
       `;
     }
 
+    function analysisMetricRows(items, metric) {
+      if (metric === "reviewed") return [...items];
+      if (metric === "needsAction") return items.filter(item => item.analysis.tone === "red");
+      if (metric === "needsRefinement") return items.filter(item => item.analysis.tone === "amber");
+      if (metric === "totalGaps") return items.filter(item => item.analysis.gaps.length > 0);
+      return [];
+    }
+
+    function renderAnalysisDrilldown(items) {
+      const panel = document.getElementById("analysisDrilldownPanel");
+      const title = document.getElementById("analysisDrilldownTitle");
+      const subtitle = document.getElementById("analysisDrilldownSubtitle");
+      const list = document.getElementById("analysisDrilldownList");
+      if (!panel || !title || !subtitle || !list) return;
+      if (!selectedAnalysisMetric) {
+        panel.hidden = true;
+        list.innerHTML = "";
+        return;
+      }
+
+      const copy = {
+        reviewed: {
+          title: "Reports reviewed",
+          subtitle: "All reports included in the current analysis filters."
+        },
+        needsAction: {
+          title: "Needs action",
+          subtitle: "Reports with the highest combination of gaps, risk, priority, and schedule pressure."
+        },
+        needsRefinement: {
+          title: "Needs refinement",
+          subtitle: "Reports that are usable but need clearer context, next actions, or delivery signals."
+        },
+        totalGaps: {
+          title: "Reports with gaps",
+          subtitle: "Reports missing important information or showing unclear delivery signals."
+        }
+      };
+
+      const rows = analysisMetricRows(items, selectedAnalysisMetric);
+      panel.hidden = false;
+      title.textContent = `${copy[selectedAnalysisMetric]?.title || "Analysis details"} (${rows.length})`;
+      subtitle.textContent = copy[selectedAnalysisMetric]?.subtitle || "Filtered report analysis details.";
+      list.innerHTML = rows.length
+        ? renderAnalysisList(rows)
+        : `<div class="empty"><strong>No matching reports</strong>No reports match this card and the current filters.</div>`;
+    }
+
     function renderReportAnalysis() {
       const cards = document.getElementById("analysisCards");
       const list = document.getElementById("analysisReportList");
@@ -4922,18 +4982,20 @@
       const gapCount = items.reduce((sum, item) => sum + item.analysis.gaps.length, 0);
       renderWeeklyMetricsNarrative(items);
       const cardData = [
-        ["Reports reviewed", items.length, "blue", "Current filter result"],
-        ["Needs action", needsAction, needsAction ? "red" : "green", "High gap or risk score"],
-        ["Needs refinement", needsRefinement, needsRefinement ? "amber" : "green", "Medium quality/risk score"],
-        ["Total gaps", gapCount, gapCount ? "amber" : "green", "Missing or unclear report signals"]
+        ["reviewed", "Reports reviewed", items.length, "blue", "Current filter result"],
+        ["needsAction", "Needs action", needsAction, needsAction ? "red" : "green", "High gap or risk score"],
+        ["needsRefinement", "Needs refinement", needsRefinement, needsRefinement ? "amber" : "green", "Medium quality/risk score"],
+        ["totalGaps", "Total gaps", gapCount, gapCount ? "amber" : "green", "Missing or unclear report signals"]
       ];
-      cards.innerHTML = cardData.map(([label, value, tone, note]) => `
-        <div class="panel metric">
+      cards.innerHTML = cardData.map(([key, label, value, tone, note]) => `
+        <button class="panel metric metric-button ${selectedAnalysisMetric === key ? "selected" : ""}" type="button" data-analysis-metric="${escapeHtml(key)}" aria-pressed="${selectedAnalysisMetric === key ? "true" : "false"}">
           <span class="chip ${tone}">${escapeHtml(label)}</span>
           <strong>${escapeHtml(value)}</strong>
           <span class="muted small">${escapeHtml(note)}</span>
-        </div>
+          <span class="muted small">Click to view details</span>
+        </button>
       `).join("");
+      renderAnalysisDrilldown(items);
       summary.textContent = items.length
         ? `${items.length} report${items.length === 1 ? "" : "s"} analyzed. ${needsAction} need action, ${needsRefinement} need refinement, ${clear} look clear.`
         : "No reports match the current analysis filters.";
@@ -7905,32 +7967,53 @@
 
     document.getElementById("analysisOwnerFilter").addEventListener("change", event => {
       analysisFilters.owner = event.target.value;
+      selectedAnalysisMetric = "";
       logFilterChange("report_analysis", "owner", event.target.value);
       renderReportAnalysis();
     });
 
     document.getElementById("analysisProductFilter").addEventListener("change", event => {
       analysisFilters.product = event.target.value;
+      selectedAnalysisMetric = "";
       logFilterChange("report_analysis", "project", event.target.value);
       renderReportAnalysis();
     });
 
     document.getElementById("analysisWeekFilter").addEventListener("change", event => {
       analysisFilters.week = event.target.value;
+      selectedAnalysisMetric = "";
       logFilterChange("report_analysis", "reporting_week", event.target.value);
       renderReportAnalysis();
     });
 
     document.getElementById("analysisHealthFilter").addEventListener("change", event => {
       analysisFilters.health = event.target.value;
+      selectedAnalysisMetric = "";
       logFilterChange("report_analysis", "health", event.target.value);
       renderReportAnalysis();
     });
 
     document.getElementById("analysisRoleFilter").addEventListener("change", event => {
       analysisFilters.role = event.target.value;
+      selectedAnalysisMetric = "";
       logFilterChange("report_analysis", "role", event.target.value);
       renderReportAnalysis();
+    });
+
+    document.getElementById("analysisCards").addEventListener("click", event => {
+      const card = event.target.closest("[data-analysis-metric]");
+      if (!card) return;
+      selectedAnalysisMetric = card.dataset.analysisMetric || "";
+      logUserAction("report_analysis_metric_opened", { metric: selectedAnalysisMetric }, { target_type: "report_analysis_metric", target_id: selectedAnalysisMetric });
+      renderReportAnalysis();
+      document.getElementById("analysisDrilldownPanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    document.getElementById("analysisDrilldownClose").addEventListener("click", () => {
+      selectedAnalysisMetric = "";
+      logUserAction("report_analysis_metric_closed", {}, { target_type: "report_analysis_metric", target_id: "overview" });
+      renderReportAnalysis();
+      document.getElementById("analysisCards")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
     document.getElementById("incidentMetrics").addEventListener("click", event => {
