@@ -2193,6 +2193,16 @@
 
         <div class="grid summary-grid" id="analysisCards"></div>
 
+        <div class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>Owner feedback</h3>
+              <p class="muted small">Personalized feedback generated from the currently filtered reports.</p>
+            </div>
+          </div>
+          <div class="report-list" id="analysisOwnerFeedback"></div>
+        </div>
+
         <div class="panel" id="analysisDrilldownPanel" hidden>
           <div class="panel-title">
             <div>
@@ -4923,6 +4933,107 @@
       `;
     }
 
+    function topRepeatedText(values, limit = 2) {
+      const counts = new Map();
+      values.forEach(value => {
+        const text = cleanText(value);
+        if (!text) return;
+        counts.set(text, (counts.get(text) || 0) + 1);
+      });
+      return [...counts.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .slice(0, limit)
+        .map(([text]) => text);
+    }
+
+    function ownerFeedbackRows(items) {
+      const groups = new Map();
+      items.forEach(item => {
+        const owners = splitPeople(item.report.owner);
+        const normalizedOwners = owners.length ? owners : ["Unassigned"];
+        normalizedOwners.forEach(owner => {
+          const displayOwner = normalizePersonDisplay(owner) || "Unassigned";
+          if (!groups.has(displayOwner)) groups.set(displayOwner, []);
+          groups.get(displayOwner).push(item);
+        });
+      });
+
+      return [...groups.entries()].map(([owner, ownerItems]) => {
+        const reportsForOwner = ownerItems.map(item => item.report);
+        const total = ownerItems.length;
+        const avgScore = Math.round(ownerItems.reduce((sum, item) => sum + Number(item.analysis.score || 0), 0) / total);
+        const avgProgress = Math.round(reportsForOwner.reduce((sum, report) => sum + Number(report.progress || 0), 0) / total);
+        const needsAction = ownerItems.filter(item => item.analysis.tone === "red").length;
+        const needsRefinement = ownerItems.filter(item => item.analysis.tone === "amber").length;
+        const blockers = reportsForOwner.filter(report => cleanText(report.blocker)).length;
+        const delayed = reportsForOwner.filter(report => {
+          const status = endDateStatus(report);
+          return status?.category === "minorDelay" || status?.category === "majorDelay";
+        }).length;
+        const topReport = ownerItems[0];
+        const commonGaps = topRepeatedText(ownerItems.flatMap(item => item.analysis.gaps), 2);
+        const commonSuggestions = topRepeatedText(ownerItems.flatMap(item => item.analysis.suggestions), 2);
+        const commonLessons = topRepeatedText(ownerItems.flatMap(item => item.analysis.lessons), 2);
+        const tone = needsAction || delayed ? "red" : needsRefinement || blockers ? "amber" : "green";
+        const headline = tone === "red"
+          ? "Needs focused follow-up"
+          : tone === "amber"
+            ? "Good base, needs clearer signals"
+            : "Reports are mostly clear";
+        const recommendation = commonSuggestions[0] ||
+          (blockers ? "Convert blockers into named escalation owners and target dates." : "Keep next actions measurable and easy to verify.");
+        const nextFocus = topReport
+          ? `Start with #${topReport.rank}: ${reportTitle(topReport.report)}.`
+          : "No priority report selected.";
+
+        return {
+          owner,
+          total,
+          avgScore,
+          avgProgress,
+          needsAction,
+          needsRefinement,
+          blockers,
+          delayed,
+          tone,
+          headline,
+          recommendation,
+          nextFocus,
+          commonGaps,
+          commonLessons
+        };
+      }).sort((a, b) =>
+        b.needsAction - a.needsAction ||
+        b.avgScore - a.avgScore ||
+        b.delayed - a.delayed ||
+        b.total - a.total ||
+        a.owner.localeCompare(b.owner)
+      );
+    }
+
+    function renderOwnerFeedback(items) {
+      const target = document.getElementById("analysisOwnerFeedback");
+      if (!target) return;
+      const rows = ownerFeedbackRows(items);
+      target.innerHTML = rows.length ? rows.map(row => `
+        <div class="report-card">
+          <div class="panel-title">
+            <div>
+              <span class="chip ${row.tone}">${escapeHtml(row.headline)}</span>
+              <h3>${escapeHtml(row.owner)}</h3>
+              <p class="muted small">${row.total} report${row.total === 1 ? "" : "s"} - Avg progress ${row.avgProgress}% - ${row.needsAction} need action - ${row.delayed} delayed</p>
+            </div>
+          </div>
+          <div class="report-card-detail">
+            <div><strong>Main feedback</strong><p class="muted small">${escapeHtml(row.commonGaps.join(" ") || "Reporting structure is clear. Keep the same cadence.")}</p></div>
+            <div><strong>Recommended improvement</strong><p class="muted small">${escapeHtml(row.recommendation)}</p></div>
+            <div><strong>Next focus</strong><p class="muted small">${escapeHtml(row.nextFocus)}</p></div>
+            <div><strong>Lesson to reinforce</strong><p class="muted small">${escapeHtml(row.commonLessons[0] || "Clear context plus a measurable next action makes updates easier to act on.")}</p></div>
+          </div>
+        </div>
+      `).join("") : `<div class="empty"><strong>No owner feedback yet</strong>Adjust filters or add status reports to generate owner feedback.</div>`;
+    }
+
     function analysisMetricRows(items, metric) {
       if (metric === "reviewed") return [...items];
       if (metric === "topPriority") return items.slice(0, 5);
@@ -5006,6 +5117,7 @@
       const gapCount = items.reduce((sum, item) => sum + item.analysis.gaps.length, 0);
       const topItem = items[0];
       renderWeeklyMetricsNarrative(items);
+      renderOwnerFeedback(items);
       const cardData = [
         ["reviewed", "Review queue", items.length, "blue", "Filtered reports"],
         ["topPriority", "Start here", topItem ? `#${topItem.rank}` : "None", topItem ? topItem.analysis.tone : "green", topItem ? reportTitle(topItem.report) : "No ranked reports"],
