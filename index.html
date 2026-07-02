@@ -2174,6 +2174,7 @@
               <p class="muted small">Includes rank, priority, gaps, suggestions, faster delivery actions, and lessons learned.</p>
             </div>
             <div class="report-actions">
+              <button class="btn soft" type="button" id="jumpOwnerFeedbackBtn">Go to owner feedback</button>
               <button class="btn" type="button" id="exportAnalysisCsvBtn">Export CSV</button>
               <button class="btn" type="button" id="exportAnalysisExcelBtn">Export Excel</button>
               <button class="btn" type="button" id="exportAnalysisPdfBtn">Export PDF</button>
@@ -2191,17 +2192,17 @@
           <div class="report-list" id="analysisNarrative"></div>
         </div>
 
-        <div class="grid summary-grid" id="analysisCards"></div>
-
-        <div class="panel">
+        <div class="panel" id="ownerFeedbackPanel">
           <div class="panel-title">
             <div>
               <h3>Owner feedback</h3>
-              <p class="muted small">Personalized feedback generated from the currently filtered reports.</p>
+              <p class="muted small">Feedback by owner based on the current filters. Use the Owner filter to focus on one person.</p>
             </div>
           </div>
           <div class="report-list" id="analysisOwnerFeedback"></div>
         </div>
+
+        <div class="grid summary-grid" id="analysisCards"></div>
 
         <div class="panel" id="analysisDrilldownPanel" hidden>
           <div class="panel-title">
@@ -8263,6 +8264,11 @@
       logUserAction("report_analysis_metric_closed", {}, { target_type: "report_analysis_metric", target_id: "overview" });
       renderReportAnalysis();
       document.getElementById("analysisCards")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    document.getElementById("jumpOwnerFeedbackBtn").addEventListener("click", () => {
+      logUserAction("owner_feedback_opened", { filters: { ...analysisFilters } }, { target_type: "report_analysis", target_id: "owner_feedback" });
+      document.getElementById("ownerFeedbackPanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
     document.getElementById("exportAnalysisCsvBtn").addEventListener("click", exportAnalysisCsv);
