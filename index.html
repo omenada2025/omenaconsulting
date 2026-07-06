@@ -1727,6 +1727,9 @@
         <div class="nav-section" data-role-manager-only>Admin</div>
         <button class="tab" data-view="sourceProjects" data-role-manager-only>Source Project</button>
         <button class="tab" data-view="reportAnalysis" data-role-manager-only>Report Analysis</button>
+        <button class="tab" data-view="ownerFeedback" data-role-manager-only>Owner Feedback</button>
+        <button class="tab" data-view="actionItems" data-role-manager-only>Action Items</button>
+        <button class="tab" data-view="weeklyReview" data-role-manager-only>Weekly Review</button>
         <button class="tab" data-view="workload" data-role-manager-only>Work Balance</button>
         <button class="tab" data-view="users" data-role-manager-only>User Access</button>
       </nav>
@@ -2223,6 +2226,198 @@
             </div>
           </div>
           <div class="report-list" id="analysisReportList"></div>
+        </div>
+      </section>
+
+      <section class="view" id="ownerFeedback" data-role-manager-view>
+        <div class="header">
+          <div>
+            <span class="page-kicker">Coaching view</span>
+            <h2>Owner Feedback</h2>
+            <p class="muted">Turn report analysis into clear feedback by owner, with the next improvement each person should focus on.</p>
+          </div>
+          <button class="btn" type="button" data-logout>Logout</button>
+        </div>
+
+        <div class="guide-grid">
+          <div class="guide-card theme-blue">
+            <strong>1. Filter the audience</strong>
+            <p class="muted small">Focus by owner, product, week, or role before sharing feedback.</p>
+          </div>
+          <div class="guide-card theme-green">
+            <strong>2. Review coaching points</strong>
+            <p class="muted small">Each owner gets a concise summary, next focus, and lesson learned.</p>
+          </div>
+          <div class="guide-card theme-amber">
+            <strong>3. Share cleanly</strong>
+            <p class="muted small">Copy the feedback or open an email draft with the message prepared.</p>
+          </div>
+        </div>
+
+        <div class="panel filter-bar report-filter-bar">
+          <label>
+            Owner
+            <select id="ownerFeedbackOwnerFilter"></select>
+          </label>
+          <label>
+            Project
+            <select id="ownerFeedbackProductFilter"></select>
+          </label>
+          <label>
+            Date / reporting week
+            <select id="ownerFeedbackWeekFilter"></select>
+          </label>
+          <label>
+            Role
+            <select id="ownerFeedbackRoleFilter">
+              <option value="all">All roles</option>
+              <option value="Product Manager">Product Manager</option>
+              <option value="UI/UX">UI/UX</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="grid summary-grid" id="ownerFeedbackCards"></div>
+
+        <div class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>Feedback by owner</h3>
+              <p class="muted small" id="ownerFeedbackSummary">No owner feedback generated yet.</p>
+            </div>
+          </div>
+          <div class="report-list" id="ownerFeedbackList"></div>
+        </div>
+      </section>
+
+      <section class="view" id="actionItems" data-role-manager-view>
+        <div class="header">
+          <div>
+            <span class="page-kicker">Decision queue</span>
+            <h2>Action Items</h2>
+            <p class="muted">Automatically identify blockers, missing next actions, schedule risks, and escalation items from the reports.</p>
+          </div>
+          <button class="btn" type="button" data-logout>Logout</button>
+        </div>
+
+        <div class="guide-grid">
+          <div class="guide-card theme-blue">
+            <strong>1. Find the signal</strong>
+            <p class="muted small">Cards surface work that needs action, not just reporting polish.</p>
+          </div>
+          <div class="guide-card theme-green">
+            <strong>2. Assign the next move</strong>
+            <p class="muted small">Each item includes owner, project, why it matters, and a recommended action.</p>
+          </div>
+          <div class="guide-card theme-amber">
+            <strong>3. Close the loop</strong>
+            <p class="muted small">Use the queue during weekly review to confirm recovery actions and decisions.</p>
+          </div>
+        </div>
+
+        <div class="panel filter-bar report-filter-bar">
+          <label>
+            Owner
+            <select id="actionItemOwnerFilter"></select>
+          </label>
+          <label>
+            Project
+            <select id="actionItemProductFilter"></select>
+          </label>
+          <label>
+            Date / reporting week
+            <select id="actionItemWeekFilter"></select>
+          </label>
+          <label>
+            Action type
+            <select id="actionItemTypeFilter">
+              <option value="all">All action types</option>
+              <option value="escalate">Escalate</option>
+              <option value="blocker">Resolve blocker</option>
+              <option value="nextAction">Add next action</option>
+              <option value="schedule">Recover schedule</option>
+              <option value="quality">Improve report</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="grid summary-grid" id="actionItemCards"></div>
+
+        <div class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>Action queue</h3>
+              <p class="muted small" id="actionItemSummary">No action items generated yet.</p>
+            </div>
+          </div>
+          <div class="report-list" id="actionItemList"></div>
+        </div>
+      </section>
+
+      <section class="view" id="weeklyReview" data-role-manager-view>
+        <div class="header">
+          <div>
+            <span class="page-kicker">Weekly operating review</span>
+            <h2>Weekly Review</h2>
+            <p class="muted">Generate a consolidated weekly narrative with portfolio health, action items, owner feedback, and lessons learned.</p>
+          </div>
+          <button class="btn" type="button" data-logout>Logout</button>
+        </div>
+
+        <div class="panel filter-bar report-filter-bar">
+          <label>
+            Owner
+            <select id="weeklyReviewOwnerFilter"></select>
+          </label>
+          <label>
+            Project
+            <select id="weeklyReviewProductFilter"></select>
+          </label>
+          <label>
+            Date / reporting week
+            <select id="weeklyReviewWeekFilter"></select>
+          </label>
+          <label>
+            Role
+            <select id="weeklyReviewRoleFilter">
+              <option value="all">All roles</option>
+              <option value="Product Manager">Product Manager</option>
+              <option value="UI/UX">UI/UX</option>
+            </select>
+          </label>
+          <div class="full panel-title">
+            <div>
+              <strong>Generate weekly review</strong>
+              <p class="muted small">Creates a shareable narrative from the currently filtered reports.</p>
+            </div>
+            <div class="report-actions">
+              <button class="btn primary" type="button" id="generateWeeklyReviewBtn">Generate weekly review</button>
+              <button class="btn soft" type="button" id="copyWeeklyReviewBtn">Copy review</button>
+              <button class="btn" type="button" id="emailWeeklyReviewBtn">Open email draft</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid summary-grid" id="weeklyReviewCards"></div>
+
+        <div class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>Review narrative</h3>
+              <p class="muted small">Use this as the weekly leadership update or coaching summary.</p>
+            </div>
+          </div>
+          <textarea id="weeklyReviewText" rows="12" readonly></textarea>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>Top actions and lessons</h3>
+              <p class="muted small" id="weeklyReviewSummary">No weekly review generated yet.</p>
+            </div>
+          </div>
+          <div class="report-list" id="weeklyReviewActions"></div>
         </div>
       </section>
 
@@ -3038,6 +3233,24 @@
       product: "all",
       week: "all",
       health: "all",
+      role: "all"
+    };
+    const ownerFeedbackFilters = {
+      owner: "all",
+      product: "all",
+      week: "all",
+      role: "all"
+    };
+    const actionItemFilters = {
+      owner: "all",
+      product: "all",
+      week: "all",
+      type: "all"
+    };
+    const weeklyReviewFilters = {
+      owner: "all",
+      product: "all",
+      week: "all",
       role: "all"
     };
     let reportHistoryOpen = false;
@@ -4574,7 +4787,7 @@
     }
 
     function canAccessView(id) {
-      if (canManageRoles()) return ["dashboard", "executive", "workflow", "incidents", "intake", "reports", "sourceProjects", "reportAnalysis", "workload", "users"].includes(id);
+      if (canManageRoles()) return ["dashboard", "executive", "workflow", "incidents", "intake", "reports", "sourceProjects", "reportAnalysis", "ownerFeedback", "actionItems", "weeklyReview", "workload", "users"].includes(id);
       if (isMasterAdmin()) return ["dashboard", "executive", "incidents", "intake", "reports"].includes(id);
       return ["dashboard", "executive", "incidents"].includes(id);
     }
@@ -4750,14 +4963,14 @@
       }).join("") : `<div class="empty"><strong>No source projects imported</strong>Open the SharePoint workbook, copy the table including headers, then paste and import it here.</div>`;
     }
 
-    function reportAnalysisRows() {
+    function analysisRowsForFilters(filters = analysisFilters) {
       return reports
         .filter(report =>
-          reportHasPerson(report.owner, analysisFilters.owner) &&
-          (analysisFilters.product === "all" || report.product === analysisFilters.product) &&
-          (analysisFilters.week === "all" || report.week === analysisFilters.week) &&
-          (analysisFilters.health === "all" || report.health === analysisFilters.health) &&
-          (analysisFilters.role === "all" || report.role === analysisFilters.role)
+          reportHasPerson(report.owner, filters.owner) &&
+          (filters.product === "all" || report.product === filters.product) &&
+          (filters.week === "all" || report.week === filters.week) &&
+          (!filters.health || filters.health === "all" || report.health === filters.health) &&
+          (!filters.role || filters.role === "all" || report.role === filters.role)
         )
         .map(report => ({ report, analysis: analyzeReportQuality(report) }))
         .sort((a, b) =>
@@ -4766,6 +4979,10 @@
           reportTitle(a.report).localeCompare(reportTitle(b.report))
         )
         .map((item, index) => ({ ...item, rank: index + 1 }));
+    }
+
+    function reportAnalysisRows() {
+      return analysisRowsForFilters(analysisFilters);
     }
 
     function analyzeReportQuality(report) {
@@ -4844,9 +5061,11 @@
         (report.health === "red" ? 3 : report.health === "amber" ? 1 : 0) +
         (report.priority === "Critical" ? 3 : report.priority === "High" ? 1 : 0) +
         (scheduleStatus?.category === "majorDelay" ? 3 : scheduleStatus?.category === "minorDelay" ? 1 : 0);
-      const tone = score >= 8 ? "red" : score >= 4 ? "amber" : "green";
-      const label = score >= 8 ? "Needs action" : score >= 4 ? "Needs refinement" : "Clear";
-      const priorityLabel = score >= 8 ? "High priority" : score >= 4 ? "Medium priority" : "Low priority";
+      const hasEscalationSignal = report.priority === "Critical" || report.health === "red" || scheduleStatus?.category === "majorDelay";
+      const hasActionSignal = cleanText(report.blocker) || !next || scheduleStatus?.category === "minorDelay";
+      const tone = hasEscalationSignal || score >= 10 ? "red" : hasActionSignal || score >= 6 ? "amber" : gaps.length ? "amber" : "green";
+      const label = hasEscalationSignal || score >= 10 ? "Escalate" : hasActionSignal || score >= 6 ? "Needs action" : gaps.length ? "Needs details" : "Clear";
+      const priorityLabel = label === "Escalate" ? "High priority" : label === "Needs action" ? "Medium priority" : label === "Needs details" ? "Needs details" : "Low priority";
 
       return { gaps, suggestions, fastTrack, lessons, score, tone, label, priorityLabel, scheduleStatus };
     }
@@ -4876,7 +5095,7 @@
       `).join("");
     }
 
-    function weeklyMetricsNarrative(items) {
+    function weeklyMetricsNarrative(items, filters = analysisFilters) {
       if (!items.length) {
         return {
           tone: "gray",
@@ -4905,7 +5124,7 @@
       const topLine = topItem ? ` Top review rank is #${topItem.rank}: ${reportTitle(topItem.report)} (${topItem.analysis.priorityLabel}).` : "";
       const tone = needsAction || critical || dateCounts.majorDelay ? "red" : needsRefinement || dateCounts.minorDelay || blockers ? "amber" : "green";
       const headline = `${total} report${total === 1 ? "" : "s"} reviewed across ${products} product${products === 1 ? "" : "s"} and ${owners} owner${owners === 1 ? "" : "s"}.`;
-      const period = analysisFilters.week === "all" ? "all reporting weeks in the current filters" : `reporting week ${reportingWeekGroupLabel(analysisFilters.week)}`;
+      const period = filters.week === "all" ? "all reporting weeks in the current filters" : `reporting week ${reportingWeekGroupLabel(filters.week)}`;
       const body = `For ${period}, average progress is ${avgProgress}%. ${healthCounts.green || 0} on track, ${healthCounts.amber || 0} in progress, ${healthCounts.red || 0} at risk, and ${healthCounts.gray || 0} paused. ${needsAction} report${needsAction === 1 ? "" : "s"} need action, ${needsRefinement} need refinement, and ${clear} look clear.`;
       const riskLine = `${gaps} missing or unclear signal${gaps === 1 ? "" : "s"} found. Schedule signals show ${dateCounts.majorDelay} major delay${dateCounts.majorDelay === 1 ? "" : "s"}, ${dateCounts.minorDelay} minor delay${dateCounts.minorDelay === 1 ? "" : "s"}, and ${blockers} blocker/risk note${blockers === 1 ? "" : "s"}.${topLine}`;
       const focus = tone === "red"
@@ -4919,7 +5138,7 @@
     function renderWeeklyMetricsNarrative(items) {
       const target = document.getElementById("analysisNarrative");
       if (!target) return;
-      const narrative = weeklyMetricsNarrative(items);
+      const narrative = weeklyMetricsNarrative(items, analysisFilters);
       target.innerHTML = `
         <div class="report-card">
           <div class="panel-title">
@@ -5143,6 +5362,316 @@
       list.innerHTML = activeItems.length
         ? renderAnalysisList(activeItems)
         : `<div class="empty"><strong>No reports to analyze</strong>Adjust filters or add status reports to populate this view.</div>`;
+    }
+
+    function copyTextToClipboard(text) {
+      if (navigator.clipboard?.writeText) {
+        return navigator.clipboard.writeText(text);
+      }
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand("copy");
+      }
+      finally {
+        document.body.removeChild(textarea);
+      }
+      return Promise.resolve();
+    }
+
+    function ownerEmailForName(owner) {
+      const ownerKey = normalizePersonKey(owner);
+      const match = loadUsers().find(user =>
+        normalizePersonKey(user.name) === ownerKey ||
+        normalizePersonKey(user.username) === ownerKey ||
+        normalizePersonKey((user.username || "").split("@")[0]) === ownerKey
+      );
+      return match?.username && match.username.includes("@") ? match.username : "";
+    }
+
+    function ownerFeedbackText(row) {
+      return [
+        `Hi ${row.owner},`,
+        "",
+        `Weekly feedback summary: ${row.headline}.`,
+        `Reports reviewed: ${row.total}. Average progress: ${row.avgProgress}%. Items needing action: ${row.needsAction}. Delayed items: ${row.delayed}.`,
+        "",
+        `Main feedback: ${row.commonGaps.join(" ") || "Your reports are mostly clear and decision-ready."}`,
+        `Recommended improvement: ${row.recommendation}`,
+        `Next focus: ${row.nextFocus}`,
+        `Lesson learned: ${row.commonLessons[0] || "Clear context plus a measurable next action makes updates easier to act on."}`,
+        "",
+        "Please update the next reporting cycle with clear blockers, owners, and next actions where needed."
+      ].join("\n");
+    }
+
+    function renderOwnerFeedbackPage() {
+      const cards = document.getElementById("ownerFeedbackCards");
+      const list = document.getElementById("ownerFeedbackList");
+      const summary = document.getElementById("ownerFeedbackSummary");
+      if (!cards || !list || !summary) return;
+      fillSelect("ownerFeedbackOwnerFilter", uniqueOwners(), "All owners", ownerFeedbackFilters.owner);
+      fillSelect("ownerFeedbackProductFilter", reports.map(report => report.product), "All projects", ownerFeedbackFilters.product);
+      fillSelect("ownerFeedbackWeekFilter", reports.map(report => report.week), "All dates", ownerFeedbackFilters.week);
+      const roleSelect = document.getElementById("ownerFeedbackRoleFilter");
+      if (roleSelect) roleSelect.value = ownerFeedbackFilters.role;
+      const items = analysisRowsForFilters(ownerFeedbackFilters);
+      const rows = ownerFeedbackRows(items);
+      const needsAction = rows.filter(row => row.needsAction > 0).length;
+      const delayed = rows.reduce((sum, row) => sum + row.delayed, 0);
+      const avgProgress = rows.length ? Math.round(rows.reduce((sum, row) => sum + row.avgProgress, 0) / rows.length) : 0;
+      cards.innerHTML = [
+        ["Owners reviewed", rows.length, "blue", `${items.length} report${items.length === 1 ? "" : "s"}`],
+        ["Need coaching", needsAction, needsAction ? "red" : "green", "Owners with action items"],
+        ["Delayed items", delayed, delayed ? "amber" : "green", "Schedule follow-ups"],
+        ["Avg progress", `${avgProgress}%`, "blue", "Across filtered owners"]
+      ].map(([label, value, tone, note]) => `
+        <div class="panel metric">
+          <span class="chip ${tone}">${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
+          <span class="muted small">${escapeHtml(note)}</span>
+        </div>
+      `).join("");
+      summary.textContent = rows.length
+        ? `${rows.length} owner${rows.length === 1 ? "" : "s"} reviewed. ${needsAction} need focused follow-up.`
+        : "No owner feedback matches the current filters.";
+      list.innerHTML = rows.length ? rows.map(row => {
+        const email = ownerEmailForName(row.owner);
+        const feedback = ownerFeedbackText(row);
+        const mailto = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent("Weekly status feedback")}&body=${encodeURIComponent(feedback)}`;
+        return `
+          <div class="report-card">
+            <div class="panel-title">
+              <div>
+                <span class="chip ${row.tone}">${escapeHtml(row.headline)}</span>
+                <h3>${escapeHtml(row.owner)}</h3>
+                <p class="muted small">${row.total} report${row.total === 1 ? "" : "s"} - Avg progress ${row.avgProgress}% - ${row.needsAction} action item${row.needsAction === 1 ? "" : "s"} - ${row.delayed} delayed</p>
+              </div>
+              <div class="report-actions">
+                <button class="btn soft" type="button" data-copy-owner-feedback="${escapeHtml(row.owner)}">Copy feedback</button>
+                <a class="btn" href="${mailto}">Email draft</a>
+              </div>
+            </div>
+            <div class="report-card-detail">
+              <div><strong>Main feedback</strong><p class="muted small">${escapeHtml(row.commonGaps.join(" ") || "Reporting structure is clear. Keep the same cadence.")}</p></div>
+              <div><strong>Recommended improvement</strong><p class="muted small">${escapeHtml(row.recommendation)}</p></div>
+              <div><strong>Next focus</strong><p class="muted small">${escapeHtml(row.nextFocus)}</p></div>
+              <div><strong>Lesson learned</strong><p class="muted small">${escapeHtml(row.commonLessons[0] || "Clear context plus a measurable next action makes updates easier to act on.")}</p></div>
+            </div>
+          </div>
+        `;
+      }).join("") : `<div class="empty"><strong>No owner feedback yet</strong>Adjust filters or add status reports to generate owner feedback.</div>`;
+    }
+
+    function actionItemsFromAnalysis(items) {
+      const actions = [];
+      items.forEach(item => {
+        const { report, analysis, rank } = item;
+        const base = {
+          report,
+          analysis,
+          rank,
+          owner: normalizePersonDisplay(report.owner || "Unassigned") || "Unassigned",
+          product: report.product || "No product",
+          title: reportTitle(report)
+        };
+        const scheduleStatus = analysis.scheduleStatus;
+        if (analysis.label === "Escalate") {
+          actions.push({
+            ...base,
+            type: "escalate",
+            label: "Escalate",
+            tone: "red",
+            reason: "Critical priority, at-risk health, or major delay signal.",
+            recommendation: "Confirm the decision owner, recovery path, and next checkpoint within 24-48 hours."
+          });
+        }
+        if (cleanText(report.blocker)) {
+          actions.push({
+            ...base,
+            type: "blocker",
+            label: "Resolve blocker",
+            tone: report.priority === "Critical" || report.health === "red" ? "red" : "amber",
+            reason: cleanText(report.blocker),
+            recommendation: "Turn this blocker into a named action with a decision owner and target date."
+          });
+        }
+        if (!cleanText(report.next)) {
+          actions.push({
+            ...base,
+            type: "nextAction",
+            label: "Add next action",
+            tone: "amber",
+            reason: "Next action is missing.",
+            recommendation: "Add the next delivery, design review, or decision step with owner and expected outcome."
+          });
+        }
+        if (scheduleStatus?.category === "minorDelay" || scheduleStatus?.category === "majorDelay") {
+          actions.push({
+            ...base,
+            type: "schedule",
+            label: "Recover schedule",
+            tone: scheduleStatus.category === "majorDelay" ? "red" : "amber",
+            reason: `Schedule classified as ${scheduleStatus.label}.`,
+            recommendation: "Confirm whether to adjust scope, add support, or reset the delivery date."
+          });
+        }
+        if (analysis.label === "Needs details") {
+          actions.push({
+            ...base,
+            type: "quality",
+            label: "Improve report",
+            tone: "amber",
+            reason: analysis.gaps[0] || "Report needs clearer signals.",
+            recommendation: analysis.suggestions[0] || "Add clearer context, blocker, or next action."
+          });
+        }
+      });
+      return actions.sort((a, b) => {
+        const toneRank = { red: 3, amber: 2, green: 1, gray: 0 };
+        return (toneRank[b.tone] || 0) - (toneRank[a.tone] || 0) || a.rank - b.rank || a.owner.localeCompare(b.owner);
+      });
+    }
+
+    function renderActionItems() {
+      const cards = document.getElementById("actionItemCards");
+      const list = document.getElementById("actionItemList");
+      const summary = document.getElementById("actionItemSummary");
+      if (!cards || !list || !summary) return;
+      fillSelect("actionItemOwnerFilter", uniqueOwners(), "All owners", actionItemFilters.owner);
+      fillSelect("actionItemProductFilter", reports.map(report => report.product), "All projects", actionItemFilters.product);
+      fillSelect("actionItemWeekFilter", reports.map(report => report.week), "All dates", actionItemFilters.week);
+      const typeSelect = document.getElementById("actionItemTypeFilter");
+      if (typeSelect) typeSelect.value = actionItemFilters.type;
+      const items = analysisRowsForFilters(actionItemFilters);
+      const allActions = actionItemsFromAnalysis(items);
+      const actions = actionItemFilters.type === "all" ? allActions : allActions.filter(action => action.type === actionItemFilters.type);
+      const escalations = actions.filter(action => action.type === "escalate").length;
+      const blockers = actions.filter(action => action.type === "blocker").length;
+      const missingNext = actions.filter(action => action.type === "nextAction").length;
+      const schedule = actions.filter(action => action.type === "schedule").length;
+      cards.innerHTML = [
+        ["Action queue", actions.length, actions.length ? "amber" : "green", "Filtered items"],
+        ["Escalations", escalations, escalations ? "red" : "green", "Leadership attention"],
+        ["Blockers", blockers, blockers ? "red" : "green", "Need resolution"],
+        ["Missing next action", missingNext, missingNext ? "amber" : "green", "Need update"],
+        ["Schedule recovery", schedule, schedule ? "amber" : "green", "Delay follow-up"]
+      ].map(([label, value, tone, note]) => `
+        <div class="panel metric">
+          <span class="chip ${tone}">${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
+          <span class="muted small">${escapeHtml(note)}</span>
+        </div>
+      `).join("");
+      summary.textContent = actions.length
+        ? `${actions.length} action item${actions.length === 1 ? "" : "s"} generated from ${items.length} report${items.length === 1 ? "" : "s"}.`
+        : "No action items match the current filters.";
+      list.innerHTML = actions.length ? actions.map(action => `
+        <div class="report-card">
+          <div class="panel-title">
+            <div>
+              <span class="chip ${action.tone}">${escapeHtml(action.label)}</span>
+              <h3>${escapeHtml(action.title)}</h3>
+              <p class="muted small">${escapeHtml(action.owner)} - ${escapeHtml(action.product)} - Rank #${escapeHtml(action.rank)}</p>
+            </div>
+          </div>
+          <div class="report-card-detail">
+            <div><strong>Why it matters</strong><p class="muted small">${escapeHtml(action.reason)}</p></div>
+            <div><strong>Recommended action</strong><p class="muted small">${escapeHtml(action.recommendation)}</p></div>
+            <div><strong>Current next action</strong><p class="muted small">${escapeHtml(cleanText(action.report.next) || "No next action captured.")}</p></div>
+            <div><strong>End date</strong><p class="muted small">${action.report.end_date ? endDateMarkup(action.report) : "No end date captured."}</p></div>
+          </div>
+        </div>
+      `).join("") : `<div class="empty"><strong>No action items</strong>No blockers, missing next actions, escalations, or schedule recovery items match the current filters.</div>`;
+    }
+
+    function weeklyReviewText(items) {
+      const narrative = weeklyMetricsNarrative(items, weeklyReviewFilters);
+      const actions = actionItemsFromAnalysis(items).slice(0, 8);
+      const feedbackRows = ownerFeedbackRows(items).slice(0, 6);
+      const lessons = topRepeatedText(items.flatMap(item => item.analysis.lessons), 5);
+      const lines = [
+        "Omena Consulting Weekly Review",
+        "",
+        narrative.headline,
+        narrative.body,
+        `Leadership focus: ${narrative.focus}`,
+        "",
+        "Top action items:"
+      ];
+      if (actions.length) {
+        actions.forEach((action, index) => {
+          lines.push(`${index + 1}. [${action.label}] ${action.title} - ${action.owner}: ${action.recommendation}`);
+        });
+      } else {
+        lines.push("No urgent action items found for the selected filters.");
+      }
+      lines.push("", "Owner feedback highlights:");
+      if (feedbackRows.length) {
+        feedbackRows.forEach(row => {
+          lines.push(`- ${row.owner}: ${row.headline}. ${row.recommendation}`);
+        });
+      } else {
+        lines.push("- No owner feedback available for the selected filters.");
+      }
+      lines.push("", "Lessons learned:");
+      if (lessons.length) {
+        lessons.forEach(lesson => lines.push(`- ${lesson}`));
+      } else {
+        lines.push("- Keep reports specific: context, blocker, next action, owner, and date.");
+      }
+      return lines.join("\n");
+    }
+
+    function renderWeeklyReview() {
+      const cards = document.getElementById("weeklyReviewCards");
+      const text = document.getElementById("weeklyReviewText");
+      const list = document.getElementById("weeklyReviewActions");
+      const summary = document.getElementById("weeklyReviewSummary");
+      if (!cards || !text || !list || !summary) return;
+      fillSelect("weeklyReviewOwnerFilter", uniqueOwners(), "All owners", weeklyReviewFilters.owner);
+      fillSelect("weeklyReviewProductFilter", reports.map(report => report.product), "All projects", weeklyReviewFilters.product);
+      fillSelect("weeklyReviewWeekFilter", reports.map(report => report.week), "All dates", weeklyReviewFilters.week);
+      const roleSelect = document.getElementById("weeklyReviewRoleFilter");
+      if (roleSelect) roleSelect.value = weeklyReviewFilters.role;
+      const items = analysisRowsForFilters(weeklyReviewFilters);
+      const narrative = weeklyMetricsNarrative(items, weeklyReviewFilters);
+      const actions = actionItemsFromAnalysis(items);
+      const feedbackRows = ownerFeedbackRows(items);
+      const review = weeklyReviewText(items);
+      text.value = review;
+      cards.innerHTML = [
+        ["Reports reviewed", items.length, "blue", "Current filters"],
+        ["Action items", actions.length, actions.length ? "amber" : "green", "Generated queue"],
+        ["Owners", feedbackRows.length, "blue", "Feedback recipients"],
+        ["Narrative tone", narrative.tone === "red" ? "Risk" : narrative.tone === "amber" ? "Watch" : "Stable", narrative.tone, "Weekly signal"]
+      ].map(([label, value, tone, note]) => `
+        <div class="panel metric">
+          <span class="chip ${tone}">${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
+          <span class="muted small">${escapeHtml(note)}</span>
+        </div>
+      `).join("");
+      summary.textContent = items.length
+        ? `${items.length} report${items.length === 1 ? "" : "s"}, ${actions.length} action item${actions.length === 1 ? "" : "s"}, ${feedbackRows.length} owner feedback summary${feedbackRows.length === 1 ? "" : "ies"}.`
+        : "No weekly review data matches the current filters.";
+      list.innerHTML = actions.length ? actions.slice(0, 8).map(action => `
+        <div class="report-card">
+          <div class="panel-title">
+            <div>
+              <span class="chip ${action.tone}">${escapeHtml(action.label)}</span>
+              <h3>${escapeHtml(action.title)}</h3>
+              <p class="muted small">${escapeHtml(action.owner)} - ${escapeHtml(action.product)}</p>
+            </div>
+          </div>
+          <p class="muted small"><strong>Action:</strong> ${escapeHtml(action.recommendation)}</p>
+        </div>
+      `).join("") : `<div class="empty"><strong>No urgent actions</strong>The selected reports do not generate urgent action items.</div>`;
     }
 
     function workBalanceStats() {
@@ -7210,6 +7739,15 @@
       if (id === "analysisOwnerFilter") analysisFilters.owner = nextValue;
       if (id === "analysisProductFilter") analysisFilters.product = nextValue;
       if (id === "analysisWeekFilter") analysisFilters.week = nextValue;
+      if (id === "ownerFeedbackOwnerFilter") ownerFeedbackFilters.owner = nextValue;
+      if (id === "ownerFeedbackProductFilter") ownerFeedbackFilters.product = nextValue;
+      if (id === "ownerFeedbackWeekFilter") ownerFeedbackFilters.week = nextValue;
+      if (id === "actionItemOwnerFilter") actionItemFilters.owner = nextValue;
+      if (id === "actionItemProductFilter") actionItemFilters.product = nextValue;
+      if (id === "actionItemWeekFilter") actionItemFilters.week = nextValue;
+      if (id === "weeklyReviewOwnerFilter") weeklyReviewFilters.owner = nextValue;
+      if (id === "weeklyReviewProductFilter") weeklyReviewFilters.product = nextValue;
+      if (id === "weeklyReviewWeekFilter") weeklyReviewFilters.week = nextValue;
       return nextValue;
     }
 
@@ -7566,6 +8104,9 @@
       renderIncidentReport();
       renderSourceProjects();
       renderReportAnalysis();
+      renderOwnerFeedbackPage();
+      renderActionItems();
+      renderWeeklyReview();
       renderWorkBalance();
       renderWorkflowGuide();
     }
@@ -8274,6 +8815,113 @@
     document.getElementById("exportAnalysisCsvBtn").addEventListener("click", exportAnalysisCsv);
     document.getElementById("exportAnalysisExcelBtn").addEventListener("click", exportAnalysisExcel);
     document.getElementById("exportAnalysisPdfBtn").addEventListener("click", exportAnalysisPdf);
+
+    document.getElementById("ownerFeedbackOwnerFilter").addEventListener("change", event => {
+      ownerFeedbackFilters.owner = event.target.value;
+      logFilterChange("owner_feedback", "owner", event.target.value);
+      renderOwnerFeedbackPage();
+    });
+
+    document.getElementById("ownerFeedbackProductFilter").addEventListener("change", event => {
+      ownerFeedbackFilters.product = event.target.value;
+      logFilterChange("owner_feedback", "project", event.target.value);
+      renderOwnerFeedbackPage();
+    });
+
+    document.getElementById("ownerFeedbackWeekFilter").addEventListener("change", event => {
+      ownerFeedbackFilters.week = event.target.value;
+      logFilterChange("owner_feedback", "date", event.target.value);
+      renderOwnerFeedbackPage();
+    });
+
+    document.getElementById("ownerFeedbackRoleFilter").addEventListener("change", event => {
+      ownerFeedbackFilters.role = event.target.value;
+      logFilterChange("owner_feedback", "role", event.target.value);
+      renderOwnerFeedbackPage();
+    });
+
+    document.getElementById("ownerFeedbackList").addEventListener("click", event => {
+      const button = event.target.closest("[data-copy-owner-feedback]");
+      if (!button) return;
+      const owner = button.dataset.copyOwnerFeedback || "";
+      const row = ownerFeedbackRows(analysisRowsForFilters(ownerFeedbackFilters)).find(candidate => candidate.owner === owner);
+      if (!row) return;
+      copyTextToClipboard(ownerFeedbackText(row)).then(() => {
+        button.textContent = "Copied";
+        setTimeout(() => { button.textContent = "Copy feedback"; }, 1600);
+      });
+      logUserAction("owner_feedback_copied", { owner }, { target_type: "owner_feedback", target_id: owner });
+    });
+
+    document.getElementById("actionItemOwnerFilter").addEventListener("change", event => {
+      actionItemFilters.owner = event.target.value;
+      logFilterChange("action_items", "owner", event.target.value);
+      renderActionItems();
+    });
+
+    document.getElementById("actionItemProductFilter").addEventListener("change", event => {
+      actionItemFilters.product = event.target.value;
+      logFilterChange("action_items", "project", event.target.value);
+      renderActionItems();
+    });
+
+    document.getElementById("actionItemWeekFilter").addEventListener("change", event => {
+      actionItemFilters.week = event.target.value;
+      logFilterChange("action_items", "date", event.target.value);
+      renderActionItems();
+    });
+
+    document.getElementById("actionItemTypeFilter").addEventListener("change", event => {
+      actionItemFilters.type = event.target.value;
+      logFilterChange("action_items", "type", event.target.value);
+      renderActionItems();
+    });
+
+    document.getElementById("weeklyReviewOwnerFilter").addEventListener("change", event => {
+      weeklyReviewFilters.owner = event.target.value;
+      logFilterChange("weekly_review", "owner", event.target.value);
+      renderWeeklyReview();
+    });
+
+    document.getElementById("weeklyReviewProductFilter").addEventListener("change", event => {
+      weeklyReviewFilters.product = event.target.value;
+      logFilterChange("weekly_review", "project", event.target.value);
+      renderWeeklyReview();
+    });
+
+    document.getElementById("weeklyReviewWeekFilter").addEventListener("change", event => {
+      weeklyReviewFilters.week = event.target.value;
+      logFilterChange("weekly_review", "date", event.target.value);
+      renderWeeklyReview();
+    });
+
+    document.getElementById("weeklyReviewRoleFilter").addEventListener("change", event => {
+      weeklyReviewFilters.role = event.target.value;
+      logFilterChange("weekly_review", "role", event.target.value);
+      renderWeeklyReview();
+    });
+
+    document.getElementById("generateWeeklyReviewBtn").addEventListener("click", () => {
+      renderWeeklyReview();
+      logUserAction("weekly_review_generated", { filters: { ...weeklyReviewFilters } }, { target_type: "weekly_review", target_id: "generated" });
+      document.getElementById("weeklyReviewText")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+
+    document.getElementById("copyWeeklyReviewBtn").addEventListener("click", event => {
+      const text = document.getElementById("weeklyReviewText")?.value || weeklyReviewText(analysisRowsForFilters(weeklyReviewFilters));
+      copyTextToClipboard(text).then(() => {
+        event.currentTarget.textContent = "Copied";
+        setTimeout(() => { event.currentTarget.textContent = "Copy review"; }, 1600);
+      });
+      logUserAction("weekly_review_copied", { filters: { ...weeklyReviewFilters } }, { target_type: "weekly_review", target_id: "copy" });
+    });
+
+    document.getElementById("emailWeeklyReviewBtn").addEventListener("click", () => {
+      const text = document.getElementById("weeklyReviewText")?.value || weeklyReviewText(analysisRowsForFilters(weeklyReviewFilters));
+      const subject = `Omena Consulting weekly review - ${weeklyReviewFilters.week === "all" ? "all dates" : reportingFieldLabel(weeklyReviewFilters.week)}`;
+      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+      logUserAction("weekly_review_email_draft_opened", { filters: { ...weeklyReviewFilters } }, { target_type: "weekly_review", target_id: "email_draft" });
+    });
 
     document.getElementById("incidentMetrics").addEventListener("click", event => {
       const card = event.target.closest("[data-incident-metric]");
