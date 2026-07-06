@@ -5,12 +5,15 @@ const corsHeaders = {
 };
 
 type InvitePayload = {
+  mode?: "invite" | "feedback";
   to?: string;
   displayName?: string;
   username?: string;
   password?: string;
   role?: string;
   loginUrl?: string;
+  subject?: string;
+  message?: string;
 };
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
@@ -75,6 +78,16 @@ function htmlEmail(payload: Required<InvitePayload>) {
   `;
 }
 
+function htmlFeedbackEmail(displayName: string, message: string) {
+  return `
+    <div style="font-family:Arial,sans-serif;line-height:1.5;color:#17212b">
+      <h2>Omena Consulting weekly feedback</h2>
+      <p>Hello ${escapeHtml(displayName)},</p>
+      <div style="white-space:pre-wrap">${escapeHtml(message)}</div>
+    </div>
+  `;
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -90,13 +103,60 @@ Deno.serve(async (request) => {
     const fromName = Deno.env.get("SENDGRID_FROM_NAME") || "Omena Consulting";
     const payload = await request.json() as InvitePayload;
 
+    if (payload.mode === "feedback") {
+      const to = payload.to || payload.username || "";
+      const displayName = payload.displayName || payload.username || "User";
+      const subject = payload.subject || "Omena Consulting weekly status feedback";
+      const message = payload.message || "";
+
+      if (!to || !message) {
+        return jsonResponse({ error: "Missing required feedback fields" }, 400);
+      }
+
+      const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${sendgridApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          personalizations: [
+            {
+              to: [{ email: to, name: displayName }],
+              subject,
+            },
+          ],
+          from: { email: fromEmail, name: fromName },
+          content: [
+            { type: "text/plain", value: message },
+            { type: "text/html", value: htmlFeedbackEmail(displayName, message) },
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        const detail = await response.text();
+        return jsonResponse({ error: "SendGrid rejected the email request", detail }, response.status);
+      }
+
+      return jsonResponse({
+        ok: true,
+        to,
+        status: response.status,
+        sent_at: new Date().toISOString(),
+      });
+    }
+
     const requiredPayload: Required<InvitePayload> = {
+      mode: payload.mode || "invite",
       to: payload.to || payload.username || "",
       displayName: payload.displayName || payload.username || "User",
       username: payload.username || payload.to || "",
       password: payload.password || "",
       role: payload.role || "Admin",
       loginUrl: payload.loginUrl || "",
+      subject: payload.subject || "",
+      message: payload.message || "",
     };
 
     if (!requiredPayload.to || !requiredPayload.username || !requiredPayload.password || !requiredPayload.loginUrl) {

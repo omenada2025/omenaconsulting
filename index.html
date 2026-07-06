@@ -2276,6 +2276,7 @@
             </select>
           </label>
         </div>
+        <div class="inline-message success" id="ownerFeedbackMessage" hidden></div>
 
         <div class="grid summary-grid" id="ownerFeedbackCards"></div>
 
@@ -5410,6 +5411,69 @@
       ].join("\n");
     }
 
+    function showOwnerFeedbackMessage(message, tone = "success") {
+      const target = document.getElementById("ownerFeedbackMessage");
+      if (!target) return;
+      target.className = `inline-message ${tone}`;
+      target.textContent = message;
+      target.hidden = false;
+    }
+
+    function openOwnerFeedbackEmailDraft(row) {
+      const email = ownerEmailForName(row.owner);
+      const feedback = ownerFeedbackText(row);
+      window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent("Omena Consulting weekly status feedback")}&body=${encodeURIComponent(feedback)}`;
+    }
+
+    async function sendOwnerFeedbackEmail(row) {
+      const email = ownerEmailForName(row.owner);
+      if (!email) {
+        showOwnerFeedbackMessage(`No email found for ${row.owner}. Opened an email draft instead.`, "danger");
+        openOwnerFeedbackEmailDraft(row);
+        return;
+      }
+      const endpoint = credentialEmailEndpoint();
+      if (!endpoint) {
+        showOwnerFeedbackMessage("Email function is not configured. Opened an email draft instead.", "danger");
+        openOwnerFeedbackEmailDraft(row);
+        return;
+      }
+
+      showOwnerFeedbackMessage(`Sending feedback to ${row.owner} at ${email}...`);
+      try {
+        const emailKey = config.emailFunctionAnonKey || config.anonKey;
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: emailKey,
+            Authorization: `Bearer ${emailKey}`
+          },
+          body: JSON.stringify({
+            mode: "feedback",
+            to: email,
+            displayName: row.owner,
+            subject: "Omena Consulting weekly status feedback",
+            message: ownerFeedbackText(row)
+          })
+        });
+
+        if (!response.ok) {
+          const detail = await response.text();
+          throw new Error(detail || `HTTP ${response.status}`);
+        }
+
+        const result = await response.json().catch(() => ({}));
+        showOwnerFeedbackMessage(`Feedback email accepted by SendGrid for ${row.owner}${result.sent_at ? ` at ${formatDateTime(result.sent_at)}` : ""}.`);
+        logUserAction("owner_feedback_email_sent", { owner: row.owner, email }, { target_type: "owner_feedback", target_id: row.owner });
+      } catch (error) {
+        console.warn("Owner feedback email failed; opening fallback draft.", error);
+        const detail = error instanceof Error ? error.message : "Unknown error";
+        showOwnerFeedbackMessage(`Automatic feedback email failed: ${detail} Opened an email draft instead.`, "danger");
+        openOwnerFeedbackEmailDraft(row);
+      }
+    }
+
     function renderOwnerFeedbackPage() {
       const cards = document.getElementById("ownerFeedbackCards");
       const list = document.getElementById("ownerFeedbackList");
@@ -5453,6 +5517,7 @@
                 <p class="muted small">${row.total} report${row.total === 1 ? "" : "s"} - Avg progress ${row.avgProgress}% - ${row.needsAction} action item${row.needsAction === 1 ? "" : "s"} - ${row.delayed} delayed</p>
               </div>
               <div class="report-actions">
+                <button class="btn primary" type="button" data-send-owner-feedback="${escapeHtml(row.owner)}" ${email ? "" : "title=\"No email found for this owner\""}>Send feedback</button>
                 <button class="btn soft" type="button" data-copy-owner-feedback="${escapeHtml(row.owner)}">Copy feedback</button>
                 <a class="btn" href="${mailto}">Email draft</a>
               </div>
@@ -8841,6 +8906,20 @@
     });
 
     document.getElementById("ownerFeedbackList").addEventListener("click", event => {
+      const sendButton = event.target.closest("[data-send-owner-feedback]");
+      if (sendButton) {
+        const owner = sendButton.dataset.sendOwnerFeedback || "";
+        const row = ownerFeedbackRows(analysisRowsForFilters(ownerFeedbackFilters)).find(candidate => candidate.owner === owner);
+        if (!row) return;
+        sendButton.textContent = "Sending...";
+        sendButton.disabled = true;
+        sendOwnerFeedbackEmail(row).finally(() => {
+          sendButton.textContent = "Send feedback";
+          sendButton.disabled = false;
+        });
+        return;
+      }
+
       const button = event.target.closest("[data-copy-owner-feedback]");
       if (!button) return;
       const owner = button.dataset.copyOwnerFeedback || "";
