@@ -2202,6 +2202,7 @@
               <p class="muted small">Feedback by owner based on the current filters. Use the Owner filter to focus on one person.</p>
             </div>
           </div>
+          <div class="inline-message success" id="analysisOwnerFeedbackMessage" hidden></div>
           <div class="report-list" id="analysisOwnerFeedback"></div>
         </div>
 
@@ -5244,6 +5245,11 @@
               <h3>${escapeHtml(row.owner)}</h3>
               <p class="muted small">${row.total} report${row.total === 1 ? "" : "s"} - Avg progress ${row.avgProgress}% - ${row.needsAction} need action - ${row.delayed} delayed</p>
             </div>
+            <div class="report-actions">
+              <button class="btn primary" type="button" data-send-owner-feedback="${escapeHtml(row.owner)}">Send feedback</button>
+              <button class="btn soft" type="button" data-copy-owner-feedback="${escapeHtml(row.owner)}">Copy feedback</button>
+              <a class="btn" href="mailto:${encodeURIComponent(ownerEmailForName(row.owner))}?subject=${encodeURIComponent("Omena Consulting weekly status feedback")}&body=${encodeURIComponent(ownerFeedbackText(row))}">Email draft</a>
+            </div>
           </div>
           <div class="report-card-detail">
             <div><strong>Main feedback</strong><p class="muted small">${escapeHtml(row.commonGaps.join(" ") || "Reporting structure is clear. Keep the same cadence.")}</p></div>
@@ -5412,11 +5418,13 @@
     }
 
     function showOwnerFeedbackMessage(message, tone = "success") {
-      const target = document.getElementById("ownerFeedbackMessage");
-      if (!target) return;
-      target.className = `inline-message ${tone}`;
-      target.textContent = message;
-      target.hidden = false;
+      ["ownerFeedbackMessage", "analysisOwnerFeedbackMessage"].forEach(id => {
+        const target = document.getElementById(id);
+        if (!target) return;
+        target.className = `inline-message ${tone}`;
+        target.textContent = message;
+        target.hidden = false;
+      });
     }
 
     function openOwnerFeedbackEmailDraft(row) {
@@ -5737,6 +5745,37 @@
           <p class="muted small"><strong>Action:</strong> ${escapeHtml(action.recommendation)}</p>
         </div>
       `).join("") : `<div class="empty"><strong>No urgent actions</strong>The selected reports do not generate urgent action items.</div>`;
+    }
+
+    function handleOwnerFeedbackClick(event, filters = ownerFeedbackFilters) {
+      const sendButton = event.target.closest("[data-send-owner-feedback]");
+      if (sendButton) {
+        const owner = sendButton.dataset.sendOwnerFeedback || "";
+        const row = ownerFeedbackRows(analysisRowsForFilters(filters)).find(candidate => candidate.owner === owner);
+        if (!row) return true;
+        sendButton.textContent = "Sending...";
+        sendButton.disabled = true;
+        sendOwnerFeedbackEmail(row).finally(() => {
+          sendButton.textContent = "Send feedback";
+          sendButton.disabled = false;
+        });
+        return true;
+      }
+
+      const copyButton = event.target.closest("[data-copy-owner-feedback]");
+      if (copyButton) {
+        const owner = copyButton.dataset.copyOwnerFeedback || "";
+        const row = ownerFeedbackRows(analysisRowsForFilters(filters)).find(candidate => candidate.owner === owner);
+        if (!row) return true;
+        copyTextToClipboard(ownerFeedbackText(row)).then(() => {
+          copyButton.textContent = "Copied";
+          setTimeout(() => { copyButton.textContent = "Copy feedback"; }, 1600);
+        });
+        logUserAction("owner_feedback_copied", { owner }, { target_type: "owner_feedback", target_id: owner });
+        return true;
+      }
+
+      return false;
     }
 
     function workBalanceStats() {
@@ -8906,30 +8945,11 @@
     });
 
     document.getElementById("ownerFeedbackList").addEventListener("click", event => {
-      const sendButton = event.target.closest("[data-send-owner-feedback]");
-      if (sendButton) {
-        const owner = sendButton.dataset.sendOwnerFeedback || "";
-        const row = ownerFeedbackRows(analysisRowsForFilters(ownerFeedbackFilters)).find(candidate => candidate.owner === owner);
-        if (!row) return;
-        sendButton.textContent = "Sending...";
-        sendButton.disabled = true;
-        sendOwnerFeedbackEmail(row).finally(() => {
-          sendButton.textContent = "Send feedback";
-          sendButton.disabled = false;
-        });
-        return;
-      }
+      handleOwnerFeedbackClick(event, ownerFeedbackFilters);
+    });
 
-      const button = event.target.closest("[data-copy-owner-feedback]");
-      if (!button) return;
-      const owner = button.dataset.copyOwnerFeedback || "";
-      const row = ownerFeedbackRows(analysisRowsForFilters(ownerFeedbackFilters)).find(candidate => candidate.owner === owner);
-      if (!row) return;
-      copyTextToClipboard(ownerFeedbackText(row)).then(() => {
-        button.textContent = "Copied";
-        setTimeout(() => { button.textContent = "Copy feedback"; }, 1600);
-      });
-      logUserAction("owner_feedback_copied", { owner }, { target_type: "owner_feedback", target_id: owner });
+    document.getElementById("analysisOwnerFeedback").addEventListener("click", event => {
+      handleOwnerFeedbackClick(event, analysisFilters);
     });
 
     document.getElementById("actionItemOwnerFilter").addEventListener("change", event => {
