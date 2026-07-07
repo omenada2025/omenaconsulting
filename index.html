@@ -3699,8 +3699,34 @@
 
     function reportHasPerson(value = "", person = "all") {
       if (person === "all") return true;
-      const target = ownerKey(person);
-      return splitPeople(value).some(item => ownerKey(item) === target);
+      const targetKeys = new Set(personMatchKeys(person));
+      return splitPeople(value).some(item =>
+        personMatchKeys(item).some(key => targetKeys.has(key))
+      );
+    }
+
+    function expandPersonAliasKeys(values = []) {
+      const keys = new Set(values.map(ownerKey).filter(Boolean));
+      const aliasGroups = [
+        ["daniela", "daniela@zenatech.com"],
+        ["deepa", "deepa@zenatech.com"],
+        ["faran", "faran@zenatech.com"],
+        ["jojo", "jocasta", "jocasta@zenatech.com"],
+        ["krishna", "krishina", "krishna@zenatech.com", "krishina@zenatech.com"],
+        ["nadishani", "nadishni", "nadish", "nadishani@zenatech.com"],
+        ["reza", "reza boostani", "reza.boostani", "reza.boostani@zenatech.com"],
+        ["riya", "riya@zenatech.com"],
+        ["sajjad", "sajjad@zenatech.com"],
+        ["sam", "saurabh", "saurabh jogdeo", "saurabh.jogdeo", "saurabh.jogdeo@zenatech.com", "sam@zenatech.com"],
+        ["swati", "swatti", "swati gurbani", "swati.gurbani", "swati.gurbani@zenatech.com", "swatti@zenatech.com"]
+      ];
+      aliasGroups.forEach(group => {
+        const groupKeys = group.map(ownerKey).filter(Boolean);
+        if (groupKeys.some(key => keys.has(key))) {
+          groupKeys.forEach(key => keys.add(key));
+        }
+      });
+      return [...keys];
     }
 
     function personMatchKeys(value = "") {
@@ -3710,11 +3736,7 @@
       const localPart = lower.includes("@") ? lower.split("@")[0] : lower;
       const normalized = normalizeLoginIdentifier(lower);
       const keys = [cleaned, lower, localPart, normalized, canonicalUsername(lower), displayNameFromLogin(lower)];
-      if (normalized === "saurabh.jogdeo") keys.push("Sam", "Saurabh", "Saurabh Jogdeo");
-      if (normalized === "swati.gurbani") keys.push("Swati", "Swatti", "Swati Gurbani");
-      if (normalized === "krishna") keys.push("Krishna", "Krishina");
-      if (normalized === "jocasta") keys.push("Jojo", "Jocasta");
-      return [...new Set(keys.map(ownerKey).filter(Boolean))];
+      return expandPersonAliasKeys(keys);
     }
 
     function currentUserOwnerKeys() {
@@ -3727,7 +3749,9 @@
 
     function isCurrentUserReportOwner(report) {
       const userKeys = currentUserOwnerKeys();
-      return splitPeople(report?.owner || "").some(owner => userKeys.has(ownerKey(owner)));
+      return splitPeople(report?.owner || "").some(owner =>
+        personMatchKeys(owner).some(key => userKeys.has(key))
+      );
     }
 
     function canDeleteReport(report) {
@@ -4455,18 +4479,21 @@
         reports = reports.filter(r => r.id !== id);
         selectedReportId = reports[0]?.id || null;
         saveReports();
-        renderAll();
+        renderAllSafely("refresh after deleting local report");
         return;
       }
 
-      await supabaseRequest(`?id=eq.${encodeURIComponent(id)}`, {
+      const deletedRows = await supabaseRequest(`?id=eq.${encodeURIComponent(id)}&select=id`, {
         method: "DELETE",
-        prefer: "return=minimal"
+        prefer: "return=representation"
       });
+      if (Array.isArray(deletedRows) && deletedRows.length === 0) {
+        throw new Error("Supabase could not find this report to delete. Refresh the status list and try again.");
+      }
       removeFieldOverride(id);
       reports = reports.filter(r => r.id !== id);
       selectedReportId = reports[0]?.id || null;
-      renderAll();
+      renderAllSafely("refresh after deleting report");
       logUserAction("report_deleted", {
         week: deletedReport?.week || null,
         health: deletedReport?.health || null
