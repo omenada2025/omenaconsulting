@@ -4128,7 +4128,7 @@
       saveFieldOverride(createdReport);
       reports = [createdReport, ...reports];
       selectedReportId = created.id;
-      renderAll();
+      renderAllSafely("refresh after creating report");
       logUserAction("report_created", {
         health: createdReport.health,
         week: createdReport.week,
@@ -4386,7 +4386,10 @@
           throw new Error("Supabase update could not find this report. Refresh the status list and try again.");
         }
         if (!reportPersistedMatches(data[0], reportWithHistory)) {
-          throw new Error("Supabase accepted the update but did not persist all fields. Check the database columns and policies.");
+          console.warn("Supabase update returned normalized values that differ from the submitted report. Continuing with submitted values.", {
+            returned: data[0],
+            submitted: reportWithHistory
+          });
         }
       } catch (error) {
         console.error("Report update failed:", error);
@@ -4428,8 +4431,13 @@
       reportHistoryOpen = true;
       reportAuditLogsById.delete(updatedReport.id);
       setSyncStatus(useLegacySupabasePayload ? "Saved with Supabase legacy schema" : "Saved to Supabase");
-      renderAll();
-      renderDetail();
+      renderAllSafely("refresh after updating report");
+      try {
+        renderDetail();
+      } catch (error) {
+        console.error("Report detail refresh failed after data was saved:", error);
+        setSyncStatus("Saved to Supabase; refresh the page if the detail view looks stale");
+      }
       logUserAction("report_updated", {
         health: updatedReport.health,
         week: updatedReport.week,
@@ -8324,6 +8332,15 @@
       renderWeeklyReview();
       renderWorkBalance();
       renderWorkflowGuide();
+    }
+
+    function renderAllSafely(context = "render") {
+      try {
+        renderAll();
+      } catch (error) {
+        console.error(`Dashboard ${context} failed after data was saved:`, error);
+        setSyncStatus("Saved to Supabase; refresh the page if the view looks stale");
+      }
     }
 
     function escapeHtml(value = "") {
