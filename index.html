@@ -5448,12 +5448,26 @@
 
     function ownerEmailForName(owner) {
       const ownerKey = normalizePersonKey(owner);
-      const match = loadUsers().find(user =>
-        normalizePersonKey(user.name) === ownerKey ||
+      const activeUsers = normalizeUsers(loadUsers())
+        .filter(user => user.active !== false && user.deleted !== true && user.username?.includes("@"));
+      const match = activeUsers.find(user =>
+        normalizePersonKey(user.displayName) === ownerKey ||
         normalizePersonKey(user.username) === ownerKey ||
         normalizePersonKey((user.username || "").split("@")[0]) === ownerKey
       );
-      return match?.username && match.username.includes("@") ? match.username : "";
+      if (match?.username) return match.username;
+      const ownerEmailAliases = {
+        [normalizePersonKey("Sam")]: "saurabh.jogdeo@zenatech.com",
+        [normalizePersonKey("Saurabh")]: "saurabh.jogdeo@zenatech.com",
+        [normalizePersonKey("Saurabh Jogdeo")]: "saurabh.jogdeo@zenatech.com",
+        [normalizePersonKey("Swati")]: "swati.gurbani@zenatech.com",
+        [normalizePersonKey("Swatti")]: "swati.gurbani@zenatech.com",
+        [normalizePersonKey("Krishna")]: "krishna@zenatech.com",
+        [normalizePersonKey("Krishina")]: "krishna@zenatech.com",
+        [normalizePersonKey("Jojo")]: "jocasta@zenatech.com",
+        [normalizePersonKey("Jocasta")]: "jocasta@zenatech.com"
+      };
+      return ownerEmailAliases[ownerKey] || "";
     }
 
     function ownerFeedbackText(row) {
