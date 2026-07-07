@@ -3516,6 +3516,27 @@
       return error?.code === "PGRST204" || /column.+schema cache/i.test(error?.message || "");
     }
 
+    function isDuplicateReportError(error) {
+      return error?.code === "23505" || /duplicate key value/i.test(error?.message || "");
+    }
+
+    function reportSaveErrorMessage(error, action = "save") {
+      if (!error) return `Could not ${action} this report. Check Supabase configuration or connection.`;
+      if (isDuplicateReportError(error)) {
+        if (action === "update") {
+          return "Could not update this report because another report already has the same product, feature/workstream, owner, reporting week, and summary. Change one of those fields or edit the existing report.";
+        }
+        return "A report with the same product, feature/workstream, owner, reporting week, and summary already exists. I updated the existing report instead of creating a duplicate.";
+      }
+      if (error.message?.includes("Saturday or Sunday") || error.message?.includes("Select a product")) {
+        return error.message;
+      }
+      const detail = [error.message, error.details, error.hint].filter(Boolean).join(" ");
+      return detail
+        ? `Could not ${action} this report: ${detail}`
+        : `Could not ${action} this report. Check Supabase configuration or connection.`;
+    }
+
     async function supabaseWrite(path, options = {}) {
       try {
         return await supabaseRequest(path, {
@@ -4071,10 +4092,28 @@
       }
 
       let data;
-      data = await supabaseWrite("?select=*", {
-        method: "POST",
-        body: report
-      });
+      try {
+        data = await supabaseWrite("?select=*", {
+          method: "POST",
+          body: report
+        });
+      } catch (error) {
+        if (!isDuplicateReportError(error)) throw error;
+        const existing = await findMatchingCloudReport(report);
+        if (!existing) {
+          throw new Error("A matching report already exists, but it could not be loaded for update. Refresh the status list and try again.");
+        }
+        const existingReport = normalizeReport(existing);
+        reports = dedupeReports([existingReport, ...reports]);
+        await updateReport({
+          ...existingReport,
+          ...report,
+          id: existingReport.id,
+          created_at: existingReport.created_at,
+          history: existingReport.history || []
+        });
+        return;
+      }
       const created = Array.isArray(data) ? data[0] : data;
       if (!created) throw new Error("Supabase did not return the created report.");
       const createdReport = normalizeReport({
@@ -4096,6 +4135,21 @@
         role: createdReport.role,
         product_type: createdReport.product_type
       }, { target_type: "report", target_id: createdReport.id, ...reportLogFields(createdReport) });
+    }
+
+    async function findMatchingCloudReport(report) {
+      if (!hasSupabaseConfig) return null;
+      const query = [
+        `product=eq.${encodeURIComponent(report.product || "")}`,
+        `week=eq.${encodeURIComponent(report.week || "")}`,
+        "select=*",
+        "limit=25"
+      ].join("&");
+      const rows = await supabaseRequest(`?${query}`, { prefer: "" });
+      const normalizedIdentity = reportIdentityKey(normalizeReport(report));
+      return (Array.isArray(rows) ? rows : []).find(row =>
+        reportIdentityKey(normalizeReport(row)) === normalizedIdentity
+      ) || null;
     }
 
     async function fetchReportById(id) {
@@ -8082,7 +8136,7 @@
         } catch (error) {
           console.error(error);
           btn.textContent = "Save Changes";
-          showReportMessage(error?.message ? `Could not update this report: ${error.message}` : "Could not update this report. Check Supabase permissions or connection.", "danger");
+          showReportMessage(reportSaveErrorMessage(error, "update"), "danger");
         } finally {
           btn.disabled = false;
         }
@@ -8648,9 +8702,7 @@
       } catch (error) {
         console.error(error);
         saveBtn.textContent = "Save Report";
-        alert(error.message.includes("Saturday or Sunday") || error.message.includes("Select a product")
-          ? error.message
-          : "Could not save this report. Check Supabase configuration or connection.");
+        alert(reportSaveErrorMessage(error, "save"));
       } finally {
         saveBtn.disabled = false;
       }
