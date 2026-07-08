@@ -2280,11 +2280,12 @@
         <div class="inline-message success" id="ownerFeedbackMessage" hidden></div>
 
         <div class="grid summary-grid" id="ownerFeedbackCards"></div>
+        <div class="panel" id="ownerFeedbackInsight"></div>
 
         <div class="panel">
           <div class="panel-title">
             <div>
-              <h3>Feedback by owner</h3>
+              <h3>Owner coaching queue</h3>
               <p class="muted small" id="ownerFeedbackSummary">No owner feedback generated yet.</p>
             </div>
           </div>
@@ -3244,6 +3245,7 @@
       week: "all",
       role: "all"
     };
+    let selectedOwnerFeedbackMetric = "needsCoaching";
     const actionItemFilters = {
       owner: "all",
       product: "all",
@@ -5297,6 +5299,14 @@
         const nextFocus = topReport
           ? `Start with #${topReport.rank}: ${reportTitle(topReport.report)}.`
           : "No priority report selected.";
+        const topReports = ownerItems.slice(0, 3).map(item => ({
+          rank: item.rank,
+          title: reportTitle(item.report),
+          product: item.report.product || "No product",
+          health: item.report.health || "No health",
+          progress: Number(item.report.progress || 0),
+          recommendation: item.analysis.suggestions[0] || item.analysis.gaps[0] || "Keep this report clear and action-oriented."
+        }));
 
         return {
           owner,
@@ -5312,7 +5322,9 @@
           recommendation,
           nextFocus,
           commonGaps,
-          commonLessons
+          commonLessons,
+          commonSuggestions,
+          topReports
         };
       }).sort((a, b) =>
         b.needsAction - a.needsAction ||
@@ -5594,6 +5606,72 @@
       }
     }
 
+    function ownerFeedbackMetricRows(rows, metric) {
+      if (metric === "reviewed") return rows;
+      if (metric === "needsCoaching") return rows.filter(row => row.needsAction > 0 || row.blockers > 0 || row.needsRefinement > 0);
+      if (metric === "delayed") return rows.filter(row => row.delayed > 0);
+      if (metric === "progress") return [...rows].sort((a, b) => a.avgProgress - b.avgProgress).slice(0, 5);
+      return rows;
+    }
+
+    function ownerFeedbackMetricCopy(metric) {
+      const copy = {
+        reviewed: {
+          title: "Owners reviewed",
+          subtitle: "Every owner represented in the current filters.",
+          empty: "No owners match the current filters."
+        },
+        needsCoaching: {
+          title: "Owners needing coaching",
+          subtitle: "Owners with report gaps, blockers, unclear next actions, or risk signals.",
+          empty: "No owner needs focused coaching for the current filters."
+        },
+        delayed: {
+          title: "Schedule follow-ups",
+          subtitle: "Owners with delayed or recovery-sensitive workstream updates.",
+          empty: "No delayed owner follow-ups match the current filters."
+        },
+        progress: {
+          title: "Progress watchlist",
+          subtitle: "Lowest average progress first, so you can spot owners who may need support.",
+          empty: "No progress data is available for the current filters."
+        }
+      };
+      return copy[metric] || copy.needsCoaching;
+    }
+
+    function renderOwnerFeedbackInsight(rows) {
+      const target = document.getElementById("ownerFeedbackInsight");
+      if (!target) return;
+      const metric = selectedOwnerFeedbackMetric || "needsCoaching";
+      const copy = ownerFeedbackMetricCopy(metric);
+      const metricRows = ownerFeedbackMetricRows(rows, metric);
+      target.innerHTML = `
+        <div class="panel-title">
+          <div>
+            <h3>${escapeHtml(copy.title)} (${metricRows.length})</h3>
+            <p class="muted small">${escapeHtml(copy.subtitle)}</p>
+          </div>
+          <button class="btn soft" type="button" data-owner-feedback-metric="reviewed">Show all owners</button>
+        </div>
+        <div class="report-list owner-feedback-insight-list">
+          ${metricRows.length ? metricRows.slice(0, 5).map(row => `
+            <div class="report-card">
+              <div class="panel-title">
+                <div>
+                  <span class="chip ${row.tone}">${escapeHtml(row.headline)}</span>
+                  <h3>${escapeHtml(row.owner)}</h3>
+                  <p class="muted small">${row.total} report${row.total === 1 ? "" : "s"} - ${row.blockers} blocker/risk note${row.blockers === 1 ? "" : "s"} - ${row.delayed} delayed - Avg progress ${row.avgProgress}%</p>
+                </div>
+              </div>
+              <p class="muted small"><strong>Coaching focus:</strong> ${escapeHtml(row.recommendation)}</p>
+              <p class="muted small"><strong>Start with:</strong> ${escapeHtml(row.nextFocus)}</p>
+            </div>
+          `).join("") : `<div class="empty"><strong>${escapeHtml(copy.empty)}</strong>Change filters or review the full owner queue below.</div>`}
+        </div>
+      `;
+    }
+
     function renderOwnerFeedbackPage() {
       const cards = document.getElementById("ownerFeedbackCards");
       const list = document.getElementById("ownerFeedbackList");
@@ -5609,20 +5687,23 @@
       const needsAction = rows.filter(row => row.needsAction > 0).length;
       const delayed = rows.reduce((sum, row) => sum + row.delayed, 0);
       const avgProgress = rows.length ? Math.round(rows.reduce((sum, row) => sum + row.avgProgress, 0) / rows.length) : 0;
-      cards.innerHTML = [
-        ["Owners reviewed", rows.length, "blue", `${items.length} report${items.length === 1 ? "" : "s"}`],
-        ["Need coaching", needsAction, needsAction ? "red" : "green", "Owners with action items"],
-        ["Delayed items", delayed, delayed ? "amber" : "green", "Schedule follow-ups"],
-        ["Avg progress", `${avgProgress}%`, "blue", "Across filtered owners"]
-      ].map(([label, value, tone, note]) => `
-        <div class="panel metric">
+      const metricCards = [
+        ["reviewed", "Owners reviewed", rows.length, "blue", `${items.length} report${items.length === 1 ? "" : "s"}`],
+        ["needsCoaching", "Need coaching", needsAction, needsAction ? "red" : "green", "Owners with action items"],
+        ["delayed", "Delayed items", delayed, delayed ? "amber" : "green", "Schedule follow-ups"],
+        ["progress", "Avg progress", `${avgProgress}%`, "blue", "Across filtered owners"]
+      ];
+      cards.innerHTML = metricCards.map(([key, label, value, tone, note]) => `
+        <button class="panel metric metric-button ${selectedOwnerFeedbackMetric === key ? "selected" : ""}" type="button" data-owner-feedback-metric="${escapeHtml(key)}" aria-pressed="${selectedOwnerFeedbackMetric === key ? "true" : "false"}">
           <span class="chip ${tone}">${escapeHtml(label)}</span>
           <strong>${escapeHtml(value)}</strong>
           <span class="muted small">${escapeHtml(note)}</span>
-        </div>
+          <span class="muted small">Click to review</span>
+        </button>
       `).join("");
+      renderOwnerFeedbackInsight(rows);
       summary.textContent = rows.length
-        ? `${rows.length} owner${rows.length === 1 ? "" : "s"} reviewed. ${needsAction} need focused follow-up.`
+        ? `${rows.length} owner${rows.length === 1 ? "" : "s"} reviewed. ${needsAction} need focused follow-up. Click an owner card to use the feedback.`
         : "No owner feedback matches the current filters.";
       list.innerHTML = rows.length ? rows.map(row => {
         const email = ownerEmailForName(row.owner);
@@ -5642,11 +5723,21 @@
                 <a class="btn" href="${mailto}">Email draft</a>
               </div>
             </div>
+            <p class="muted small"><strong>Coaching brief:</strong> ${escapeHtml(row.headline)} ${escapeHtml(row.recommendation)}</p>
             <div class="report-card-detail">
               <div><strong>Main feedback</strong><p class="muted small">${escapeHtml(row.commonGaps.join(" ") || "Reporting structure is clear. Keep the same cadence.")}</p></div>
               <div><strong>Recommended improvement</strong><p class="muted small">${escapeHtml(row.recommendation)}</p></div>
               <div><strong>Next focus</strong><p class="muted small">${escapeHtml(row.nextFocus)}</p></div>
               <div><strong>Lesson learned</strong><p class="muted small">${escapeHtml(row.commonLessons[0] || "Clear context plus a measurable next action makes updates easier to act on.")}</p></div>
+            </div>
+            <div class="report-card-detail">
+              ${row.topReports.map(report => `
+                <div>
+                  <strong>#${report.rank} ${escapeHtml(report.title)}</strong>
+                  <p class="muted small">${escapeHtml(report.product)} - ${escapeHtml(report.health)} - ${report.progress}% progress</p>
+                  <p class="muted small">${escapeHtml(report.recommendation)}</p>
+                </div>
+              `).join("")}
             </div>
           </div>
         `;
@@ -9094,6 +9185,22 @@
     document.getElementById("ownerFeedbackRoleFilter").addEventListener("change", event => {
       ownerFeedbackFilters.role = event.target.value;
       logFilterChange("owner_feedback", "role", event.target.value);
+      renderOwnerFeedbackPage();
+    });
+
+    document.getElementById("ownerFeedbackCards").addEventListener("click", event => {
+      const card = event.target.closest("[data-owner-feedback-metric]");
+      if (!card) return;
+      selectedOwnerFeedbackMetric = card.dataset.ownerFeedbackMetric || "needsCoaching";
+      logUserAction("owner_feedback_metric_opened", { metric: selectedOwnerFeedbackMetric }, { target_type: "owner_feedback_metric", target_id: selectedOwnerFeedbackMetric });
+      renderOwnerFeedbackPage();
+      document.getElementById("ownerFeedbackInsight")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+
+    document.getElementById("ownerFeedbackInsight").addEventListener("click", event => {
+      const button = event.target.closest("[data-owner-feedback-metric]");
+      if (!button) return;
+      selectedOwnerFeedbackMetric = button.dataset.ownerFeedbackMetric || "reviewed";
       renderOwnerFeedbackPage();
     });
 
