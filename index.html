@@ -3710,7 +3710,7 @@
     function expandPersonAliasKeys(values = []) {
       const keys = new Set(values.map(ownerKey).filter(Boolean));
       const aliasGroups = [
-        ["daniela", "daniela@zenatech.com"],
+        ["dani", "daniela", "daniela@zenatech.com"],
         ["deepa", "deepa@zenatech.com"],
         ["faran", "faran@zenatech.com"],
         ["jojo", "jocasta", "jocasta@zenatech.com"],
@@ -3737,7 +3737,24 @@
       const lower = cleaned.toLowerCase();
       const localPart = lower.includes("@") ? lower.split("@")[0] : lower;
       const normalized = normalizeLoginIdentifier(lower);
-      const keys = [cleaned, lower, localPart, normalized, canonicalUsername(lower), displayNameFromLogin(lower)];
+      const identityTokens = localPart
+        .split(/[.\s_-]+/)
+        .map(cleanText)
+        .filter(token => token.length >= 3);
+      const displayTokens = cleanText(displayNameFromLogin(lower))
+        .split(/\s+/)
+        .map(cleanText)
+        .filter(token => token.length >= 3);
+      const keys = [
+        cleaned,
+        lower,
+        localPart,
+        normalized,
+        canonicalUsername(lower),
+        displayNameFromLogin(lower),
+        ...identityTokens,
+        ...displayTokens
+      ];
       return expandPersonAliasKeys(keys);
     }
 
@@ -3758,6 +3775,12 @@
 
     function canDeleteReport(report) {
       return Boolean(report?.id && isCurrentUserReportOwner(report));
+    }
+
+    function deletePermissionMessage(report) {
+      const signedInAs = currentUser?.displayName || currentUser?.username || "Unknown user";
+      const owner = cleanText(report?.owner || "") || "Unassigned";
+      return `Only the report owner can delete this status. Signed in as ${signedInAs}; report owner is ${owner}.`;
     }
 
     function canEditReport(report) {
@@ -4475,7 +4498,7 @@
     async function deleteReportById(id) {
       const deletedReport = reports.find(r => r.id === id);
       if (!canDeleteReport(deletedReport)) {
-        throw new Error("Only the report owner can delete this status.");
+        throw new Error(deletePermissionMessage(deletedReport));
       }
       if (!hasSupabaseConfig) {
         reports = reports.filter(r => r.id !== id);
@@ -8210,7 +8233,7 @@
           <div class="form-actions detail-actions">
             <button class="btn" type="button" id="reportHistoryBtn">${reportHistoryOpen ? "Hide History" : "History"}</button>
             <button class="btn" type="button" id="cancelEditReport">Cancel</button>
-            <button class="btn danger" type="button" id="deleteReport" ${canDeleteReport(report) ? "" : "disabled title=\"Only the report owner can delete this status.\""}>Delete Report</button>
+            <button class="btn danger" type="button" id="deleteReport" ${canDeleteReport(report) ? "" : `disabled title="${escapeHtml(deletePermissionMessage(report))}"`}>Delete Report</button>
             <button class="btn primary" type="submit" id="updateReportBtn" ${canEditReport(report) ? "" : "disabled title=\"Only the report owner, Master admin, or Role Manager can edit this status.\""}>Save Changes</button>
           </div>
           <div id="reportHistoryPanel" ${reportHistoryOpen ? "" : "hidden"}>${renderReportHistory(report)}</div>
@@ -8253,7 +8276,7 @@
       document.getElementById("deleteReport").addEventListener("click", async () => {
         hideReportMessage();
         if (!canDeleteReport(report)) {
-          showReportMessage("Only the report owner can delete this status.", "danger");
+          showReportMessage(deletePermissionMessage(report), "danger");
           return;
         }
         if (!confirm("Are you sure you want to delete the report?")) return;
