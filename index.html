@@ -88,14 +88,16 @@
 
     .app {
       min-height: 100vh;
-      display: grid;
-      grid-template-columns: 280px minmax(0, 1fr);
+      display: block;
       min-width: 0;
     }
 
     aside {
-      position: sticky;
+      position: fixed;
       top: 0;
+      left: 0;
+      bottom: 0;
+      width: 280px;
       height: 100vh;
       min-width: 0;
       overflow: hidden;
@@ -110,6 +112,7 @@
 
     main {
       padding: 28px;
+      margin-left: 280px;
       max-width: 1720px;
       width: 100%;
       min-width: 0;
@@ -1769,14 +1772,15 @@
     }
 
     @media (max-width: 980px) {
-      .app { grid-template-columns: 1fr; }
+      .app { display: grid; grid-template-columns: 1fr; }
       aside {
         position: static;
+        width: auto;
         height: auto;
         overflow: visible;
       }
       .side-actions { position: static; margin-top: 22px; }
-      main { padding: 18px; }
+      main { margin-left: 0; padding: 18px; }
       .summary-grid, .two-col, .three-col, .exec-grid, .exec-metrics, .health-stack, .form-grid, .filter-bar, .health-toolbar, .health-detail-grid, .report-card-detail, .timeline-scale, .delivery-row { grid-template-columns: 1fr; }
       .timeline-scale-track {
         display: none;
