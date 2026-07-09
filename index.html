@@ -877,6 +877,128 @@
       line-height: 1;
     }
 
+    .timeline-panel {
+      min-width: 0;
+    }
+
+    .timeline-board {
+      display: grid;
+      gap: 12px;
+      max-height: 680px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .timeline-scale {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 12px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: rgba(255,255,255,.96);
+      padding-bottom: 6px;
+    }
+
+    .timeline-scale-track {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      text-align: center;
+    }
+
+    .delivery-row {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,251,253,.92));
+      cursor: pointer;
+      text-align: left;
+      color: inherit;
+      font: inherit;
+      transition: border-color .14s ease, box-shadow .14s ease, transform .14s ease;
+    }
+
+    .delivery-row:hover,
+    .delivery-row:focus-visible,
+    .delivery-row.selected {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(69, 132, 161, .14);
+      outline: none;
+      transform: translateY(-1px);
+    }
+
+    .delivery-row-label {
+      display: grid;
+      gap: 4px;
+      align-content: start;
+      min-width: 0;
+    }
+
+    .delivery-row-label strong {
+      overflow-wrap: anywhere;
+    }
+
+    .delivery-track {
+      position: relative;
+      min-height: 44px;
+      border-radius: 999px;
+      background:
+        linear-gradient(90deg, rgba(216,224,232,.75) 1px, transparent 1px) 0 0 / 20% 100%,
+        rgba(237, 244, 248, .9);
+      overflow: hidden;
+      align-self: center;
+    }
+
+    .delivery-bar {
+      position: absolute;
+      left: var(--bar-left, 0%);
+      width: var(--bar-width, 18%);
+      top: 8px;
+      bottom: 8px;
+      min-width: 34px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--bar-color, var(--blue)) 18%, #fff);
+      border: 1px solid color-mix(in srgb, var(--bar-color, var(--blue)) 50%, #fff);
+      overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.55);
+    }
+
+    .delivery-bar-fill {
+      height: 100%;
+      width: var(--bar-progress, 0%);
+      background: linear-gradient(90deg, var(--bar-color, var(--blue)), color-mix(in srgb, var(--bar-color, var(--blue)) 70%, #fff));
+      opacity: .9;
+    }
+
+    .timeline-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .timeline-detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .timeline-detail-grid > div {
+      border: 1px solid var(--line);
+      background: rgba(241, 247, 250, .72);
+      border-radius: 12px;
+      padding: 10px;
+    }
+
     .chip {
       display: inline-flex;
       align-items: center;
@@ -1632,7 +1754,10 @@
       }
       .side-actions { position: static; margin-top: 22px; }
       main { padding: 18px; }
-      .summary-grid, .two-col, .three-col, .exec-grid, .exec-metrics, .health-stack, .form-grid, .filter-bar, .health-toolbar, .health-detail-grid, .report-card-detail { grid-template-columns: 1fr; }
+      .summary-grid, .two-col, .three-col, .exec-grid, .exec-metrics, .health-stack, .form-grid, .filter-bar, .health-toolbar, .health-detail-grid, .report-card-detail, .timeline-scale, .delivery-row { grid-template-columns: 1fr; }
+      .timeline-scale-track {
+        display: none;
+      }
       .edit-form-section .form-grid { grid-template-columns: 1fr; }
       .status-workspace #reportDetail {
         position: static;
@@ -1723,6 +1848,7 @@
         <button class="tab" data-view="workflow" data-role-manager-only title="End-to-end workflow guide for using the dashboard">Workflow Guide</button>
         <div class="nav-section">Monitor</div>
         <button class="tab" data-view="incidents" title="Major delays, minor delays, blockers, at-risk, and critical workstreams">Incidents & Delays</button>
+        <button class="tab" data-view="timeline" data-master-only title="Delivery timeline, dependencies, milestones, and schedule progress">Delivery Timeline</button>
         <button class="tab" data-view="reports" data-master-only>Status Center</button>
         <div class="nav-section" data-role-manager-only>Admin</div>
         <button class="tab" data-view="sourceProjects" data-role-manager-only>Source Project</button>
@@ -2647,6 +2773,116 @@
         </div>
       </section>
 
+      <section class="view" id="timeline" data-master-view>
+        <div class="header">
+          <div>
+            <span class="page-kicker">Delivery planning</span>
+            <h2>Delivery Timeline</h2>
+            <p class="muted" id="timelineSubtitle">Track workstreams by start date, end date, milestone, dependency, and schedule status. Use it like a lightweight Gantt view for delivery follow-up.</p>
+          </div>
+          <div class="top-actions">
+            <button class="btn primary" data-jump="reports" type="button">Open Status Center</button>
+            <button class="btn" type="button" data-logout>Logout</button>
+          </div>
+        </div>
+
+        <div class="guide-grid">
+          <div class="guide-card theme-blue">
+            <strong>1. Plan the sequence</strong>
+            <p class="muted small">Start/end dates create the visual timeline and show how work is moving.</p>
+          </div>
+          <div class="guide-card theme-green">
+            <strong>2. Watch dependencies</strong>
+            <p class="muted small">Use Depends on to show blocked work and likely critical path items.</p>
+          </div>
+          <div class="guide-card theme-amber">
+            <strong>3. Review milestones</strong>
+            <p class="muted small">Milestones make progress easier to understand than a single percent number.</p>
+          </div>
+        </div>
+
+        <div class="panel filter-bar">
+          <label>
+            Date filter
+            <select id="timelinePeriodFilter">
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="custom">Custom</option>
+            </select>
+          </label>
+          <label class="week-field">
+            Reporting date
+            <button class="week-picker-btn" id="timelineWeekFilter" type="button" aria-haspopup="dialog" aria-expanded="false"></button>
+            <div class="week-picker" id="timelineWeekPicker" hidden></div>
+          </label>
+          <label class="date-custom timeline-custom-date" hidden>
+            Start date
+            <input type="date" id="timelineStartFilter" />
+          </label>
+          <label class="date-custom timeline-custom-date" hidden>
+            End date
+            <input type="date" id="timelineEndFilter" />
+          </label>
+          <label>
+            Project
+            <select id="timelineProductFilter"></select>
+          </label>
+          <label>
+            Owner
+            <select id="timelineOwnerFilter"></select>
+          </label>
+          <label>
+            Milestone
+            <select id="timelineMilestoneFilter"></select>
+          </label>
+          <label>
+            Schedule
+            <select id="timelineScheduleFilter">
+              <option value="all">All schedule statuses</option>
+              <option value="ahead">Ahead of Schedule</option>
+              <option value="onTime">On Time</option>
+              <option value="minorDelay">Minor Delay</option>
+              <option value="majorDelay">Major Delay</option>
+              <option value="dependency">Has dependency</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="grid summary-grid" id="timelineMetrics"></div>
+
+        <div class="panel" id="timelineDrilldownPanel" hidden>
+          <div class="panel-title">
+            <div>
+              <h3 id="timelineDrilldownTitle">Timeline details</h3>
+              <p class="muted small" id="timelineDrilldownSubtitle"></p>
+            </div>
+            <button class="btn" type="button" id="timelineDrilldownClose">Back to timeline overview</button>
+          </div>
+          <div class="report-list" id="timelineDrilldownList"></div>
+        </div>
+
+        <div class="grid two-col">
+          <div class="panel timeline-panel">
+            <div class="panel-title">
+              <div>
+                <h3>Delivery timeline</h3>
+                <p class="muted small">Bars show planned delivery range. Fill shows progress. Click a row to open delivery details.</p>
+              </div>
+            </div>
+            <div class="timeline-board" id="deliveryTimelineBoard"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">
+              <div>
+                <h3>Critical path signals</h3>
+                <p class="muted small">Delayed work, dependencies, blockers, and high-priority items that may affect delivery.</p>
+              </div>
+            </div>
+            <div class="report-list" id="criticalPathList"></div>
+          </div>
+        </div>
+      </section>
+
       <section class="view" id="intake" data-master-view>
         <div class="header">
           <div>
@@ -2740,6 +2976,14 @@
                   <input name="due_date" type="date" />
                 </label>
                 <label>
+                  Baseline end date
+                  <input name="baseline_due_date" type="date" />
+                </label>
+                <label>
+                  Depends on
+                  <input name="dependency" placeholder="e.g., API access, design approval, QA environment" />
+                </label>
+                <label>
                   Health
                   <select name="health">
                     <option value="green">On Track</option>
@@ -2772,6 +3016,21 @@
                     <option>Release</option>
                     <option>Paused</option>
                     <option>Completed</option>
+                  </select>
+                </label>
+                <label>
+                  Milestone
+                  <select name="milestone">
+                    <option value="">Select milestone</option>
+                    <option>Discovery complete</option>
+                    <option>Requirements approved</option>
+                    <option>Design approved</option>
+                    <option>Dev handoff</option>
+                    <option>Development started</option>
+                    <option>QA started</option>
+                    <option>Release ready</option>
+                    <option>Go-live</option>
+                    <option>Post-launch validation</option>
                   </select>
                 </label>
               </div>
@@ -3178,6 +3437,8 @@
     let selectedDashboardMetric = "";
     let selectedExecutiveMetric = "";
     let selectedIncidentMetric = "";
+    let selectedTimelineMetric = "";
+    let selectedTimelineReportId = "";
     let selectedAnalysisMetric = "";
     let useLegacySupabasePayload = false;
     let actionLoggingDisabled = false;
@@ -3231,6 +3492,16 @@
       owner: "all",
       type: "all",
       productType: "all"
+    };
+    const timelineFilters = {
+      period: "monthly",
+      week: "",
+      start: "",
+      end: "",
+      product: "all",
+      owner: "all",
+      milestone: "all",
+      schedule: "all"
     };
     const analysisFilters = {
       owner: "all",
@@ -3307,7 +3578,10 @@
         product_type: report.product_type || "Legacy",
         role: report.role || inferRole(report),
         start_date: report.start_date || "",
-        due_date: report.due_date || ""
+        due_date: report.due_date || "",
+        baseline_due_date: report.baseline_due_date || "",
+        dependency: report.dependency || "",
+        milestone: report.milestone || ""
       };
       overrides[report.id] = value;
       overrides[`identity:${reportIdentityKey(report)}`] = value;
@@ -3398,6 +3672,9 @@
         role: report.role || inferRole(report),
         start_date: report.start_date || "",
         due_date: report.due_date || "",
+        baseline_due_date: report.baseline_due_date || "",
+        dependency: report.dependency || "",
+        milestone: report.milestone || "",
         history: Array.isArray(report.history) ? report.history.slice(-50) : []
       };
       return btoa(unescape(encodeURIComponent(JSON.stringify(meta))));
@@ -3449,6 +3726,9 @@
         week: row.week || "",
         start_date: firstValue(row.start_date, row.startDate, legacyMeta.start_date, legacyMeta.startDate),
         due_date: firstValue(row.due_date, row.dueDate, row.end_date, row.endDate, legacyMeta.due_date, legacyMeta.dueDate, legacyMeta.end_date, legacyMeta.endDate),
+        baseline_due_date: firstValue(row.baseline_due_date, row.baselineDueDate, legacyMeta.baseline_due_date, legacyMeta.baselineDueDate),
+        dependency: row.dependency || row.depends_on || row.dependsOn || legacyMeta.dependency || legacyMeta.depends_on || "",
+        milestone: row.milestone || legacyMeta.milestone || "",
         health: row.health || "amber",
         progress: Number(row.progress || 0),
         stage: normalized.stage,
@@ -3490,6 +3770,9 @@
         participants: report.participants || null,
         start_date: report.start_date || null,
         due_date: report.due_date || null,
+        baseline_due_date: report.baseline_due_date || null,
+        dependency: report.dependency || null,
+        milestone: report.milestone || null,
         history: Array.isArray(report.history) ? report.history.slice(-50) : [],
       };
     }
@@ -4172,7 +4455,10 @@
         product_type: report.product_type,
         role: report.role,
         start_date: report.start_date,
-        due_date: report.due_date
+        due_date: report.due_date,
+        baseline_due_date: report.baseline_due_date,
+        dependency: report.dependency,
+        milestone: report.milestone
       });
       saveFieldOverride(createdReport);
       reports = [createdReport, ...reports];
@@ -4244,7 +4530,10 @@
         [row.product_type || legacyMeta.product_type || "Legacy", report.product_type || "Legacy"],
         [row.role || legacyMeta.role || inferRole(report), report.role || inferRole(report)],
         [row.start_date || legacyMeta.start_date || "", report.start_date || ""],
-        [row.due_date || legacyMeta.due_date || "", report.due_date || ""]
+        [row.due_date || legacyMeta.due_date || "", report.due_date || ""],
+        [row.baseline_due_date || legacyMeta.baseline_due_date || "", report.baseline_due_date || ""],
+        [row.dependency || legacyMeta.dependency || "", report.dependency || ""],
+        [row.milestone || legacyMeta.milestone || "", report.milestone || ""]
       ];
       return comparisons.every(([left, right]) => sameValue(left, right));
     }
@@ -4364,6 +4653,9 @@
       ["week", "Reporting week"],
       ["start_date", "Start date"],
       ["due_date", "End date"],
+      ["baseline_due_date", "Baseline end date"],
+      ["dependency", "Depends on"],
+      ["milestone", "Milestone"],
       ["health", "Health"],
       ["progress", "Progress"],
       ["stage", "Stage"],
@@ -4468,6 +4760,9 @@
         role: reportWithHistory.role,
         start_date: reportWithHistory.start_date,
         due_date: reportWithHistory.due_date,
+        baseline_due_date: reportWithHistory.baseline_due_date,
+        dependency: reportWithHistory.dependency,
+        milestone: reportWithHistory.milestone,
         history: reportWithHistory.history
       });
       saveFieldOverride(updatedReport);
@@ -4904,8 +5199,8 @@
     }
 
     function canAccessView(id) {
-      if (canManageRoles()) return ["dashboard", "executive", "workflow", "incidents", "intake", "reports", "sourceProjects", "reportAnalysis", "ownerFeedback", "actionItems", "weeklyReview", "workload", "users"].includes(id);
-      if (isMasterAdmin()) return ["dashboard", "executive", "incidents", "intake", "reports"].includes(id);
+      if (canManageRoles()) return ["dashboard", "executive", "workflow", "incidents", "timeline", "intake", "reports", "sourceProjects", "reportAnalysis", "ownerFeedback", "actionItems", "weeklyReview", "workload", "users"].includes(id);
+      if (isMasterAdmin()) return ["dashboard", "executive", "incidents", "timeline", "intake", "reports"].includes(id);
       return ["dashboard", "executive", "incidents"].includes(id);
     }
 
@@ -4940,6 +5235,7 @@
       renderUserManagement();
       renderSourceProjects();
       renderReportAnalysis();
+      renderDeliveryTimeline();
       renderWorkBalance();
       renderWorkflowGuide();
       if (!canAccessView(getActiveView())) {
@@ -6873,6 +7169,24 @@
     function endDateScheduleClassification(report) {
       const currentEndDate = reportEndDate(report);
       if (!currentEndDate) return null;
+      const baselineEndDate = firstValue(report?.baseline_due_date, report?.baselineDueDate);
+      if (baselineEndDate && baselineEndDate !== currentEndDate) {
+        const deltaDays = daysBetweenDates(baselineEndDate, currentEndDate);
+        if (deltaDays !== null) {
+          const duration = scheduleDurationDays(report, baselineEndDate, deltaDays);
+          const percent = Math.abs(deltaDays) / duration * 100;
+          if (deltaDays < 0) {
+            return percent > 5
+              ? { category: "ahead", tone: "green", label: "Ahead of Schedule", percent }
+              : { category: "onTime", tone: "blue", label: "On Time", percent };
+          }
+          if (deltaDays > 0) {
+            return percent <= 10
+              ? { category: "minorDelay", tone: "amber", label: "Minor Delay", percent }
+              : { category: "majorDelay", tone: "red", label: "Major Delay", percent };
+          }
+        }
+      }
       const change = currentEndDateChange(report);
       if (change) {
         const plannedEndDate = historyValue(change.before);
@@ -7183,6 +7497,196 @@
           </div>
         </div>
       `;
+    }
+
+    function timelineReportStart(report) {
+      return firstValue(report.start_date, report.week, report.created_at?.slice?.(0, 10));
+    }
+
+    function timelineReportEnd(report) {
+      return firstValue(reportEndDate(report), report.start_date, report.week);
+    }
+
+    function getTimelineReports() {
+      return reports
+        .filter(report =>
+          matchesDateFilter(report.week, timelineFilters) &&
+          (timelineFilters.product === "all" || report.product === timelineFilters.product) &&
+          reportHasPerson(report.owner, timelineFilters.owner) &&
+          (timelineFilters.milestone === "all" || (report.milestone || "No milestone") === timelineFilters.milestone)
+        )
+        .filter(report => {
+          const status = endDateStatus(report);
+          if (timelineFilters.schedule === "all") return true;
+          if (timelineFilters.schedule === "dependency") return Boolean(cleanText(report.dependency));
+          return status?.category === timelineFilters.schedule;
+        })
+        .sort((a, b) =>
+          (timelineReportStart(a) || "9999-12-31").localeCompare(timelineReportStart(b) || "9999-12-31") ||
+          endDateRank(a).localeCompare(endDateRank(b))
+        );
+    }
+
+    function timelineRange(source) {
+      const filterRange = timelineFilters.start || timelineFilters.end
+        ? { start: parseDate(timelineFilters.start || ""), end: parseDate(timelineFilters.end || "") }
+        : null;
+      const starts = source.map(timelineReportStart).map(parseDate).filter(Boolean);
+      const ends = source.map(timelineReportEnd).map(parseDate).filter(Boolean);
+      const min = filterRange?.start || starts.sort((a, b) => a - b)[0] || parseDate(timelineFilters.start || timelineFilters.week) || new Date();
+      const max = filterRange?.end || ends.sort((a, b) => b - a)[0] || addDays(min, 4);
+      return {
+        start: min,
+        end: max > min ? max : addDays(min, 4)
+      };
+    }
+
+    function timelineBarStyle(report, range) {
+      const start = parseDate(timelineReportStart(report)) || range.start;
+      const end = parseDate(timelineReportEnd(report)) || start;
+      const totalDays = Math.max(1, daysBetweenDates(formatDate(range.start), formatDate(range.end)) || 1);
+      const leftDays = Math.max(0, daysBetweenDates(formatDate(range.start), formatDate(start)) || 0);
+      const durationDays = Math.max(1, daysBetweenDates(formatDate(start), formatDate(end)) || 1);
+      const status = endDateStatus(report);
+      const tone = status?.tone || healthClass(report);
+      const color = tone === "red" ? "var(--red)" : tone === "amber" || tone === "orange" ? "var(--amber)" : tone === "green" ? "var(--green)" : "var(--blue)";
+      return `--bar-left:${Math.min(96, Math.max(0, leftDays / totalDays * 100))}%;--bar-width:${Math.min(100, Math.max(8, durationDays / totalDays * 100))}%;--bar-progress:${Math.max(0, Math.min(100, Number(report.progress || 0)))}%;--bar-color:${color};`;
+    }
+
+    function timelineMetricRows(source, metric) {
+      if (metric === "active") return source;
+      if (metric === "dependencies") return source.filter(report => cleanText(report.dependency));
+      if (metric === "critical") return source.filter(report => hasBlockerSignal(report) || cleanText(report.dependency) || ["minorDelay", "majorDelay"].includes(endDateStatus(report)?.category));
+      if (metric === "delayed") return source.filter(report => ["minorDelay", "majorDelay"].includes(endDateStatus(report)?.category));
+      if (metric === "milestones") return source.filter(report => cleanText(report.milestone));
+      return [];
+    }
+
+    function timelineDetailCard(report) {
+      const status = endDateStatus(report);
+      return `
+        <div class="report-card">
+          <div class="panel-title">
+            <div>
+              <span class="product-label">${escapeHtml(report.product || "No product")}</span>
+              <h3>${escapeHtml(reportTitle(report))}</h3>
+              <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.role || "No role")} - ${escapeHtml(reportingFieldLabel(report.week))}${reportEndDate(report) ? ` - ${endDateMarkup(report)}` : ""}</p>
+            </div>
+            <span class="chip ${status?.tone || healthClass(report)}">${escapeHtml(status?.label || labels[report.health] || "On Time")}</span>
+          </div>
+          <p>${escapeHtml(report.summary || "No summary captured.")}</p>
+          <div class="timeline-detail-grid">
+            <div><strong>Milestone</strong><p class="muted small">${escapeHtml(report.milestone || "No milestone selected.")}</p></div>
+            <div><strong>Depends on</strong><p class="muted small">${escapeHtml(report.dependency || "No dependency captured.")}</p></div>
+            <div><strong>Baseline</strong><p class="muted small">${escapeHtml(report.baseline_due_date || "No baseline date.")}</p></div>
+            <div><strong>Progress</strong><p class="muted small">${escapeHtml(report.progress || 0)}%</p></div>
+            <div><strong>Blocker or risk</strong><p class="muted small">${escapeHtml(report.blocker || "No blocker captured.")}</p></div>
+            <div><strong>Next action</strong><p class="muted small">${escapeHtml(report.next || "No next action captured.")}</p></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderTimelineDrilldown(source) {
+      const panel = document.getElementById("timelineDrilldownPanel");
+      const title = document.getElementById("timelineDrilldownTitle");
+      const subtitle = document.getElementById("timelineDrilldownSubtitle");
+      const list = document.getElementById("timelineDrilldownList");
+      if (!panel || !title || !subtitle || !list) return;
+      if (!selectedTimelineMetric) {
+        panel.hidden = true;
+        list.innerHTML = "";
+        return;
+      }
+      const copy = {
+        active: ["Active workstreams", "All timeline rows included by the current filters."],
+        dependencies: ["Dependencies", "Workstreams with a dependency or external handoff captured."],
+        critical: ["Critical path signals", "Delayed, blocked, dependent, At Risk, or Critical workstreams."],
+        delayed: ["Schedule delay", "Workstreams classified as Minor Delay or Major Delay."],
+        milestones: ["Milestones", "Workstreams with an active milestone selected."]
+      };
+      const rows = timelineMetricRows(source, selectedTimelineMetric);
+      panel.hidden = false;
+      title.textContent = `${copy[selectedTimelineMetric]?.[0] || "Timeline details"} (${rows.length})`;
+      subtitle.textContent = copy[selectedTimelineMetric]?.[1] || "Filtered delivery details.";
+      list.innerHTML = rows.length
+        ? rows.map(timelineDetailCard).join("")
+        : `<div class="empty"><strong>No matching timeline details</strong>Change the filters or add milestone/dependency information in Status Center.</div>`;
+    }
+
+    function renderDeliveryTimeline() {
+      const metricsTarget = document.getElementById("timelineMetrics");
+      const board = document.getElementById("deliveryTimelineBoard");
+      const criticalTarget = document.getElementById("criticalPathList");
+      if (!metricsTarget || !board || !criticalTarget) return;
+
+      fillSelect("timelineProductFilter", reports.map(report => report.product), "All projects", timelineFilters.product);
+      fillSelect("timelineOwnerFilter", uniqueOwners(), "All owners", timelineFilters.owner);
+      fillSelect("timelineMilestoneFilter", reports.map(report => report.milestone || "No milestone"), "All milestones", timelineFilters.milestone);
+
+      const source = getTimelineReports();
+      const range = timelineRange(source);
+      const dependencies = source.filter(report => cleanText(report.dependency)).length;
+      const critical = timelineMetricRows(source, "critical");
+      const delayed = timelineMetricRows(source, "delayed");
+      const milestones = source.filter(report => cleanText(report.milestone)).length;
+      const products = uniqueCount(source, "product");
+      const subtitle = document.getElementById("timelineSubtitle");
+      if (subtitle) {
+        subtitle.textContent = `Showing ${source.length} workstream${source.length === 1 ? "" : "s"} across ${products} project${products === 1 ? "" : "s"} for ${dateFilterLabel(timelineFilters)}. Timeline range ${formatDate(range.start)} to ${formatDate(range.end)}.`;
+      }
+
+      const metrics = [
+        ["active", "Active workstreams", source.length, "blue", `${products} projects`],
+        ["dependencies", "Dependencies", dependencies, dependencies ? "amber" : "green", "Need handoff or unblock"],
+        ["critical", "Critical path", critical.length, critical.length ? "red" : "green", "Risk to delivery sequence"],
+        ["delayed", "Schedule delay", delayed.length, delayed.length ? "red" : "green", "Minor + major delay"],
+        ["milestones", "Milestones", milestones, "blue", "Selected delivery steps"]
+      ];
+      metricsTarget.innerHTML = metrics.map(([key, name, value, tone, note]) => `
+        <button class="panel metric metric-button ${selectedTimelineMetric === key ? "selected" : ""}" type="button" data-timeline-metric="${escapeHtml(key)}" aria-pressed="${selectedTimelineMetric === key ? "true" : "false"}">
+          <span class="chip ${tone}">${escapeHtml(name)}</span>
+          <strong>${escapeHtml(value)}</strong>
+          <span class="muted small">${escapeHtml(note)}</span>
+          <span class="muted small">Click to view details</span>
+        </button>
+      `).join("");
+      renderTimelineDrilldown(source);
+
+      const scaleLabels = [formatDate(range.start), "", "Midpoint", "", formatDate(range.end)];
+      board.innerHTML = source.length ? `
+        <div class="timeline-scale">
+          <span>Workstream</span>
+          <div class="timeline-scale-track">${scaleLabels.map(label => `<span>${escapeHtml(label)}</span>`).join("")}</div>
+        </div>
+        ${source.map(report => {
+          const status = endDateStatus(report);
+          return `
+            <button class="delivery-row ${selectedTimelineReportId === report.id ? "selected" : ""}" type="button" data-timeline-report="${escapeHtml(report.id)}">
+              <div class="delivery-row-label">
+                <span class="product-label">${escapeHtml(report.product || "No product")}</span>
+                <strong>${escapeHtml(reportTitle(report))}</strong>
+                <span class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.role || "No role")}</span>
+                <div class="timeline-meta">
+                  <span class="chip ${status?.tone || healthClass(report)}">${escapeHtml(status?.label || labels[report.health] || "On Time")}</span>
+                  ${report.milestone ? `<span class="chip blue">${escapeHtml(report.milestone)}</span>` : ""}
+                  ${report.dependency ? `<span class="chip amber">Depends on</span>` : ""}
+                </div>
+              </div>
+              <div>
+                <div class="delivery-track">
+                  <div class="delivery-bar" style="${timelineBarStyle(report, range)}"><div class="delivery-bar-fill"></div></div>
+                </div>
+                <p class="muted small">${escapeHtml(timelineReportStart(report) || "No start")} to ${escapeHtml(timelineReportEnd(report) || "No end")} - ${Number(report.progress || 0)}% complete${report.baseline_due_date ? ` - baseline ${escapeHtml(report.baseline_due_date)}` : ""}</p>
+                ${report.dependency ? `<p class="muted small"><strong>Depends on:</strong> ${escapeHtml(report.dependency)}</p>` : ""}
+              </div>
+            </button>
+        ${selectedTimelineReportId === report.id ? timelineDetailCard(report) : ""}
+          `;
+        }).join("")}
+      ` : `<div class="empty"><strong>No timeline records</strong>Add start/end dates in Status Center or adjust the filters.</div>`;
+
+      criticalTarget.innerHTML = critical.length ? critical.slice(0, 8).map(timelineDetailCard).join("") : `<div class="empty"><strong>No critical path signals</strong>No delayed, blocked, or dependent workstreams match the current filters.</div>`;
     }
 
     function renderIncidentDrilldown(source, projectGroups) {
@@ -7833,6 +8337,9 @@
         ["Stage", report.stage || "No stage captured."],
         ["Progress", `${Number(report.progress || 0)}%`],
         ["End date", reportEndDate(report) ? endDateMarkup(report) : "No end date captured."],
+        ["Baseline", report.baseline_due_date || "No baseline date captured."],
+        ["Milestone", report.milestone || "No milestone selected."],
+        ["Depends on", report.dependency || "No dependency captured."],
         ["Priority", report.priority || "Normal"]
       ];
       return `
@@ -7857,6 +8364,9 @@
       ["week", "Reporting week"],
       ["start_date", "Start date"],
       ["due_date", "End date"],
+      ["baseline_due_date", "Baseline end date"],
+      ["dependency", "Depends on"],
+      ["milestone", "Milestone"],
       ["health", "Health"],
       ["progress", "Progress"],
       ["stage", "Stage"],
@@ -7978,6 +8488,9 @@
       ["progress", "Progress"],
       ["stage", "Stage"],
       ["due_date", "End date"],
+      ["baseline_due_date", "Baseline end date"],
+      ["dependency", "Depends on"],
+      ["milestone", "Milestone"],
       ["scheduleStatus", "Schedule status"],
       ["priority", "Delivery priority"],
       ["summary", "Summary"],
@@ -8201,9 +8714,12 @@
                 ${editWeekField(report.week)}
                 ${editField("Start date", "start_date", report.start_date, "date")}
                 ${editEndDateField(report)}
+                ${editField("Baseline end date", "baseline_due_date", report.baseline_due_date || "", "date")}
+                ${editField("Depends on", "dependency", report.dependency || "", "text")}
                 <label>Health<select name="health"><option value="green" ${report.health === "green" ? "selected" : ""}>On Track</option><option value="amber" ${report.health === "amber" ? "selected" : ""}>In Progress</option><option value="red" ${report.health === "red" ? "selected" : ""}>At Risk</option><option value="gray" ${report.health === "gray" ? "selected" : ""}>Paused</option></select></label>
                 ${editField("Progress", "progress", report.progress, "number")}
                 ${stageSelect(report.stage)}
+                ${milestoneSelect(report.milestone)}
               </div>
             </section>
             <section class="edit-form-section">
@@ -8406,6 +8922,17 @@
       `;
     }
 
+    function milestoneSelect(current = "") {
+      const milestones = ["", "Discovery complete", "Requirements approved", "Design approved", "Dev handoff", "Development started", "QA started", "Release ready", "Go-live", "Post-launch validation"];
+      return `
+        <label>Milestone
+          <select name="milestone">
+            ${milestones.map(milestone => `<option value="${escapeHtml(milestone)}" ${milestone === current ? "selected" : ""}>${escapeHtml(milestone || "Select milestone")}</option>`).join("")}
+          </select>
+        </label>
+      `;
+    }
+
     function pickerFormValue(form, name) {
       const productPicker = form.querySelector(`[data-product-picker][data-name="${CSS.escape(name)}"]`);
       if (productPicker) {
@@ -8466,6 +8993,7 @@
       renderTimeline("nextList", "next", "No next actions captured yet.");
       renderReports();
       renderIncidentReport();
+      renderDeliveryTimeline();
       renderSourceProjects();
       renderReportAnalysis();
       renderOwnerFeedbackPage();
@@ -9127,6 +9655,81 @@
       renderIncidentReport();
     });
 
+    document.getElementById("timelineProductFilter").addEventListener("change", event => {
+      timelineFilters.product = event.target.value;
+      selectedTimelineMetric = "";
+      logFilterChange("delivery_timeline", "project", event.target.value);
+      renderDeliveryTimeline();
+    });
+
+    document.getElementById("timelinePeriodFilter").addEventListener("change", event => {
+      timelineFilters.period = event.target.value;
+      selectedTimelineMetric = "";
+      refreshDateFilterControls("timeline", timelineFilters);
+      logFilterChange("delivery_timeline", "date_filter", event.target.value);
+      renderDeliveryTimeline();
+    });
+
+    document.getElementById("timelineStartFilter").addEventListener("change", event => {
+      timelineFilters.start = event.target.value;
+      selectedTimelineMetric = "";
+      logFilterChange("delivery_timeline", "start_date", event.target.value);
+      renderDeliveryTimeline();
+    });
+
+    document.getElementById("timelineEndFilter").addEventListener("change", event => {
+      timelineFilters.end = event.target.value;
+      selectedTimelineMetric = "";
+      logFilterChange("delivery_timeline", "end_date", event.target.value);
+      renderDeliveryTimeline();
+    });
+
+    document.getElementById("timelineOwnerFilter").addEventListener("change", event => {
+      timelineFilters.owner = event.target.value;
+      selectedTimelineMetric = "";
+      logFilterChange("delivery_timeline", "owner", event.target.value);
+      renderDeliveryTimeline();
+    });
+
+    document.getElementById("timelineMilestoneFilter").addEventListener("change", event => {
+      timelineFilters.milestone = event.target.value;
+      selectedTimelineMetric = "";
+      logFilterChange("delivery_timeline", "milestone", event.target.value);
+      renderDeliveryTimeline();
+    });
+
+    document.getElementById("timelineScheduleFilter").addEventListener("change", event => {
+      timelineFilters.schedule = event.target.value;
+      selectedTimelineMetric = "";
+      logFilterChange("delivery_timeline", "schedule", event.target.value);
+      renderDeliveryTimeline();
+    });
+
+    document.getElementById("timelineMetrics").addEventListener("click", event => {
+      const card = event.target.closest("[data-timeline-metric]");
+      if (!card) return;
+      selectedTimelineMetric = card.dataset.timelineMetric || "";
+      logUserAction("timeline_metric_opened", { metric: selectedTimelineMetric }, { target_type: "timeline_metric", target_id: selectedTimelineMetric });
+      renderDeliveryTimeline();
+      document.getElementById("timelineDrilldownPanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    document.getElementById("timelineDrilldownClose").addEventListener("click", () => {
+      selectedTimelineMetric = "";
+      logUserAction("timeline_metric_closed", {}, { target_type: "timeline_metric", target_id: "overview" });
+      renderDeliveryTimeline();
+      document.getElementById("timelineMetrics")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    document.getElementById("deliveryTimelineBoard").addEventListener("click", event => {
+      const row = event.target.closest("[data-timeline-report]");
+      if (!row) return;
+      selectedTimelineReportId = selectedTimelineReportId === row.dataset.timelineReport ? "" : row.dataset.timelineReport;
+      const report = reports.find(r => r.id === selectedTimelineReportId);
+      logUserAction("timeline_report_selected", {}, { target_type: "report", target_id: selectedTimelineReportId || "none", ...reportLogFields(report) });
+      renderDeliveryTimeline();
+    });
+
     document.getElementById("analysisOwnerFilter").addEventListener("change", event => {
       analysisFilters.owner = event.target.value;
       selectedAnalysisMetric = "";
@@ -9378,7 +9981,8 @@
     [
       [dashboardFilters, "dashboard"],
       [executiveFilters, "executive"],
-      [incidentFilters, "incident"]
+      [incidentFilters, "incident"],
+      [timelineFilters, "timeline"]
     ].forEach(([filters, prefix]) => {
       filters.week = defaultReportingMonday;
       const range = customRangeForFilter(filters);
@@ -9410,9 +10014,18 @@
       renderIncidentReport();
     }, defaultReportingMonday);
     incidentFilters.week = document.getElementById("incidentWeekFilter").value;
+    initWeekPicker(document.getElementById("timelineWeekFilter"), document.getElementById("timelineWeekPicker"), value => {
+      timelineFilters.week = value;
+      selectedTimelineMetric = "";
+      refreshDateFilterControls("timeline", timelineFilters);
+      logFilterChange("delivery_timeline", "reporting_date", dateFilterLabel(timelineFilters));
+      renderDeliveryTimeline();
+    }, defaultReportingMonday);
+    timelineFilters.week = document.getElementById("timelineWeekFilter").value;
     refreshDateFilterControls("dashboard", dashboardFilters);
     refreshDateFilterControls("executive", executiveFilters);
     refreshDateFilterControls("incident", incidentFilters);
+    refreshDateFilterControls("timeline", timelineFilters);
     initWeekPicker(document.getElementById("reportWeekFilter"), document.getElementById("reportWeekPicker"), value => {
       reportFilters.week = value;
       logFilterChange("source_reports", "reporting_week", reportingFieldLabel(value));
