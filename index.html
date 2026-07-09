@@ -2998,10 +2998,7 @@
                   Baseline end date
                   <input name="baseline_due_date" type="date" />
                 </label>
-                <label>
-                  Depends on
-                  <input name="dependency" placeholder="e.g., API access, design approval, QA environment" />
-                </label>
+                <label>Depends on${dependencyPickerMarkup("")}</label>
                 <label>
                   Health
                   <select name="health">
@@ -3415,6 +3412,7 @@
     const USERS_KEY = "product-uiux-pulse-users-v1";
     const PEOPLE_KEY = "product-uiux-pulse-people-v1";
     const PRODUCTS_KEY = "product-uiux-pulse-products-v1";
+    const DEPENDENCIES_KEY = "product-uiux-pulse-dependencies-v1";
     const SESSION_KEY = "product-uiux-pulse-session-v1";
     const TEAM_ACCESS_CODE = "PU-SOEN-2FSO";
     const TEAM_EMAIL_DOMAINS = ["zenatech.com", "zena.tech", "zenadrone.com", "epazz.com"];
@@ -4138,6 +4136,26 @@
       localStorage.setItem(PRODUCTS_KEY, JSON.stringify(uniqueProducts(values)));
     }
 
+    function loadCustomDependencies() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(DEPENDENCIES_KEY) || "[]");
+        return Array.isArray(parsed) ? uniqueProducts(parsed) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveCustomDependencies(values) {
+      localStorage.setItem(DEPENDENCIES_KEY, JSON.stringify(uniqueProducts(values)));
+    }
+
+    function addDependencyToDirectory(name) {
+      const dependency = cleanText(name);
+      if (!dependency) return "";
+      saveCustomDependencies([...loadCustomDependencies(), dependency]);
+      return dependency;
+    }
+
     function addProductToDirectory(name) {
       const product = cleanText(name);
       if (!product) return "";
@@ -4148,6 +4166,28 @@
     function productDirectory() {
       const reportProducts = reports.map(report => report.product).filter(Boolean);
       return uniqueProducts([...PRODUCT_OPTIONS, ...reportProducts, ...loadCustomProducts()]);
+    }
+
+    function dependencyDirectory() {
+      const commonDependencies = [
+        "API access",
+        "Client approval",
+        "Data migration",
+        "Design approval",
+        "DevOps support",
+        "QA environment",
+        "Security review",
+        "Stakeholder decision",
+        "Vendor response"
+      ];
+      const reportDependencies = reports.map(report => report.dependency).filter(Boolean);
+      const workstreamDependencies = reports.flatMap(report => {
+        const title = cleanText(report.feature_workstream || "");
+        const product = cleanText(report.product || "");
+        if (title && product) return [`${product} - ${title}`];
+        return [title || product].filter(Boolean);
+      });
+      return uniqueProducts([...commonDependencies, ...workstreamDependencies, ...reportDependencies, ...loadCustomDependencies()]);
     }
 
     function peopleDirectory() {
@@ -4301,6 +4341,66 @@
       });
     }
 
+    function dependencyPickerMarkup(value = "") {
+      return `
+        <div class="people-picker" data-dependency-picker data-name="dependency" data-label="Dependency" data-placeholder="Select dependency" data-selected="${escapeHtml(value || "")}">
+          <input type="hidden" name="dependency" value="${escapeHtml(value || "")}" />
+        </div>
+      `;
+    }
+
+    function renderDependencyPicker(picker) {
+      const selected = cleanText(picker.dataset.selected || "");
+      const selectedTitle = selected || picker.dataset.placeholder || "Select dependency";
+      const values = uniqueProducts([selected, ...dependencyDirectory()].filter(Boolean));
+      picker.innerHTML = `
+        <input type="hidden" name="${escapeHtml(picker.dataset.name || "dependency")}" value="${escapeHtml(selected)}" />
+        <button class="people-picker-btn" type="button" aria-haspopup="listbox" aria-expanded="false" title="${escapeHtml(selectedTitle)}">
+          <span>${escapeHtml(selectedTitle)}</span>
+        </button>
+        <div class="people-menu" hidden>
+          <input type="text" class="picker-search" data-picker-search placeholder="Type to search dependencies" />
+          <div class="people-options" role="listbox" aria-label="${escapeHtml(picker.dataset.label || "Dependencies")}">
+            <label class="people-option" data-search-text="no dependency">
+              <input type="radio" name="${escapeHtml(picker.dataset.name || "dependency")}_choice" value="" ${!selected ? "checked" : ""}>
+              <span>No dependency</span>
+            </label>
+            ${values.map(dependency => `
+              <label class="people-option" data-search-text="${escapeHtml(canonicalText(dependency))}">
+                <input type="radio" name="${escapeHtml(picker.dataset.name || "dependency")}_choice" value="${escapeHtml(dependency)}" ${dependency === selected ? "checked" : ""}>
+                <span>${escapeHtml(dependency)}</span>
+              </label>
+            `).join("")}
+          </div>
+          <div class="people-add">
+            <input type="text" data-new-dependency placeholder="Add dependency" />
+            <button class="btn" type="button" data-add-dependency>Add</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function updateDependencyPickerSelection(picker, value, { keepOpen = false } = {}) {
+      picker.dataset.selected = cleanText(value);
+      renderDependencyPicker(picker);
+      if (keepOpen) {
+        const menu = picker.querySelector(".people-menu");
+        const button = picker.querySelector(".people-picker-btn");
+        if (menu) menu.hidden = false;
+        if (button) button.setAttribute("aria-expanded", "true");
+      }
+    }
+
+    function initDependencyPickers(root = document) {
+      root.querySelectorAll("[data-dependency-picker]").forEach(picker => {
+        if (!picker.dataset.selected) {
+          const hidden = picker.querySelector(`input[name="${CSS.escape(picker.dataset.name || "dependency")}"]`);
+          picker.dataset.selected = hidden?.value ? cleanText(hidden.value) : "";
+        }
+        renderDependencyPicker(picker);
+      });
+    }
+
     function filterPickerOptions(menu, query) {
       const needle = canonicalText(query);
       let visibleCount = 0;
@@ -4315,9 +4415,13 @@
         empty = document.createElement("div");
         empty.className = "empty";
         empty.dataset.pickerEmpty = "true";
-        empty.innerHTML = menu.closest("[data-product-picker]")
-          ? "<strong>No matches</strong>Try another letter or add the product below."
-          : "<strong>No matches</strong>Try another letter or add the person below.";
+        if (menu.closest("[data-dependency-picker]")) {
+          empty.innerHTML = "<strong>No matches</strong>Try another letter or add the dependency below.";
+        } else if (menu.closest("[data-product-picker]")) {
+          empty.innerHTML = "<strong>No matches</strong>Try another letter or add the product below.";
+        } else {
+          empty.innerHTML = "<strong>No matches</strong>Try another letter or add the person below.";
+        }
         menu.querySelector(".people-options")?.appendChild(empty);
       }
       empty.hidden = visibleCount > 0;
@@ -8734,7 +8838,7 @@
                 ${editField("Start date", "start_date", report.start_date, "date")}
                 ${editEndDateField(report)}
                 ${editField("Baseline end date", "baseline_due_date", report.baseline_due_date || "", "date")}
-                ${editField("Depends on", "dependency", report.dependency || "", "text")}
+                <label>Depends on${dependencyPickerMarkup(report.dependency || "")}</label>
                 <label>Health<select name="health"><option value="green" ${report.health === "green" ? "selected" : ""}>On Track</option><option value="amber" ${report.health === "amber" ? "selected" : ""}>In Progress</option><option value="red" ${report.health === "red" ? "selected" : ""}>At Risk</option><option value="gray" ${report.health === "gray" ? "selected" : ""}>Paused</option></select></label>
                 ${editField("Progress", "progress", report.progress, "number")}
                 ${stageSelect(report.stage)}
@@ -8779,6 +8883,7 @@
       const editWeekInput = detail.querySelector('input[name="week"]');
       initProductPickers(detail);
       initPeoplePickers(detail);
+      initDependencyPickers(detail);
       initWeekPicker(editWeekButton, editWeekPicker, () => {}, report.week || mondayForDate(), editWeekInput);
       document.getElementById("reportHistoryBtn").addEventListener("click", async () => {
         reportHistoryOpen = !reportHistoryOpen;
@@ -8966,12 +9071,16 @@
         if (selected.length) return selected.join(" / ");
         return cleanText(peoplePicker.querySelector(`input[name="${CSS.escape(name)}"]`)?.value || "");
       }
+      const dependencyPicker = form.querySelector(`[data-dependency-picker][data-name="${CSS.escape(name)}"]`);
+      if (dependencyPicker) {
+        return cleanText(dependencyPicker.dataset.selected || dependencyPicker.querySelector(`input[name="${CSS.escape(name)}"]`)?.value || "");
+      }
       return "";
     }
 
     function readReportForm(form, id = crypto.randomUUID(), { requireProduct = true } = {}) {
       const data = Object.fromEntries(new FormData(form).entries());
-      ["product", "owner", "participants"].forEach(name => {
+      ["product", "owner", "participants", "dependency"].forEach(name => {
         const value = pickerFormValue(form, name);
         if (value || name === "product") data[name] = value;
       });
@@ -9320,12 +9429,13 @@
       const pickerButton = event.target.closest(".people-picker-btn");
       const addButton = event.target.closest("[data-add-person]");
       const addProductButton = event.target.closest("[data-add-product]");
+      const addDependencyButton = event.target.closest("[data-add-dependency]");
       const option = event.target.closest(".people-option input");
-      const activePicker = event.target.closest("[data-people-picker], [data-product-picker]");
+      const activePicker = event.target.closest("[data-people-picker], [data-product-picker], [data-dependency-picker]");
 
       if (pickerButton) {
         event.stopPropagation();
-        const picker = pickerButton.closest("[data-people-picker], [data-product-picker]");
+        const picker = pickerButton.closest("[data-people-picker], [data-product-picker], [data-dependency-picker]");
         const menu = picker.querySelector(".people-menu");
         const opening = menu.hidden;
         document.querySelectorAll(".people-menu").forEach(item => {
@@ -9370,11 +9480,29 @@
         return;
       }
 
+      if (addDependencyButton) {
+        event.stopPropagation();
+        const picker = addDependencyButton.closest("[data-dependency-picker]");
+        const input = picker.querySelector("[data-new-dependency]");
+        const dependency = addDependencyToDirectory(input.value);
+        if (!dependency) return;
+        updateDependencyPickerSelection(picker, dependency, { keepOpen: false });
+        picker.querySelector(".people-menu").hidden = true;
+        picker.querySelector(".people-picker-btn").setAttribute("aria-expanded", "false");
+        return;
+      }
+
       if (option) {
         event.stopPropagation();
-        const picker = option.closest("[data-people-picker], [data-product-picker]");
+        const picker = option.closest("[data-people-picker], [data-product-picker], [data-dependency-picker]");
         if (picker.matches("[data-product-picker]")) {
           updateProductPickerSelection(picker, option.value);
+          picker.querySelector(".people-menu").hidden = true;
+          picker.querySelector(".people-picker-btn").setAttribute("aria-expanded", "false");
+          return;
+        }
+        if (picker.matches("[data-dependency-picker]")) {
+          updateDependencyPickerSelection(picker, option.value);
           picker.querySelector(".people-menu").hidden = true;
           picker.querySelector(".people-picker-btn").setAttribute("aria-expanded", "false");
           return;
@@ -9421,6 +9549,10 @@
           picker.dataset.selected = "";
           renderPeoplePicker(picker);
         });
+        form.querySelectorAll("[data-dependency-picker]").forEach(picker => {
+          picker.dataset.selected = "";
+          renderDependencyPicker(picker);
+        });
         setWeekdayDateValue(document.getElementById("statusWeekFilter"), mondayForDate());
         setWeekdayDateValue(form.week, mondayForDate());
         saveBtn.textContent = "Saved";
@@ -9444,6 +9576,10 @@
         event.currentTarget.querySelectorAll("[data-people-picker]").forEach(picker => {
           picker.dataset.selected = "";
           renderPeoplePicker(picker);
+        });
+        event.currentTarget.querySelectorAll("[data-dependency-picker]").forEach(picker => {
+          picker.dataset.selected = "";
+          renderDependencyPicker(picker);
         });
       }, 0);
     });
@@ -10052,6 +10188,7 @@
     }, "");
     initProductPickers(document.getElementById("statusForm"));
     initPeoplePickers(document.getElementById("statusForm"));
+    initDependencyPickers(document.getElementById("statusForm"));
     initReportingWeekInputs();
     (async () => {
       await syncUsersWithCloud();
