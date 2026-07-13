@@ -1516,7 +1516,9 @@
       cursor: pointer;
       text-align: left;
       color: inherit;
+      font: inherit;
       width: 100%;
+      appearance: none;
     }
 
     .report-card.interactive:hover,
@@ -2615,6 +2617,17 @@
           </div>
           <div class="report-list" id="workloadOwnershipSummary"></div>
         </div>
+
+        <div class="panel" id="workloadDetailPanel" hidden>
+          <div class="panel-title">
+            <div>
+              <h3 id="workloadDetailTitle">Owner workstreams</h3>
+              <p class="muted small" id="workloadDetailSubtitle"></p>
+            </div>
+            <button class="btn" type="button" id="workloadDetailClose">Back to owner overview</button>
+          </div>
+          <div class="report-list" id="workloadDetailList"></div>
+        </div>
       </section>
 
       <section class="view" id="users" data-role-manager-view>
@@ -3535,6 +3548,7 @@
     let selectedTimelineMetric = "";
     let selectedTimelineReportId = "";
     let selectedAnalysisMetric = "";
+    let selectedWorkloadKey = "";
     let useLegacySupabasePayload = false;
     let actionLoggingDisabled = false;
     let currentUser = null;
@@ -6667,6 +6681,75 @@
       return "Capacity looks manageable under the current report mix.";
     }
 
+    function workloadKey(role, owner) {
+      return `${role || ""}|${owner || ""}`;
+    }
+
+    function workloadReportsForOwner(role, owner) {
+      const normalizedOwner = normalizePersonDisplay(owner || "Unassigned") || "Unassigned";
+      return reports
+        .filter(report => report.role === role && (normalizePersonDisplay(report.owner || "Unassigned") || "Unassigned") === normalizedOwner)
+        .sort((a, b) =>
+          endDateRank(a).localeCompare(endDateRank(b)) ||
+          reportTitle(a).localeCompare(reportTitle(b))
+        );
+    }
+
+    function workloadDetailCard(report) {
+      const tone = healthClass(report);
+      const schedule = endDateStatus(report);
+      return `
+        <div class="report-card">
+          <div class="panel-title">
+            <div>
+              <span class="product-label">${escapeHtml(report.product || "No product")}</span>
+              <h3>${escapeHtml(reportTitle(report))}</h3>
+              <p class="muted small">${escapeHtml(report.role || "No role")} - Reporting week ${escapeHtml(reportingFieldLabel(report.week))}${reportEndDate(report) ? ` - ${endDateMarkup(report)}` : ""}</p>
+            </div>
+            <span class="chip ${tone}">${escapeHtml(labels[report.health] || report.health || "No health")}</span>
+          </div>
+          <p>${escapeHtml(report.summary || "No summary captured.")}</p>
+          <div class="report-card-detail">
+            <div><strong>Progress</strong><p class="muted small">${Number(report.progress || 0)}%</p></div>
+            <div><strong>Stage</strong><p class="muted small">${escapeHtml(report.stage || "No stage")}</p></div>
+            <div><strong>Schedule</strong><p class="muted small">${escapeHtml(schedule?.label || "No end date status")}</p></div>
+            <div><strong>Blocker or risk</strong><p class="muted small">${escapeHtml(report.blocker || "No blocker captured.")}</p></div>
+            <div><strong>Next action</strong><p class="muted small">${escapeHtml(report.next || "No next action captured.")}</p></div>
+            <div><strong>Action owner</strong><p class="muted small">${escapeHtml(report.action_owner || report.owner || "Not assigned")}</p></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderWorkloadDetail(ownershipRows) {
+      const panel = document.getElementById("workloadDetailPanel");
+      const title = document.getElementById("workloadDetailTitle");
+      const subtitle = document.getElementById("workloadDetailSubtitle");
+      const list = document.getElementById("workloadDetailList");
+      if (!panel || !title || !subtitle || !list) return;
+      if (!selectedWorkloadKey) {
+        panel.hidden = true;
+        list.innerHTML = "";
+        return;
+      }
+
+      const selected = ownershipRows.find(item => workloadKey(item.role, item.owner) === selectedWorkloadKey);
+      if (!selected) {
+        selectedWorkloadKey = "";
+        panel.hidden = true;
+        list.innerHTML = "";
+        return;
+      }
+
+      const rows = workloadReportsForOwner(selected.role, selected.owner);
+      panel.hidden = false;
+      title.textContent = `${selected.owner} workstreams`;
+      subtitle.textContent = `${selected.role} - ${rows.length} workstream${rows.length === 1 ? "" : "s"} across ${selected.products.size} project${selected.products.size === 1 ? "" : "s"}.`;
+      list.innerHTML = rows.length
+        ? rows.map(workloadDetailCard).join("")
+        : `<div class="empty"><strong>No workstreams found</strong>This owner has no matching PM or UI/UX workstreams.</div>`;
+    }
+
     function renderWorkBalance() {
       const cardsTarget = document.getElementById("workloadCards");
       const ownershipTarget = document.getElementById("workloadOwnershipSummary");
@@ -6697,8 +6780,12 @@
         </div>
       `).join("");
 
+      if (selectedWorkloadKey && !ownershipRows.some(item => workloadKey(item.role, item.owner) === selectedWorkloadKey)) {
+        selectedWorkloadKey = "";
+      }
+
       ownershipTarget.innerHTML = ownershipRows.length ? ownershipRows.map(item => `
-        <div class="report-card workload-card">
+        <button class="report-card interactive workload-card ${workloadKey(item.role, item.owner) === selectedWorkloadKey ? "selected" : ""}" type="button" data-workload-owner="${escapeHtml(item.owner)}" data-workload-role="${escapeHtml(item.role)}">
           <header>
             <div>
               <span class="product-label">${escapeHtml(item.role)}</span>
@@ -6718,8 +6805,10 @@
           </div>
           <p class="workload-products">${escapeHtml([...item.products].sort((a, b) => a.localeCompare(b)).join(", ") || "No product assigned")}</p>
           <p class="muted small"><strong>PM recommendation:</strong> ${escapeHtml(workloadRecommendation(item, item.role === "UI/UX" ? uxAverage : pmAverage))}</p>
-        </div>
+          <span class="muted small">Click to view workstreams</span>
+        </button>
       `).join("") : `<div class="empty"><strong>No workload yet</strong>Add status reports with PM or UI/UX roles to populate this view.</div>`;
+      renderWorkloadDetail(ownershipRows);
     }
 
     function renderUserManagement() {
@@ -10404,6 +10493,25 @@
         event.currentTarget.textContent = "Email owner";
         event.currentTarget.disabled = false;
       }
+    });
+
+    document.getElementById("workloadOwnershipSummary").addEventListener("click", event => {
+      const card = event.target.closest("[data-workload-owner]");
+      if (!card) return;
+      selectedWorkloadKey = workloadKey(card.dataset.workloadRole, card.dataset.workloadOwner);
+      logUserAction("workload_owner_selected", {
+        owner: card.dataset.workloadOwner,
+        role: card.dataset.workloadRole
+      }, { target_type: "workload_owner", target_id: selectedWorkloadKey });
+      renderWorkBalance();
+      document.getElementById("workloadDetailPanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    document.getElementById("workloadDetailClose").addEventListener("click", () => {
+      selectedWorkloadKey = "";
+      logUserAction("workload_owner_closed", {}, { target_type: "workload_owner", target_id: "overview" });
+      renderWorkBalance();
+      document.getElementById("workloadOwnershipSummary")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
     document.getElementById("incidentMetrics").addEventListener("click", event => {
