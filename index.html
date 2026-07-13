@@ -3007,11 +3007,27 @@
                   Baseline end date
                   <input name="baseline_due_date" type="date" />
                 </label>
-                <label>Depends on${dependencyPickerMarkup("")}</label>
+                <label>Depends on
+                  <div class="people-picker" data-dependency-picker data-name="dependency" data-label="Dependency" data-placeholder="Select dependency" data-selected="">
+                    <input type="hidden" name="dependency" value="" />
+                  </div>
+                </label>
                 <label>
                   Delay root cause
                   <select name="delay_reason">
-                    ${DELAY_REASON_OPTIONS.map(reason => `<option value="${escapeHtml(reason)}">${escapeHtml(reason || "Select root cause")}</option>`).join("")}
+                    <option value="">Select root cause</option>
+                    <option>Access / permissions</option>
+                    <option>Blocked by dependency</option>
+                    <option>Client or stakeholder feedback</option>
+                    <option>Data issue</option>
+                    <option>Environment or deployment</option>
+                    <option>Requirement clarification</option>
+                    <option>Resource capacity</option>
+                    <option>Scope change</option>
+                    <option>Technical issue</option>
+                    <option>Testing / QA findings</option>
+                    <option>Vendor or third party</option>
+                    <option>Other</option>
                   </select>
                 </label>
                 <label class="full">
@@ -3105,7 +3121,11 @@
                 <label>
                   Action status
                   <select name="action_status">
-                    ${ACTION_STATUS_OPTIONS.map(status => `<option>${escapeHtml(status)}</option>`).join("")}
+                    <option>Open</option>
+                    <option>In Progress</option>
+                    <option>Waiting on decision</option>
+                    <option>Blocked</option>
+                    <option>Closed</option>
                   </select>
                 </label>
                 <label class="full">
@@ -3258,6 +3278,11 @@
       "Other"
     ];
     const ACTION_STATUS_OPTIONS = ["Open", "In Progress", "Waiting on decision", "Blocked", "Closed"];
+
+    function normalizeActionStatus(value = "Open") {
+      const cleanValue = cleanText(value);
+      return ACTION_STATUS_OPTIONS.includes(cleanValue) ? cleanValue : "Open";
+    }
 
     const sampleReports = [
       {
@@ -3750,7 +3775,7 @@
         action_owner: report.action_owner || "",
         action_due_date: report.action_due_date || "",
         decision_needed: report.decision_needed || "",
-        action_status: report.action_status || "Open",
+        action_status: normalizeActionStatus(report.action_status),
         history: Array.isArray(report.history) ? report.history.slice(-50) : []
       };
       return btoa(unescape(encodeURIComponent(JSON.stringify(meta))));
@@ -3810,7 +3835,7 @@
         action_owner: row.action_owner || row.actionOwner || legacyMeta.action_owner || legacyMeta.actionOwner || "",
         action_due_date: firstValue(row.action_due_date, row.actionDueDate, legacyMeta.action_due_date, legacyMeta.actionDueDate),
         decision_needed: row.decision_needed || row.decisionNeeded || legacyMeta.decision_needed || legacyMeta.decisionNeeded || "",
-        action_status: row.action_status || row.actionStatus || legacyMeta.action_status || legacyMeta.actionStatus || "Open",
+        action_status: normalizeActionStatus(row.action_status || row.actionStatus || legacyMeta.action_status || legacyMeta.actionStatus || "Open"),
         health: row.health || "amber",
         progress: Number(row.progress || 0),
         stage: normalized.stage,
@@ -3860,7 +3885,7 @@
         action_owner: report.action_owner || null,
         action_due_date: report.action_due_date || null,
         decision_needed: report.decision_needed || null,
-        action_status: report.action_status || "Open",
+        action_status: normalizeActionStatus(report.action_status),
         history: Array.isArray(report.history) ? report.history.slice(-50) : [],
       };
     }
@@ -9365,6 +9390,7 @@
         ...data,
         id,
         role: data.role || "Product Manager",
+        action_status: normalizeActionStatus(data.action_status),
         progress: Math.max(0, Math.min(100, Number(data.progress || 0))),
         impact: Number(data.impact || 1),
         time: Number(data.time || 1)
