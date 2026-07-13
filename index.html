@@ -108,13 +108,14 @@
       color: #f8fafc;
       display: flex;
       flex-direction: column;
+      z-index: 30;
     }
 
     main {
       padding: 28px;
       margin-left: 280px;
       max-width: 1720px;
-      width: 100%;
+      width: calc(100% - 280px);
       min-width: 0;
     }
 
@@ -1780,7 +1781,7 @@
         overflow: visible;
       }
       .side-actions { position: static; margin-top: 22px; }
-      main { margin-left: 0; padding: 18px; }
+      main { margin-left: 0; width: 100%; padding: 18px; }
       .summary-grid, .two-col, .three-col, .exec-grid, .exec-metrics, .health-stack, .form-grid, .filter-bar, .health-toolbar, .health-detail-grid, .report-card-detail, .timeline-scale, .delivery-row { grid-template-columns: 1fr; }
       .timeline-scale-track {
         display: none;
