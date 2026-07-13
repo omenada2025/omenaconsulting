@@ -7369,11 +7369,55 @@
       return endDateScheduleClassification(report);
     }
 
+    function pluralizeDays(count) {
+      return `${count} day${count === 1 ? "" : "s"}`;
+    }
+
+    function shortReasonText(value, maxLength = 180) {
+      const text = cleanText(value);
+      if (!text || text.length <= maxLength) return text;
+      return `${text.slice(0, maxLength - 1).trim()}...`;
+    }
+
+    function scheduleStatusReason(report, status = endDateStatus(report)) {
+      if (!status) return "No schedule classification is available because no end date was captured.";
+      const currentEndDate = reportEndDate(report);
+      const blocker = shortReasonText(report?.blocker);
+      let reason = "";
+      const baselineEndDate = firstValue(report?.baseline_due_date, report?.baselineDueDate);
+      const dateChange = currentEndDateChange(report);
+      const previousEndDate = baselineEndDate && baselineEndDate !== currentEndDate
+        ? baselineEndDate
+        : dateChange
+          ? historyValue(dateChange.before)
+          : "";
+      const deltaDays = previousEndDate && currentEndDate ? daysBetweenDates(previousEndDate, currentEndDate) : null;
+
+      if (deltaDays !== null && deltaDays !== 0) {
+        const direction = deltaDays > 0 ? "later than planned" : "earlier than planned";
+        reason = `End date moved ${pluralizeDays(Math.abs(deltaDays))} ${direction}, from ${previousEndDate} to ${currentEndDate}.`;
+      } else if (status.category === "minorDelay" || status.category === "majorDelay") {
+        const overdueDays = Math.abs(daysUntilDate(currentEndDate) || 0);
+        reason = overdueDays
+          ? `End date is ${pluralizeDays(overdueDays)} past the current date.`
+          : "End date is behind the current schedule classification.";
+      } else if (status.category === "ahead") {
+        reason = "Current end date is more than 5% earlier than the planned date.";
+      } else {
+        reason = "Current end date is within the planned schedule.";
+      }
+
+      const percent = Number.isFinite(status.percent) ? ` Schedule variance: ${Math.round(status.percent)}%.` : "";
+      const blockerReason = blocker ? ` Reported blocker/risk: ${blocker}` : "";
+      return `${reason}${percent}${blockerReason}`;
+    }
+
     function endDateMarkup(report, prefix = "End") {
       const dueDate = reportEndDate(report);
       if (!dueDate) return "";
       const status = endDateStatus(report);
-      return `${escapeHtml(prefix)} ${escapeHtml(dueDate)}${status ? ` <span class="end-date-status"><span class="chip ${status.tone}">${escapeHtml(status.label)}</span></span>` : ""}`;
+      const reason = status ? scheduleStatusReason(report, status) : "";
+      return `${escapeHtml(prefix)} ${escapeHtml(dueDate)}${status ? ` <span class="end-date-status" title="${escapeHtml(reason)}"><span class="chip ${status.tone}">${escapeHtml(status.label)}</span></span>` : ""}`;
     }
 
     function endDateRank(report) {
@@ -7475,12 +7519,14 @@
       const alerts = getEndDateAlerts(source).slice(0, 8);
       target.innerHTML = alerts.length ? alerts.map(report => {
         const status = endDateStatus(report);
+        const reason = scheduleStatusReason(report, status);
         return `
           <div class="exec-row featured">
             <div>
               <span class="product-label">${escapeHtml(report.product || "No product")}</span>
               <strong>${escapeHtml(reportTitle(report))}</strong>
               <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(reportProductLine(report))} - ${endDateMarkup(report)}</p>
+              <p class="muted small"><strong>Reason:</strong> ${escapeHtml(reason)}</p>
             </div>
             <span class="chip ${status.tone}">${escapeHtml(status.label)}</span>
           </div>
@@ -7611,6 +7657,8 @@
 
     function incidentDetailCard(report) {
       const tone = incidentTone(report);
+      const status = endDateStatus(report);
+      const scheduleReason = status ? scheduleStatusReason(report, status) : "";
       return `
         <div class="report-card">
           <div class="panel-title">
@@ -7623,6 +7671,7 @@
           </div>
           <p>${escapeHtml(report.summary || "No summary captured.")}</p>
           <div class="report-card-detail">
+            ${scheduleReason ? `<div><strong>Schedule reason</strong><p class="muted small"><span class="chip ${status.tone}">${escapeHtml(status.label)}</span> ${escapeHtml(scheduleReason)}</p></div>` : ""}
             <div><strong>Blocker or risk</strong><p class="muted small">${escapeHtml(report.blocker || "No blocker captured.")}</p></div>
             <div><strong>Next action</strong><p class="muted small">${escapeHtml(report.next || "No next action captured.")}</p></div>
             <div><strong>Priority</strong><p class="muted small">${escapeHtml(report.priority || "Normal")} - ${escapeHtml(labels[report.health] || report.health || "No health")}</p></div>
@@ -7696,6 +7745,7 @@
 
     function timelineDetailCard(report) {
       const status = endDateStatus(report);
+      const scheduleReason = status ? scheduleStatusReason(report, status) : "";
       return `
         <div class="report-card">
           <div class="panel-title">
@@ -7711,6 +7761,7 @@
             <div><strong>Milestone</strong><p class="muted small">${escapeHtml(report.milestone || "No milestone selected.")}</p></div>
             <div><strong>Depends on</strong><p class="muted small">${escapeHtml(report.dependency || "No dependency captured.")}</p></div>
             <div><strong>Baseline</strong><p class="muted small">${escapeHtml(report.baseline_due_date || "No baseline date.")}</p></div>
+            ${scheduleReason ? `<div><strong>Schedule reason</strong><p class="muted small"><span class="chip ${status.tone}">${escapeHtml(status.label)}</span> ${escapeHtml(scheduleReason)}</p></div>` : ""}
             <div><strong>Progress</strong><p class="muted small">${escapeHtml(report.progress || 0)}%</p></div>
             <div><strong>Blocker or risk</strong><p class="muted small">${escapeHtml(report.blocker || "No blocker captured.")}</p></div>
             <div><strong>Next action</strong><p class="muted small">${escapeHtml(report.next || "No next action captured.")}</p></div>
@@ -8462,6 +8513,8 @@
     }
 
     function reportCardDetailMarkup(report) {
+      const status = endDateStatus(report);
+      const scheduleReason = status ? scheduleStatusReason(report, status) : "";
       const rows = [
         ["Win", report.win || "No win captured yet."],
         ["Blocker or risk", report.blocker || "No blocker captured yet."],
@@ -8469,6 +8522,7 @@
         ["Stage", report.stage || "No stage captured."],
         ["Progress", `${Number(report.progress || 0)}%`],
         ["End date", reportEndDate(report) ? endDateMarkup(report) : "No end date captured."],
+        ...(scheduleReason ? [["Schedule reason", `${status.label}: ${scheduleReason}`]] : []),
         ["Baseline", report.baseline_due_date || "No baseline date captured."],
         ["Milestone", report.milestone || "No milestone selected."],
         ["Depends on", report.dependency || "No dependency captured."],
