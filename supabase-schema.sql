@@ -11,6 +11,15 @@ create table if not exists public.status_reports (
   week date not null,
   start_date date,
   due_date date,
+  baseline_due_date date,
+  dependency text,
+  milestone text,
+  delay_reason text,
+  date_change_reason text,
+  action_owner text,
+  action_due_date date,
+  decision_needed text,
+  action_status text not null default 'Open' check (action_status in ('Open', 'In Progress', 'Waiting on decision', 'Blocked', 'Closed')),
   health text not null check (health in ('green', 'amber', 'red', 'gray')),
   progress integer not null default 0 check (progress >= 0 and progress <= 100),
   stage text not null,
@@ -31,6 +40,34 @@ check (role in ('Product Manager', 'UI/UX'));
 
 alter table public.status_reports
 add column if not exists due_date date;
+
+alter table public.status_reports
+add column if not exists baseline_due_date date;
+
+alter table public.status_reports
+add column if not exists dependency text;
+
+alter table public.status_reports
+add column if not exists milestone text;
+
+alter table public.status_reports
+add column if not exists delay_reason text;
+
+alter table public.status_reports
+add column if not exists date_change_reason text;
+
+alter table public.status_reports
+add column if not exists action_owner text;
+
+alter table public.status_reports
+add column if not exists action_due_date date;
+
+alter table public.status_reports
+add column if not exists decision_needed text;
+
+alter table public.status_reports
+add column if not exists action_status text not null default 'Open'
+check (action_status in ('Open', 'In Progress', 'Waiting on decision', 'Blocked', 'Closed'));
 
 alter table public.status_reports
 add column if not exists product_type text not null default 'Legacy'

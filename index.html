@@ -3009,6 +3009,16 @@
                 </label>
                 <label>Depends on${dependencyPickerMarkup("")}</label>
                 <label>
+                  Delay root cause
+                  <select name="delay_reason">
+                    ${DELAY_REASON_OPTIONS.map(reason => `<option value="${escapeHtml(reason)}">${escapeHtml(reason || "Select root cause")}</option>`).join("")}
+                  </select>
+                </label>
+                <label class="full">
+                  Date change reason
+                  <textarea name="date_change_reason" placeholder="Why did the delivery date change, if applicable?"></textarea>
+                </label>
+                <label>
                   Health
                   <select name="health">
                     <option value="green">On Track</option>
@@ -3083,6 +3093,24 @@
                 <label>
                   Next action
                   <textarea name="next" placeholder="What is the next delivery, design, review, or handoff step?"></textarea>
+                </label>
+                <label>
+                  Corrective action owner
+                  <div class="people-picker" data-people-picker data-name="action_owner" data-label="Corrective action owner" data-placeholder="Select owner"></div>
+                </label>
+                <label>
+                  Action target date
+                  <input name="action_due_date" type="date" />
+                </label>
+                <label>
+                  Action status
+                  <select name="action_status">
+                    ${ACTION_STATUS_OPTIONS.map(status => `<option>${escapeHtml(status)}</option>`).join("")}
+                  </select>
+                </label>
+                <label class="full">
+                  Decision needed
+                  <textarea name="decision_needed" placeholder="What decision, approval, or trade-off is needed to unblock or accelerate delivery?"></textarea>
                 </label>
                 <label>
                   Risk impact
@@ -3214,6 +3242,22 @@
       red: "At Risk",
       gray: "Paused"
     };
+    const DELAY_REASON_OPTIONS = [
+      "",
+      "Access / permissions",
+      "Blocked by dependency",
+      "Client or stakeholder feedback",
+      "Data issue",
+      "Environment or deployment",
+      "Requirement clarification",
+      "Resource capacity",
+      "Scope change",
+      "Technical issue",
+      "Testing / QA findings",
+      "Vendor or third party",
+      "Other"
+    ];
+    const ACTION_STATUS_OPTIONS = ["Open", "In Progress", "Waiting on decision", "Blocked", "Closed"];
 
     const sampleReports = [
       {
@@ -3701,6 +3745,12 @@
         baseline_due_date: report.baseline_due_date || "",
         dependency: report.dependency || "",
         milestone: report.milestone || "",
+        delay_reason: report.delay_reason || "",
+        date_change_reason: report.date_change_reason || "",
+        action_owner: report.action_owner || "",
+        action_due_date: report.action_due_date || "",
+        decision_needed: report.decision_needed || "",
+        action_status: report.action_status || "Open",
         history: Array.isArray(report.history) ? report.history.slice(-50) : []
       };
       return btoa(unescape(encodeURIComponent(JSON.stringify(meta))));
@@ -3755,6 +3805,12 @@
         baseline_due_date: firstValue(row.baseline_due_date, row.baselineDueDate, legacyMeta.baseline_due_date, legacyMeta.baselineDueDate),
         dependency: row.dependency || row.depends_on || row.dependsOn || legacyMeta.dependency || legacyMeta.depends_on || "",
         milestone: row.milestone || legacyMeta.milestone || "",
+        delay_reason: row.delay_reason || row.delayReason || legacyMeta.delay_reason || legacyMeta.delayReason || "",
+        date_change_reason: row.date_change_reason || row.dateChangeReason || legacyMeta.date_change_reason || legacyMeta.dateChangeReason || "",
+        action_owner: row.action_owner || row.actionOwner || legacyMeta.action_owner || legacyMeta.actionOwner || "",
+        action_due_date: firstValue(row.action_due_date, row.actionDueDate, legacyMeta.action_due_date, legacyMeta.actionDueDate),
+        decision_needed: row.decision_needed || row.decisionNeeded || legacyMeta.decision_needed || legacyMeta.decisionNeeded || "",
+        action_status: row.action_status || row.actionStatus || legacyMeta.action_status || legacyMeta.actionStatus || "Open",
         health: row.health || "amber",
         progress: Number(row.progress || 0),
         stage: normalized.stage,
@@ -3799,6 +3855,12 @@
         baseline_due_date: report.baseline_due_date || null,
         dependency: report.dependency || null,
         milestone: report.milestone || null,
+        delay_reason: report.delay_reason || null,
+        date_change_reason: report.date_change_reason || null,
+        action_owner: report.action_owner || null,
+        action_due_date: report.action_due_date || null,
+        decision_needed: report.decision_needed || null,
+        action_status: report.action_status || "Open",
         history: Array.isArray(report.history) ? report.history.slice(-50) : [],
       };
     }
@@ -4665,7 +4727,13 @@
         [row.due_date || legacyMeta.due_date || "", report.due_date || ""],
         [row.baseline_due_date || legacyMeta.baseline_due_date || "", report.baseline_due_date || ""],
         [row.dependency || legacyMeta.dependency || "", report.dependency || ""],
-        [row.milestone || legacyMeta.milestone || "", report.milestone || ""]
+        [row.milestone || legacyMeta.milestone || "", report.milestone || ""],
+        [row.delay_reason || legacyMeta.delay_reason || "", report.delay_reason || ""],
+        [row.date_change_reason || legacyMeta.date_change_reason || "", report.date_change_reason || ""],
+        [row.action_owner || legacyMeta.action_owner || "", report.action_owner || ""],
+        [row.action_due_date || legacyMeta.action_due_date || "", report.action_due_date || ""],
+        [row.decision_needed || legacyMeta.decision_needed || "", report.decision_needed || ""],
+        [row.action_status || legacyMeta.action_status || "Open", report.action_status || "Open"]
       ];
       return comparisons.every(([left, right]) => sameValue(left, right));
     }
@@ -4788,6 +4856,12 @@
       ["baseline_due_date", "Baseline end date"],
       ["dependency", "Depends on"],
       ["milestone", "Milestone"],
+      ["delay_reason", "Delay root cause"],
+      ["date_change_reason", "Date change reason"],
+      ["action_owner", "Corrective action owner"],
+      ["action_due_date", "Action target date"],
+      ["decision_needed", "Decision needed"],
+      ["action_status", "Action status"],
       ["health", "Health"],
       ["progress", "Progress"],
       ["stage", "Stage"],
@@ -4895,6 +4969,12 @@
         baseline_due_date: reportWithHistory.baseline_due_date,
         dependency: reportWithHistory.dependency,
         milestone: reportWithHistory.milestone,
+        delay_reason: reportWithHistory.delay_reason,
+        date_change_reason: reportWithHistory.date_change_reason,
+        action_owner: reportWithHistory.action_owner,
+        action_due_date: reportWithHistory.action_due_date,
+        decision_needed: reportWithHistory.decision_needed,
+        action_status: reportWithHistory.action_status,
         history: reportWithHistory.history
       });
       saveFieldOverride(updatedReport);
@@ -5541,6 +5621,8 @@
       const win = cleanText(report.win);
       const progress = Number(report.progress || 0);
       const scheduleStatus = endDateStatus(report);
+      const completeness = reportCompletenessScore(report);
+      const escalation = escalationLevel(report);
 
       if (!cleanText(report.product)) {
         gaps.push("Project/product is missing.");
@@ -5570,6 +5652,18 @@
         gaps.push("Next action is missing.");
         suggestions.push("Add a next action with an owner, target date, and expected outcome.");
       }
+      if (next && !cleanText(report.action_owner)) {
+        gaps.push("Corrective action owner is missing.");
+        suggestions.push("Assign a named owner for the next action so follow-up is accountable.");
+      }
+      if (next && !cleanText(report.action_due_date)) {
+        gaps.push("Action target date is missing.");
+        suggestions.push("Add a target date for the next action so the weekly review has a clear checkpoint.");
+      }
+      if ((report.health === "red" || report.priority === "Critical") && !cleanText(report.decision_needed)) {
+        gaps.push("Decision needed is missing for a risky report.");
+        suggestions.push("State the decision, approval, or trade-off needed to unblock delivery.");
+      }
       if (!reportEndDate(report)) {
         gaps.push("End date is missing.");
         suggestions.push("Add an end date so schedule risk and delivery classification are visible.");
@@ -5581,10 +5675,24 @@
       if (scheduleStatus?.category === "minorDelay" || scheduleStatus?.category === "majorDelay") {
         gaps.push(`Schedule is classified as ${scheduleStatus.label}.`);
         suggestions.push("Update the recovery plan and confirm if scope, date, or resourcing needs to change.");
+        if (!cleanText(report.delay_reason)) {
+          gaps.push("Delay root cause is missing.");
+          suggestions.push("Select the root cause so leadership can see whether the delay is access, dependency, scope, staffing, or technical.");
+        }
+        if (!cleanText(report.date_change_reason) && cleanText(report.baseline_due_date) && report.baseline_due_date !== reportEndDate(report)) {
+          gaps.push("Date changed without a reason.");
+          suggestions.push("Add why the delivery date changed and what was approved.");
+        }
+      }
+      if (completeness.score < 80) {
+        suggestions.push(`Raise completeness from ${completeness.score}% by filling: ${completeness.missing.slice(0, 3).join(", ")}.`);
       }
 
       if (blocker) {
         fastTrack.push("Turn the blocker into a named escalation with a decision owner and a 24-48 hour target.");
+      }
+      if (cleanText(report.action_owner) && cleanText(report.action_due_date)) {
+        fastTrack.push(`Use ${report.action_owner}'s ${report.action_due_date} checkpoint as the next delivery control point.`);
       }
       if (progress < 60) {
         fastTrack.push("Split the next milestone into smaller deliverables that can be validated this week.");
@@ -5597,6 +5705,8 @@
       }
 
       if (blocker) lessons.push("Blockers need earlier escalation and a named decision owner.");
+      if (cleanText(report.delay_reason)) lessons.push(`Root cause captured as ${report.delay_reason}; reuse this signal in weekly planning.`);
+      if (report.action_status === "Closed") lessons.push("Closed actions should be used as examples of clean weekly follow-through.");
       if (scheduleStatus?.category === "majorDelay") lessons.push("Major delays should trigger scope review before the next reporting cycle.");
       if (!next) lessons.push("Reports without next actions are harder to turn into decisions.");
       if (summary.length >= 45 && next) lessons.push("Clear context plus a concrete next action makes the report easier to act on.");
@@ -5605,14 +5715,15 @@
       const score = gaps.length * 2 +
         (report.health === "red" ? 3 : report.health === "amber" ? 1 : 0) +
         (report.priority === "Critical" ? 3 : report.priority === "High" ? 1 : 0) +
-        (scheduleStatus?.category === "majorDelay" ? 3 : scheduleStatus?.category === "minorDelay" ? 1 : 0);
+        (scheduleStatus?.category === "majorDelay" ? 3 : scheduleStatus?.category === "minorDelay" ? 1 : 0) +
+        (completeness.score < 70 ? 2 : completeness.score < 85 ? 1 : 0);
       const hasEscalationSignal = report.priority === "Critical" || report.health === "red" || scheduleStatus?.category === "majorDelay";
       const hasActionSignal = cleanText(report.blocker) || !next || scheduleStatus?.category === "minorDelay";
       const tone = hasEscalationSignal || score >= 10 ? "red" : hasActionSignal || score >= 6 ? "amber" : gaps.length ? "amber" : "green";
       const label = hasEscalationSignal || score >= 10 ? "Escalate" : hasActionSignal || score >= 6 ? "Needs action" : gaps.length ? "Needs details" : "Clear";
       const priorityLabel = label === "Escalate" ? "High priority" : label === "Needs action" ? "Medium priority" : label === "Needs details" ? "Needs details" : "Low priority";
 
-      return { gaps, suggestions, fastTrack, lessons, score, tone, label, priorityLabel, scheduleStatus };
+      return { gaps, suggestions, fastTrack, lessons, score, tone, label, priorityLabel, scheduleStatus, completeness, escalation };
     }
 
     function renderAnalysisList(items) {
@@ -5627,10 +5738,12 @@
             <div class="report-actions">
               <span class="chip blue">Rank #${escapeHtml(rank || "-")}</span>
               <span class="chip ${analysis.tone}">${escapeHtml(analysis.priorityLabel)}</span>
+              <span class="chip ${analysis.escalation.tone}">${escapeHtml(analysis.escalation.label)}</span>
             </div>
           </div>
           <p class="muted small">${escapeHtml(cleanText(report.summary) || "No summary captured.")}</p>
           <div class="report-card-detail">
+            <div><strong>Completeness</strong><p class="muted small">${analysis.completeness.score}%${analysis.completeness.missing.length ? ` - Missing ${escapeHtml(analysis.completeness.missing.slice(0, 3).join(", "))}` : " - Complete"}</p></div>
             <div><strong>What needs attention</strong><p class="muted small">${escapeHtml(analysis.gaps.slice(0, 2).join(" ") || "No major gaps detected.")}</p></div>
             <div><strong>Do this next</strong><p class="muted small">${escapeHtml(analysis.suggestions[0] || "Keep actions measurable and easy to verify.")}</p></div>
             <div><strong>Faster delivery</strong><p class="muted small">${escapeHtml(analysis.fastTrack[0] || "Keep the current cadence.")}</p></div>
@@ -6311,6 +6424,10 @@
             <div><strong>Why it matters</strong><p class="muted small">${escapeHtml(action.reason)}</p></div>
             <div><strong>Recommended action</strong><p class="muted small">${escapeHtml(action.recommendation)}</p></div>
             <div><strong>Current next action</strong><p class="muted small">${escapeHtml(cleanText(action.report.next) || "No next action captured.")}</p></div>
+            <div><strong>Action owner</strong><p class="muted small">${escapeHtml(action.report.action_owner || action.owner || "No action owner captured.")}</p></div>
+            <div><strong>Action target date</strong><p class="muted small">${escapeHtml(action.report.action_due_date || "No target date captured.")}</p></div>
+            <div><strong>Action status</strong><p class="muted small">${escapeHtml(action.report.action_status || "Open")}</p></div>
+            <div><strong>Decision needed</strong><p class="muted small">${escapeHtml(cleanText(action.report.decision_needed) || "No decision needed captured.")}</p></div>
             <div><strong>End date</strong><p class="muted small">${action.report.end_date ? endDateMarkup(action.report) : "No end date captured."}</p></div>
           </div>
         </div>
@@ -7408,8 +7525,10 @@
       }
 
       const percent = Number.isFinite(status.percent) ? ` Schedule variance: ${Math.round(status.percent)}%.` : "";
+      const rootCause = cleanText(report?.delay_reason) ? ` Root cause: ${cleanText(report.delay_reason)}.` : "";
+      const dateReason = cleanText(report?.date_change_reason) ? ` Date change reason: ${shortReasonText(report.date_change_reason)}` : "";
       const blockerReason = blocker ? ` Reported blocker/risk: ${blocker}` : "";
-      return `${reason}${percent}${blockerReason}`;
+      return `${reason}${percent}${rootCause}${dateReason}${blockerReason}`;
     }
 
     function endDateMarkup(report, prefix = "End") {
@@ -8512,21 +8631,70 @@
       `).join("");
     }
 
+    function reportCompletenessScore(report) {
+      const required = [
+        ["Product", report.product],
+        ["Feature / workstream", report.feature_workstream],
+        ["Owner", report.owner],
+        ["Reporting week", report.week],
+        ["End date", reportEndDate(report)],
+        ["Summary", report.summary],
+        ["Win", report.win],
+        ["Next action", report.next],
+        ["Action owner", report.action_owner],
+        ["Action target date", report.action_due_date]
+      ];
+      const status = endDateStatus(report);
+      if (report.health === "red" || report.priority === "Critical" || status?.category === "minorDelay" || status?.category === "majorDelay") {
+        required.push(["Blocker or risk", report.blocker]);
+        required.push(["Delay root cause", report.delay_reason]);
+        required.push(["Decision needed", report.decision_needed || report.next]);
+      }
+      const missing = required.filter(([, value]) => !cleanText(value)).map(([label]) => label);
+      const score = Math.round(((required.length - missing.length) / required.length) * 100);
+      return { score, missing };
+    }
+
+    function escalationLevel(report) {
+      const status = endDateStatus(report);
+      const blocker = cleanText(report.blocker);
+      if (report.priority === "Critical" || report.health === "red" || status?.category === "majorDelay") {
+        return { tone: "red", label: "Escalate within 24-48 hours" };
+      }
+      if (status?.category === "minorDelay" || blocker || report.action_status === "Blocked") {
+        return { tone: "amber", label: "Needs recovery action" };
+      }
+      if (report.action_status === "Closed") {
+        return { tone: "green", label: "Closed / monitor only" };
+      }
+      return { tone: "blue", label: "Track in weekly review" };
+    }
+
     function reportCardDetailMarkup(report) {
       const status = endDateStatus(report);
       const scheduleReason = status ? scheduleStatusReason(report, status) : "";
+      const completeness = reportCompletenessScore(report);
+      const escalation = escalationLevel(report);
       const rows = [
         ["Win", report.win || "No win captured yet."],
         ["Blocker or risk", report.blocker || "No blocker captured yet."],
         ["Next action", report.next || "No next action captured yet."],
+        ["Corrective action owner", report.action_owner || "No action owner selected."],
+        ["Action target date", report.action_due_date || "No action target date captured."],
+        ["Action status", report.action_status || "Open"],
+        ["Decision needed", report.decision_needed || "No decision needed captured."],
         ["Stage", report.stage || "No stage captured."],
         ["Progress", `${Number(report.progress || 0)}%`],
         ["End date", reportEndDate(report) ? endDateMarkup(report) : "No end date captured."],
         ...(scheduleReason ? [["Schedule reason", `${status.label}: ${scheduleReason}`]] : []),
+        ["Delay root cause", report.delay_reason || "No delay root cause selected."],
+        ["Date change reason", report.date_change_reason || "No date change reason captured."],
         ["Baseline", report.baseline_due_date || "No baseline date captured."],
         ["Milestone", report.milestone || "No milestone selected."],
         ["Depends on", report.dependency || "No dependency captured."],
-        ["Priority", report.priority || "Normal"]
+        ["Priority", report.priority || "Normal"],
+        ["Escalation", escalation.label],
+        ["Completeness", `${completeness.score}%${completeness.missing.length ? ` - Missing: ${completeness.missing.slice(0, 3).join(", ")}` : ""}`]
       ];
       return `
         <div class="report-card-detail">
@@ -8553,6 +8721,12 @@
       ["baseline_due_date", "Baseline end date"],
       ["dependency", "Depends on"],
       ["milestone", "Milestone"],
+      ["delay_reason", "Delay root cause"],
+      ["date_change_reason", "Date change reason"],
+      ["action_owner", "Corrective action owner"],
+      ["action_due_date", "Action target date"],
+      ["action_status", "Action status"],
+      ["decision_needed", "Decision needed"],
       ["health", "Health"],
       ["progress", "Progress"],
       ["stage", "Stage"],
@@ -8560,6 +8734,8 @@
       ["win", "Win"],
       ["blocker", "Blocker or risk"],
       ["next", "Next action"],
+      ["completeness", "Completeness score"],
+      ["escalation", "Escalation rule"],
       ["impact", "Risk impact"],
       ["time", "Time to solve"],
       ["priority", "Priority"]
@@ -8573,6 +8749,8 @@
     function exportValue(report, key) {
       if (key === "health") return labels[report.health] || report.health || "";
       if (key === "product_type") return report.product_type || "Legacy";
+      if (key === "completeness") return `${reportCompletenessScore(report).score}%`;
+      if (key === "escalation") return escalationLevel(report).label;
       return report[key] ?? "";
     }
 
@@ -8902,6 +9080,8 @@
                 ${editEndDateField(report)}
                 ${editField("Baseline end date", "baseline_due_date", report.baseline_due_date || "", "date")}
                 <label>Depends on${dependencyPickerMarkup(report.dependency || "")}</label>
+                ${delayReasonSelect(report.delay_reason)}
+                ${editArea("Date change reason", "date_change_reason", report.date_change_reason)}
                 <label>Health<select name="health"><option value="green" ${report.health === "green" ? "selected" : ""}>On Track</option><option value="amber" ${report.health === "amber" ? "selected" : ""}>In Progress</option><option value="red" ${report.health === "red" ? "selected" : ""}>At Risk</option><option value="gray" ${report.health === "gray" ? "selected" : ""}>Paused</option></select></label>
                 ${editField("Progress", "progress", report.progress, "number")}
                 ${stageSelect(report.stage)}
@@ -8918,6 +9098,10 @@
                 ${editArea("Win", "win", report.win)}
                 ${editArea("Blocker or risk", "blocker", report.blocker)}
                 ${editArea("Next action", "next", report.next)}
+                <label>Corrective action owner${peoplePickerMarkup("action_owner", report.action_owner || "", { label: "Corrective action owner", placeholder: "Select owner" })}</label>
+                ${editField("Action target date", "action_due_date", report.action_due_date || "", "date")}
+                ${actionStatusSelect(report.action_status)}
+                ${editArea("Decision needed", "decision_needed", report.decision_needed)}
               </div>
             </section>
             <section class="edit-form-section">
@@ -9120,6 +9304,27 @@
       `;
     }
 
+    function delayReasonSelect(current = "") {
+      return `
+        <label>Delay root cause
+          <select name="delay_reason">
+            ${DELAY_REASON_OPTIONS.map(reason => `<option value="${escapeHtml(reason)}" ${reason === current ? "selected" : ""}>${escapeHtml(reason || "Select root cause")}</option>`).join("")}
+          </select>
+        </label>
+      `;
+    }
+
+    function actionStatusSelect(current = "Open") {
+      const value = ACTION_STATUS_OPTIONS.includes(current) ? current : "Open";
+      return `
+        <label>Action status
+          <select name="action_status">
+            ${ACTION_STATUS_OPTIONS.map(status => `<option ${status === value ? "selected" : ""}>${escapeHtml(status)}</option>`).join("")}
+          </select>
+        </label>
+      `;
+    }
+
     function pickerFormValue(form, name) {
       const productPicker = form.querySelector(`[data-product-picker][data-name="${CSS.escape(name)}"]`);
       if (productPicker) {
@@ -9143,7 +9348,7 @@
 
     function readReportForm(form, id = crypto.randomUUID(), { requireProduct = true } = {}) {
       const data = Object.fromEntries(new FormData(form).entries());
-      ["product", "owner", "participants", "dependency"].forEach(name => {
+      ["product", "owner", "participants", "action_owner", "dependency"].forEach(name => {
         const value = pickerFormValue(form, name);
         if (value || name === "product") data[name] = value;
       });
