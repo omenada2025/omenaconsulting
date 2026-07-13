@@ -1555,6 +1555,24 @@
       margin-bottom: 4px;
     }
 
+    .user-log-list {
+      max-height: min(700px, 72vh);
+    }
+
+    .user-log-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .user-log-json {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
     .detail-form {
       display: grid;
       gap: 12px;
@@ -1888,6 +1906,7 @@
         <button class="tab" data-view="weeklyReview" data-role-manager-only>Owner Weekly Feedback</button>
         <button class="tab" data-view="workload" data-role-manager-only>Work Balance</button>
         <button class="tab" data-view="users" data-role-manager-only>User Access</button>
+        <button class="tab" data-view="userLog" data-role-manager-only>User Log</button>
       </nav>
       <div class="signed-in-card" id="signedInCard" hidden>
         <div class="signed-in-eyebrow">Signed in as</div>
@@ -2706,6 +2725,75 @@
           </div>
           <div class="report-list" id="userList"></div>
           <div class="inline-message success" id="userMessage" hidden></div>
+        </div>
+      </section>
+
+      <section class="view" id="userLog" data-role-manager-view>
+        <div class="header">
+          <div>
+            <span class="page-kicker">Audit trail</span>
+            <h2>User Log</h2>
+            <p class="muted">Review sign-ins, report changes, exports, filters, and access-management actions.</p>
+          </div>
+          <button class="btn" type="button" data-logout>Logout</button>
+        </div>
+
+        <div class="guide-grid">
+          <div class="guide-card">
+            <strong>1. Filter activity</strong>
+            <p class="muted small">Narrow the log by user, action, page, or affected item.</p>
+          </div>
+          <div class="guide-card">
+            <strong>2. Review evidence</strong>
+            <p class="muted small">Each event shows when it happened, who did it, and what was touched.</p>
+          </div>
+          <div class="guide-card">
+            <strong>3. Export if needed</strong>
+            <p class="muted small">Download the filtered audit trail for follow-up or compliance review.</p>
+          </div>
+        </div>
+
+        <div class="panel filter-bar">
+          <label>
+            User
+            <select id="userLogUserFilter">
+              <option value="all">All users</option>
+            </select>
+          </label>
+          <label>
+            Action
+            <select id="userLogActionFilter">
+              <option value="all">All actions</option>
+            </select>
+          </label>
+          <label>
+            Page
+            <select id="userLogViewFilter">
+              <option value="all">All pages</option>
+            </select>
+          </label>
+          <label>
+            Target
+            <select id="userLogTargetFilter">
+              <option value="all">All targets</option>
+            </select>
+          </label>
+          <div style="display:flex; align-items:end; gap:10px; flex-wrap:wrap">
+            <button class="btn soft" type="button" id="refreshUserLogBtn">Refresh log</button>
+            <button class="btn" type="button" id="exportUserLogCsvBtn">Export CSV</button>
+          </div>
+        </div>
+
+        <div class="summary-grid" id="userLogCards"></div>
+
+        <div class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>Recent Activity</h3>
+              <p class="muted small" id="userLogSummary">Open this page or click Refresh log to load activity.</p>
+            </div>
+          </div>
+          <div class="report-list user-log-list" id="userLogList"></div>
         </div>
       </section>
 
@@ -3555,6 +3643,14 @@
     let currentProfile = "admin";
     let pendingUserDelete = "";
     let userDirectoryRefreshPromise = null;
+    let userActionLogs = [];
+    let userLogLoadMessage = "Open this page or click Refresh log to load activity.";
+    const userLogFilters = {
+      user: "all",
+      action: "all",
+      view: "all",
+      targetType: "all"
+    };
     const PRODUCT_TYPE_OPTIONS = ["Legacy", "New product"];
     const PRODUCT_OPTIONS = [
       "AeroPass", "Ameritek Ventures", "Augmum", "DaaS360", "DAAS", "DeskFlex", "DittoMask", "Ecker Capital", "Epazz",
@@ -5450,7 +5546,7 @@
     }
 
     function canAccessView(id) {
-      if (canManageRoles()) return ["dashboard", "executive", "workflow", "incidents", "timeline", "intake", "reports", "sourceProjects", "reportAnalysis", "ownerFeedback", "actionItems", "weeklyReview", "workload", "users"].includes(id);
+      if (canManageRoles()) return ["dashboard", "executive", "workflow", "incidents", "timeline", "intake", "reports", "sourceProjects", "reportAnalysis", "ownerFeedback", "actionItems", "weeklyReview", "workload", "users", "userLog"].includes(id);
       if (isMasterAdmin()) return ["dashboard", "executive", "incidents", "timeline", "intake", "reports"].includes(id);
       return ["dashboard", "executive", "incidents"].includes(id);
     }
@@ -5489,6 +5585,7 @@
       renderDeliveryTimeline();
       renderWorkBalance();
       renderWorkflowGuide();
+      renderUserLog();
       if (!canAccessView(getActiveView())) {
         switchView("dashboard");
       }
@@ -6866,6 +6963,165 @@
       renderWorkBalance();
     }
 
+    function parseUserLogDetails(row) {
+      if (!row?.details) return {};
+      if (typeof row.details === "object") return row.details;
+      try {
+        return JSON.parse(row.details);
+      } catch {
+        return {};
+      }
+    }
+
+    function userLogDisplayUser(row) {
+      const details = parseUserLogDetails(row);
+      return cleanText(details.user_display_name || details.username || row.owner || "Unknown user");
+    }
+
+    function actionLabel(action = "") {
+      const clean = cleanText(action).replace(/_/g, " ");
+      return clean ? clean.charAt(0).toUpperCase() + clean.slice(1) : "Activity";
+    }
+
+    function userLogRows() {
+      return userActionLogs.filter(row => {
+        const user = userLogDisplayUser(row);
+        const action = cleanText(row.action);
+        const view = cleanText(row.view || "unknown");
+        const targetType = cleanText(row.target_type || "none");
+        if (userLogFilters.user !== "all" && user !== userLogFilters.user) return false;
+        if (userLogFilters.action !== "all" && action !== userLogFilters.action) return false;
+        if (userLogFilters.view !== "all" && view !== userLogFilters.view) return false;
+        if (userLogFilters.targetType !== "all" && targetType !== userLogFilters.targetType) return false;
+        return true;
+      }).sort((a, b) => Date.parse(b.created_at || 0) - Date.parse(a.created_at || 0));
+    }
+
+    function renderUserLog() {
+      const list = document.getElementById("userLogList");
+      const summary = document.getElementById("userLogSummary");
+      const cards = document.getElementById("userLogCards");
+      if (!list || !summary || !cards) return;
+
+      userLogFilters.user = fillSelect("userLogUserFilter", userActionLogs.map(userLogDisplayUser), "All users", userLogFilters.user);
+      userLogFilters.action = fillSelect("userLogActionFilter", userActionLogs.map(row => cleanText(row.action)), "All actions", userLogFilters.action);
+      userLogFilters.view = fillSelect("userLogViewFilter", userActionLogs.map(row => cleanText(row.view || "unknown")), "All pages", userLogFilters.view);
+      userLogFilters.targetType = fillSelect("userLogTargetFilter", userActionLogs.map(row => cleanText(row.target_type || "none")), "All targets", userLogFilters.targetType);
+
+      const rows = userLogRows();
+      const uniqueUsers = new Set(rows.map(userLogDisplayUser).filter(Boolean)).size;
+      const reportEvents = rows.filter(row => cleanText(row.action).includes("report") || cleanText(row.target_type).includes("report")).length;
+      const accessEvents = rows.filter(row => /user|role|login|logout|access/i.test(`${row.action || ""} ${row.target_type || ""}`)).length;
+      const latest = rows[0]?.created_at ? formatDateTime(rows[0].created_at) : "No activity yet";
+
+      cards.innerHTML = [
+        { label: "Events", value: rows.length, note: "Filtered audit entries", chip: "blue" },
+        { label: "Users", value: uniqueUsers, note: "People with activity", chip: "green" },
+        { label: "Report activity", value: reportEvents, note: "Create, update, delete, select, export", chip: "amber" },
+        { label: "Access activity", value: accessEvents, note: "Login, logout, roles, users", chip: "red" }
+      ].map(card => `
+        <div class="stat-card">
+          <span class="chip ${card.chip}">${escapeHtml(card.label)}</span>
+          <strong>${escapeHtml(card.value)}</strong>
+          <p class="muted small">${escapeHtml(card.note)}</p>
+        </div>
+      `).join("");
+
+      summary.textContent = rows.length
+        ? `${rows.length} events shown. Latest activity: ${latest}.`
+        : userLogLoadMessage;
+
+      if (!rows.length) {
+        list.innerHTML = `<div class="empty"><strong>No user log activity found</strong>${escapeHtml(userLogLoadMessage)}</div>`;
+        return;
+      }
+
+      list.innerHTML = rows.map(row => {
+        const details = parseUserLogDetails(row);
+        const detailPreview = Object.entries(details)
+          .filter(([key, value]) => value !== null && value !== "" && !["user_agent"].includes(key))
+          .slice(0, 8)
+          .map(([key, value]) => `${key}: ${typeof value === "object" ? JSON.stringify(value) : value}`)
+          .join("\n");
+        const target = [row.target_type, row.target_id].filter(Boolean).join(": ") || "No target captured";
+        const productOwner = [row.product, row.owner].filter(Boolean).join(" - ");
+        return `
+          <div class="report-card">
+            <header>
+              <div>
+                <strong>${escapeHtml(actionLabel(row.action))}</strong>
+                <p class="muted small">${escapeHtml(formatDateTime(row.created_at))} - ${escapeHtml(userLogDisplayUser(row))}</p>
+              </div>
+              <span class="chip blue">${escapeHtml(row.view || "unknown page")}</span>
+            </header>
+            <div class="user-log-meta">
+              <span class="chip gray">${escapeHtml(target)}</span>
+              ${productOwner ? `<span class="chip green">${escapeHtml(productOwner)}</span>` : ""}
+              ${row.report_id ? `<span class="chip amber">Report ${escapeHtml(row.report_id)}</span>` : ""}
+            </div>
+            ${detailPreview ? `<div class="report-card-detail"><div class="user-log-json">${escapeHtml(detailPreview)}</div></div>` : ""}
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function refreshUserLog() {
+      if (!canManageRoles()) return;
+      if (!hasSupabaseConfig) {
+        userActionLogs = [];
+        userLogLoadMessage = "Supabase is not configured, so live user logs cannot be loaded.";
+        renderUserLog();
+        return;
+      }
+      try {
+        userLogLoadMessage = "Loading user activity...";
+        renderUserLog();
+        const rows = await supabaseTableRequest(actionLogTable, "?select=*&order=created_at.desc&limit=500", {
+          prefer: "",
+          timeoutMs: 10000
+        });
+        userActionLogs = Array.isArray(rows) ? rows : [];
+        userLogLoadMessage = userActionLogs.length ? "Loaded latest user activity." : "No user log rows found yet. New actions will appear here after people use the app.";
+      } catch (error) {
+        console.warn("Could not load user log:", error);
+        userActionLogs = [];
+        userLogLoadMessage = `Could not load user log: ${error.message || error}`;
+      }
+      renderUserLog();
+    }
+
+    function exportUserLogCsv() {
+      const rows = userLogRows();
+      const columns = [
+        ["created_at", "Created at"],
+        ["user", "User"],
+        ["role", "Role"],
+        ["action", "Action"],
+        ["view", "Page"],
+        ["target_type", "Target type"],
+        ["target_id", "Target ID"],
+        ["report_id", "Report ID"],
+        ["product", "Product"],
+        ["owner", "Owner"],
+        ["details", "Details"],
+        ["page_url", "Page URL"]
+      ];
+      const header = columns.map(([, label]) => csvEscape(label)).join(",");
+      const body = rows.map(row => {
+        const details = parseUserLogDetails(row);
+        const valueMap = {
+          ...row,
+          created_at: formatDateTime(row.created_at),
+          user: userLogDisplayUser(row),
+          role: details.user_role || "",
+          details: JSON.stringify(details)
+        };
+        return columns.map(([key]) => csvEscape(valueMap[key] ?? "")).join(",");
+      }).join("\n");
+      downloadBlob(`user-log-${formatDate(new Date())}.csv`, [header, body].filter(Boolean).join("\n"), "text/csv;charset=utf-8");
+      logUserAction("user_log_exported", { format: "csv", row_count: rows.length, filters: { ...userLogFilters } }, { target_type: "export", target_id: "user_log_csv" });
+    }
+
     function workflowVisibleSteps() {
       const dashboardCount = typeof getDashboardReports === "function" ? getDashboardReports().length : reports.length;
       const incidentCount = typeof getIncidentReports === "function" ? getIncidentReports().length : reports.filter(report => incidentFlags(report).delayed || incidentFlags(report).dueSoon || incidentFlags(report).postponed || isRiskReport(report)).length;
@@ -6953,6 +7209,16 @@
           purpose: "Create users, assign roles, reset codes, resend access, activate or deactivate access, and delete users.",
           outcome: "People can sign in with the correct role and only see the areas they should use.",
           action: "Open User Access"
+        },
+        {
+          number: "09",
+          view: "userLog",
+          title: "User Log",
+          audience: "Role Manager",
+          metric: `${userActionLogs.length || 0} events`,
+          purpose: "Audit sign-ins, report saves, deletes, exports, filter changes, and user-access actions.",
+          outcome: "A traceable activity record for coaching, troubleshooting, and access review.",
+          action: "Open User Log"
         }
       ];
       return steps.filter(step => canAccessView(step.view));
@@ -9693,6 +9959,9 @@
         if (tab.dataset.view === "users") {
           await refreshUserManagementFromCloud();
         }
+        if (tab.dataset.view === "userLog") {
+          await refreshUserLog();
+        }
         await refreshSharedDashboards();
       });
     });
@@ -9702,6 +9971,9 @@
         switchView(btn.dataset.jump);
         if (btn.dataset.jump === "users") {
           await refreshUserManagementFromCloud();
+        }
+        if (btn.dataset.jump === "userLog") {
+          await refreshUserLog();
         }
         await refreshSharedDashboards();
       });
@@ -9721,6 +9993,27 @@
 
     document.getElementById("refreshUsersBtn")?.addEventListener("click", async () => {
       await refreshUserManagementFromCloud();
+    });
+
+    document.getElementById("refreshUserLogBtn")?.addEventListener("click", async () => {
+      await refreshUserLog();
+    });
+
+    document.getElementById("exportUserLogCsvBtn")?.addEventListener("click", () => {
+      exportUserLogCsv();
+    });
+
+    [
+      ["userLogUserFilter", "user"],
+      ["userLogActionFilter", "action"],
+      ["userLogViewFilter", "view"],
+      ["userLogTargetFilter", "targetType"]
+    ].forEach(([id, key]) => {
+      document.getElementById(id)?.addEventListener("change", event => {
+        userLogFilters[key] = event.target.value;
+        renderUserLog();
+        logFilterChange("user_log", key, event.target.value);
+      });
     });
 
     document.getElementById("importSourceProjectsBtn")?.addEventListener("click", () => {
