@@ -1573,6 +1573,17 @@
       color: var(--muted);
     }
 
+    .compact-list {
+      max-height: min(520px, 60vh);
+    }
+
+    .personal-card-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
     .detail-form {
       display: grid;
       gap: 12px;
@@ -1893,6 +1904,7 @@
         <div class="nav-section">Dashboards</div>
         <button class="tab active" data-view="dashboard" title="Portfolio health, workstreams, dates, risks, wins, blockers, and next actions">Portfolio Dashboard</button>
         <button class="tab" data-view="executive" title="Leadership summary focused on attention items and decisions">Executive View</button>
+        <button class="tab" data-view="myDashboard" title="Personal dashboard for your workstreams, dates, risks, and next actions">My Dashboard</button>
         <button class="tab" data-view="workflow" data-role-manager-only title="End-to-end workflow guide for using the dashboard">Workflow Guide</button>
         <div class="nav-section">Monitor</div>
         <button class="tab" data-view="incidents" title="Major delays, minor delays, blockers, at-risk, and critical workstreams">Incidents & Delays</button>
@@ -2055,6 +2067,121 @@
           <div class="panel">
             <h3>Next Actions</h3>
             <div class="timeline" id="nextList"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="myDashboard">
+        <div class="header">
+          <div>
+            <span class="page-kicker">Personal workspace</span>
+            <h2>My Dashboard</h2>
+            <p class="muted" id="myDashboardSubtitle">See your own workstreams, delivery health, next actions, feedback, and progress in one place.</p>
+          </div>
+          <div class="top-actions">
+            <button class="btn primary" data-jump="reports" data-master-only>Update status</button>
+            <button class="btn" type="button" data-logout>Logout</button>
+          </div>
+        </div>
+
+        <div class="guide-grid">
+          <div class="guide-card theme-blue">
+            <strong>1. Know your queue</strong>
+            <p class="muted small">Your reports are filtered automatically by owner or participant.</p>
+          </div>
+          <div class="guide-card theme-green">
+            <strong>2. Protect delivery</strong>
+            <p class="muted small">Review due dates, blockers, dependencies, and next actions before they become escalations.</p>
+          </div>
+          <div class="guide-card theme-amber">
+            <strong>3. Improve next update</strong>
+            <p class="muted small">Use feedback and missing-info signals to make the next status clearer.</p>
+          </div>
+        </div>
+
+        <div class="panel filter-bar">
+          <label>
+            Date filter
+            <select id="myDashboardPeriodFilter">
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="custom">Custom</option>
+            </select>
+          </label>
+          <label class="week-field">
+            Reporting date
+            <button class="week-picker-btn" id="myDashboardWeekFilter" type="button" aria-haspopup="dialog" aria-expanded="false"></button>
+            <div class="week-picker" id="myDashboardWeekPicker" hidden></div>
+          </label>
+          <label class="date-custom myDashboard-custom-date" hidden>
+            Start date
+            <input type="date" id="myDashboardStartFilter" />
+          </label>
+          <label class="date-custom myDashboard-custom-date" hidden>
+            End date
+            <input type="date" id="myDashboardEndFilter" />
+          </label>
+          <label data-role-manager-only>
+            Owner
+            <select id="myDashboardOwnerFilter"></select>
+          </label>
+          <label>
+            Project
+            <select id="myDashboardProductFilter"></select>
+          </label>
+          <label>
+            Delivery health
+            <select id="myDashboardHealthFilter">
+              <option value="all">All health</option>
+              <option value="green">On Track</option>
+              <option value="amber">In Progress</option>
+              <option value="red">At Risk</option>
+              <option value="gray">Paused</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="grid summary-grid" id="myDashboardMetrics"></div>
+
+        <div class="grid two-col">
+          <div class="panel">
+            <div class="panel-title">
+              <div>
+                <h3>My Action Queue</h3>
+                <p class="muted small">Next actions, blockers, due dates, and decisions that need attention.</p>
+              </div>
+            </div>
+            <div class="report-list compact-list" id="myActionQueue"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">
+              <div>
+                <h3>My Timeline</h3>
+                <p class="muted small">Start, end, dependencies, milestones, and schedule classification.</p>
+              </div>
+            </div>
+            <div class="delivery-board compact-list" id="myTimelineBoard"></div>
+          </div>
+        </div>
+
+        <div class="grid two-col" style="margin-top:16px">
+          <div class="panel">
+            <div class="panel-title">
+              <div>
+                <h3>My Feedback</h3>
+                <p class="muted small">Suggested improvements generated from your current status reports.</p>
+              </div>
+            </div>
+            <div class="report-list compact-list" id="myFeedbackList"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">
+              <div>
+                <h3>My Workstreams</h3>
+                <p class="muted small">Click Update to open the selected report in Status Center.</p>
+              </div>
+            </div>
+            <div class="report-list compact-list" id="myWorkstreamList"></div>
           </div>
         </div>
       </section>
@@ -3667,6 +3794,15 @@
       productType: "all",
       owner: "all",
       role: "all",
+      health: "all"
+    };
+    const myDashboardFilters = {
+      period: "monthly",
+      week: "",
+      start: "",
+      end: "",
+      owner: "me",
+      product: "all",
       health: "all"
     };
     const portfolioHealthFilters = {
@@ -5546,9 +5682,9 @@
     }
 
     function canAccessView(id) {
-      if (canManageRoles()) return ["dashboard", "executive", "workflow", "incidents", "timeline", "intake", "reports", "sourceProjects", "reportAnalysis", "ownerFeedback", "actionItems", "weeklyReview", "workload", "users", "userLog"].includes(id);
-      if (isMasterAdmin()) return ["dashboard", "executive", "incidents", "timeline", "intake", "reports"].includes(id);
-      return ["dashboard", "executive", "incidents"].includes(id);
+      if (canManageRoles()) return ["dashboard", "executive", "myDashboard", "workflow", "incidents", "timeline", "intake", "reports", "sourceProjects", "reportAnalysis", "ownerFeedback", "actionItems", "weeklyReview", "workload", "users", "userLog"].includes(id);
+      if (isMasterAdmin()) return ["dashboard", "executive", "myDashboard", "incidents", "timeline", "intake", "reports"].includes(id);
+      return ["dashboard", "executive", "myDashboard", "incidents"].includes(id);
     }
 
     function requireMasterAdmin(action = "manage reports") {
@@ -5580,6 +5716,7 @@
         element.hidden = !canManageRoles();
       });
       renderUserManagement();
+      renderMyDashboard();
       renderSourceProjects();
       renderReportAnalysis();
       renderDeliveryTimeline();
@@ -7152,6 +7289,16 @@
         },
         {
           number: "03",
+          view: "myDashboard",
+          title: "My Dashboard",
+          audience: "All profiles",
+          metric: `${typeof getMyDashboardReports === "function" ? getMyDashboardReports().length : 0} personal items`,
+          purpose: "Review your own workstreams, action queue, schedule watch, and owner feedback in one place.",
+          outcome: "Each owner knows what to update next and which risks need follow-up.",
+          action: "Open My Dashboard"
+        },
+        {
+          number: "04",
           view: "reportAnalysis",
           title: "Report Analysis",
           audience: "Role Manager",
@@ -7161,7 +7308,7 @@
           action: "Open Report Analysis"
         },
         {
-          number: "04",
+          number: "05",
           view: "dashboard",
           title: "Portfolio Dashboard",
           audience: "All profiles",
@@ -7171,7 +7318,7 @@
           action: "Open Dashboard"
         },
         {
-          number: "05",
+          number: "06",
           view: "executive",
           title: "Executive View",
           audience: "All profiles",
@@ -7181,7 +7328,7 @@
           action: "Open Executive View"
         },
         {
-          number: "06",
+          number: "07",
           view: "incidents",
           title: "Incidents & Delays",
           audience: "All profiles",
@@ -7191,7 +7338,7 @@
           action: "Open Incidents"
         },
         {
-          number: "07",
+          number: "08",
           view: "workload",
           title: "Work Balance",
           audience: "Role Manager",
@@ -7201,7 +7348,7 @@
           action: "Open Work Balance"
         },
         {
-          number: "08",
+          number: "09",
           view: "users",
           title: "User Access",
           audience: "Role Manager",
@@ -7211,7 +7358,7 @@
           action: "Open User Access"
         },
         {
-          number: "09",
+          number: "10",
           view: "userLog",
           title: "User Log",
           audience: "Role Manager",
@@ -8119,6 +8266,233 @@
         (dashboardFilters.role === "all" || report.role === dashboardFilters.role) &&
         (dashboardFilters.health === "all" || report.health === dashboardFilters.health)
       );
+    }
+
+    function reportHasCurrentUser(report) {
+      const userKeys = currentUserOwnerKeys();
+      if (!userKeys.size) return false;
+      return [...splitPeople(report.owner), ...splitPeople(report.participants)].some(person =>
+        personMatchKeys(person).some(key => userKeys.has(key))
+      );
+    }
+
+    function reportHasOwnerOrParticipant(report, owner = "all") {
+      if (owner === "all") return true;
+      return reportHasPerson(report.owner, owner) || reportHasPerson(report.participants, owner);
+    }
+
+    function myDashboardOwnerLabel() {
+      if (canManageRoles() && myDashboardFilters.owner !== "me") {
+        return myDashboardFilters.owner === "all" ? "all owners" : myDashboardFilters.owner;
+      }
+      return currentUser?.displayName || currentUser?.username || "your work";
+    }
+
+    function getMyDashboardReports() {
+      return reports
+        .filter(report => {
+          const ownerMatch = canManageRoles() && myDashboardFilters.owner !== "me"
+            ? reportHasOwnerOrParticipant(report, myDashboardFilters.owner)
+            : reportHasCurrentUser(report);
+          return (
+            ownerMatch &&
+            matchesDateFilter(report.week, myDashboardFilters) &&
+            (myDashboardFilters.product === "all" || report.product === myDashboardFilters.product) &&
+            (myDashboardFilters.health === "all" || report.health === myDashboardFilters.health)
+          );
+        })
+        .sort((a, b) =>
+          endDateRank(a).localeCompare(endDateRank(b)) ||
+          (b.week || "").localeCompare(a.week || "") ||
+          reportTitle(a).localeCompare(reportTitle(b))
+        );
+    }
+
+    function populateMyDashboardFilters() {
+      const ownerSelect = document.getElementById("myDashboardOwnerFilter");
+      if (ownerSelect) {
+        const owners = uniqueOwners();
+        const options = [
+          `<option value="me">My work</option>`,
+          `<option value="all">All owners</option>`,
+          ...owners.map(owner => `<option value="${escapeHtml(owner)}">${escapeHtml(owner)}</option>`)
+        ];
+        ownerSelect.innerHTML = options.join("");
+        if (![...ownerSelect.options].some(option => option.value === myDashboardFilters.owner)) {
+          myDashboardFilters.owner = "me";
+        }
+        ownerSelect.value = myDashboardFilters.owner;
+      }
+      myDashboardFilters.product = fillSelect("myDashboardProductFilter", getMyDashboardReports().map(report => report.product), "All projects", myDashboardFilters.product);
+      document.getElementById("myDashboardHealthFilter").value = myDashboardFilters.health;
+    }
+
+    function myDashboardActionRows(source) {
+      return source
+        .filter(report => {
+          const status = endDateStatus(report);
+          return cleanText(report.next) || cleanText(report.blocker) || cleanText(report.decision_needed) || cleanText(report.action_due_date) || ["minorDelay", "majorDelay"].includes(status?.category);
+        })
+        .sort((a, b) =>
+          (reportEndDate(a) || "9999-12-31").localeCompare(reportEndDate(b) || "9999-12-31") ||
+          endDateRank(a).localeCompare(endDateRank(b))
+        );
+    }
+
+    function myDashboardTimelineRange(source) {
+      const filterRange = myDashboardFilters.start || myDashboardFilters.end
+        ? { start: parseDate(myDashboardFilters.start || ""), end: parseDate(myDashboardFilters.end || "") }
+        : null;
+      const starts = source.map(timelineReportStart).map(parseDate).filter(Boolean);
+      const ends = source.map(timelineReportEnd).map(parseDate).filter(Boolean);
+      const min = filterRange?.start || starts.sort((a, b) => a - b)[0] || parseDate(myDashboardFilters.start || myDashboardFilters.week) || new Date();
+      const max = filterRange?.end || ends.sort((a, b) => b - a)[0] || addDays(min, 4);
+      return { start: min, end: max > min ? max : addDays(min, 4) };
+    }
+
+    function openReportFromMyDashboard(reportId) {
+      const report = reports.find(item => item.id === reportId);
+      if (!report) return;
+      selectedReportId = report.id;
+      reportHistoryOpen = true;
+      reportHistoryDate = "";
+      reportFilters.owner = report.owner ? ownerDisplay(report.owner) : "all";
+      reportFilters.productType = "all";
+      reportFilters.week = "";
+      reportFilters.health = "all";
+      reportFilters.role = "all";
+      switchView("reports");
+      renderReports();
+      renderDetail();
+      fetchReportAuditLogs(report).then(() => renderDetail()).catch(error => console.warn("Could not load report history:", error));
+      logUserAction("my_dashboard_report_opened", {}, { target_type: "report", target_id: report.id, ...reportLogFields(report) });
+    }
+
+    function renderMyDashboard() {
+      const subtitle = document.getElementById("myDashboardSubtitle");
+      const metrics = document.getElementById("myDashboardMetrics");
+      const actions = document.getElementById("myActionQueue");
+      const timeline = document.getElementById("myTimelineBoard");
+      const feedback = document.getElementById("myFeedbackList");
+      const workstreams = document.getElementById("myWorkstreamList");
+      if (!subtitle || !metrics || !actions || !timeline || !feedback || !workstreams) return;
+
+      populateMyDashboardFilters();
+      const source = getMyDashboardReports();
+      const ownerLabel = myDashboardOwnerLabel();
+      const dateLabel = dateFilterLabel(myDashboardFilters);
+      const products = new Set(source.map(report => report.product).filter(Boolean));
+      const delayed = source.filter(report => ["minorDelay", "majorDelay"].includes(endDateStatus(report)?.category));
+      const dueSoon = source.filter(report => endDateStatus(report)?.category === "minorDelay");
+      const blockers = source.filter(hasBlockerSignal);
+      const needsUpdate = source.filter(report => reportCompletenessScore(report).score < 75 || !cleanText(report.next));
+      const avgProgress = source.length ? Math.round(source.reduce((sum, report) => sum + Number(report.progress || 0), 0) / source.length) : 0;
+
+      subtitle.textContent = `Showing ${source.length} workstream${source.length === 1 ? "" : "s"} for ${ownerLabel} in ${dateLabel}. ${needsUpdate.length} need clearer next steps or missing information.`;
+
+      metrics.innerHTML = [
+        ["My workstreams", source.length, "blue", `${products.size} project${products.size === 1 ? "" : "s"}`],
+        ["At risk / blockers", blockers.length, blockers.length ? "red" : "green", "Blockers, red health, or critical priority"],
+        ["Schedule watch", delayed.length, delayed.length ? "red" : "green", `${dueSoon.length} minor delay${dueSoon.length === 1 ? "" : "s"}`],
+        ["Avg progress", `${avgProgress}%`, avgProgress >= 75 ? "green" : avgProgress >= 45 ? "amber" : "red", "Across filtered work"],
+        ["Needs update", needsUpdate.length, needsUpdate.length ? "amber" : "green", "Missing next action or key fields"]
+      ].map(([label, value, tone, note]) => `
+        <div class="stat-card interactive" data-my-metric="${escapeHtml(label)}">
+          <span class="chip ${tone}">${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
+          <p class="muted small">${escapeHtml(note)}</p>
+        </div>
+      `).join("");
+
+      const actionRows = myDashboardActionRows(source).slice(0, 10);
+      actions.innerHTML = actionRows.length ? actionRows.map(report => {
+        const status = endDateStatus(report);
+        return `
+          <div class="report-card">
+            <header>
+              <div>
+                <span class="product-label">${escapeHtml(report.product || "No product")}</span>
+                <strong>${escapeHtml(reportTitle(report))}</strong>
+                <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${reportEndDate(report) ? endDateMarkup(report) : "No end date"}</p>
+              </div>
+              <span class="chip ${status?.tone || healthClass(report)}">${escapeHtml(status?.label || labels[report.health] || "Status")}</span>
+            </header>
+            <div class="report-card-detail">
+              <div><strong>Next action</strong><p class="muted small">${escapeHtml(report.next || "No next action captured.")}</p></div>
+              <div><strong>Blocker / risk</strong><p class="muted small">${escapeHtml(report.blocker || "No blocker captured.")}</p></div>
+              <div><strong>Action owner</strong><p class="muted small">${escapeHtml(report.action_owner || report.owner || "Not assigned")}</p></div>
+            </div>
+            <div class="personal-card-actions"><button class="btn soft" type="button" data-my-open-report="${escapeHtml(report.id)}">Update this status</button></div>
+          </div>
+        `;
+      }).join("") : `<div class="empty"><strong>No action queue</strong>Your current filtered work has no blockers, decisions, or next actions requiring follow-up.</div>`;
+
+      const range = myDashboardTimelineRange(source);
+      timeline.innerHTML = source.length ? source.slice(0, 10).map(report => {
+        const status = endDateStatus(report);
+        return `
+          <div class="delivery-row" data-my-open-report="${escapeHtml(report.id)}" role="button" tabindex="0">
+            <div>
+              <span class="product-label">${escapeHtml(report.product || "No product")}</span>
+              <strong>${escapeHtml(reportTitle(report))}</strong>
+              <p class="muted small">${escapeHtml(timelineReportStart(report) || "No start")} to ${escapeHtml(timelineReportEnd(report) || "No end")} - ${escapeHtml(report.progress || 0)}% complete</p>
+              <span class="chip ${status?.tone || healthClass(report)}">${escapeHtml(status?.label || labels[report.health] || "On Time")}</span>
+              ${report.dependency ? `<span class="chip amber">Depends on ${escapeHtml(report.dependency)}</span>` : ""}
+            </div>
+            <div>
+              <div class="timeline-scale">
+                <span>${escapeHtml(formatDate(range.start))}</span>
+                <span>Midpoint</span>
+                <span>${escapeHtml(formatDate(range.end))}</span>
+              </div>
+              <div class="delivery-track">
+                <div class="delivery-bar" style="${timelineBarStyle(report, range)}"></div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("") : `<div class="empty"><strong>No timeline yet</strong>Add start and end dates in Status Center to build your personal timeline.</div>`;
+
+      const feedbackRows = source
+        .map(report => ({ report, analysis: analyzeReportQuality(report) }))
+        .filter(item => item.analysis.gaps.length || item.analysis.suggestions.length || item.analysis.fastTrack.length)
+        .sort((a, b) => b.analysis.score - a.analysis.score)
+        .slice(0, 8);
+      feedback.innerHTML = feedbackRows.length ? feedbackRows.map(({ report, analysis }) => `
+        <div class="report-card">
+          <header>
+            <div>
+              <span class="product-label">${escapeHtml(report.product || "No product")}</span>
+              <strong>${escapeHtml(reportTitle(report))}</strong>
+              <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - quality score ${escapeHtml(analysis.score)}</p>
+            </div>
+            <span class="chip ${analysis.tone}">${escapeHtml(analysis.headline)}</span>
+          </header>
+          <div class="report-card-detail">
+            <div><strong>Improve next</strong><p class="muted small">${escapeHtml(analysis.suggestions[0] || "Keep the status clear and action-oriented.")}</p></div>
+            <div><strong>Move faster</strong><p class="muted small">${escapeHtml(analysis.fastTrack[0] || "Keep the next action tied to an owner and date.")}</p></div>
+            <div><strong>Lesson</strong><p class="muted small">${escapeHtml(analysis.lessons[0] || "Strong reports make delivery risk visible earlier.")}</p></div>
+          </div>
+        </div>
+      `).join("") : `<div class="empty"><strong>No feedback items</strong>Your filtered reports look clear enough for the current review.</div>`;
+
+      workstreams.innerHTML = source.length ? source.slice(0, 12).map(report => {
+        const completeness = reportCompletenessScore(report);
+        return `
+          <div class="report-card">
+            <header>
+              <div>
+                <span class="product-label">${escapeHtml(report.product || "No product")}</span>
+                <strong>${escapeHtml(reportTitle(report))}</strong>
+                <p class="muted small">${escapeHtml(report.role || "No role")} - ${escapeHtml(labels[report.health] || report.health || "No health")} - ${reportEndDate(report) ? endDateMarkup(report) : "No end date"}</p>
+              </div>
+              <span class="chip ${completeness.score >= 80 ? "green" : completeness.score >= 60 ? "amber" : "red"}">${escapeHtml(completeness.score)}% complete</span>
+            </header>
+            <p class="small">${escapeHtml(report.summary || "No summary captured.")}</p>
+            <div class="personal-card-actions"><button class="btn soft" type="button" data-my-open-report="${escapeHtml(report.id)}">Open / update</button></div>
+          </div>
+        `;
+      }).join("") : `<div class="empty"><strong>No workstreams found</strong>If you expected work here, check that your name is listed as owner or participant in the report.</div>`;
     }
 
     function getReportList() {
@@ -9351,6 +9725,7 @@
       select.value = nextValue;
       if (id === "dashboardTypeFilter") dashboardFilters.productType = nextValue;
       if (id === "dashboardOwnerFilter") dashboardFilters.owner = nextValue;
+      if (id === "myDashboardProductFilter") myDashboardFilters.product = nextValue;
       if (id === "executiveTypeFilter") executiveFilters.productType = nextValue;
       if (id === "reportOwnerFilter") reportFilters.owner = nextValue;
       if (id === "reportTypeFilter") reportFilters.productType = nextValue;
@@ -9762,6 +10137,7 @@
         ? `Showing ${filteredCount} of ${reports.length} updates for ${selectedPeriod}. Latest available reporting period: ${latestPeriod}.`
         : "No updates are available yet. Add a status report to start building the portfolio view.";
       renderMetrics();
+      renderMyDashboard();
       renderExecutiveDashboard();
       renderHealth();
       renderRiskMatrix();
@@ -10305,6 +10681,58 @@
       renderAll();
     });
 
+    document.getElementById("myDashboardPeriodFilter").addEventListener("change", event => {
+      myDashboardFilters.period = event.target.value;
+      refreshDateFilterControls("myDashboard", myDashboardFilters);
+      logFilterChange("my_dashboard", "date_filter", event.target.value);
+      renderMyDashboard();
+    });
+
+    document.getElementById("myDashboardStartFilter").addEventListener("change", event => {
+      myDashboardFilters.start = event.target.value;
+      logFilterChange("my_dashboard", "start_date", event.target.value);
+      renderMyDashboard();
+    });
+
+    document.getElementById("myDashboardEndFilter").addEventListener("change", event => {
+      myDashboardFilters.end = event.target.value;
+      logFilterChange("my_dashboard", "end_date", event.target.value);
+      renderMyDashboard();
+    });
+
+    document.getElementById("myDashboardOwnerFilter").addEventListener("change", event => {
+      myDashboardFilters.owner = event.target.value;
+      logFilterChange("my_dashboard", "owner", event.target.value);
+      renderMyDashboard();
+    });
+
+    document.getElementById("myDashboardProductFilter").addEventListener("change", event => {
+      myDashboardFilters.product = event.target.value;
+      logFilterChange("my_dashboard", "project", event.target.value);
+      renderMyDashboard();
+    });
+
+    document.getElementById("myDashboardHealthFilter").addEventListener("change", event => {
+      myDashboardFilters.health = event.target.value;
+      logFilterChange("my_dashboard", "health", event.target.value);
+      renderMyDashboard();
+    });
+
+    function handleMyDashboardOpen(event) {
+      const target = event.target.closest("[data-my-open-report]");
+      if (!target) return;
+      if (!requireMasterAdmin("update status reports")) return;
+      openReportFromMyDashboard(target.dataset.myOpenReport);
+    }
+
+    ["myActionQueue", "myTimelineBoard", "myWorkstreamList"].forEach(id => {
+      document.getElementById(id)?.addEventListener("click", handleMyDashboardOpen);
+      document.getElementById(id)?.addEventListener("keydown", event => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        handleMyDashboardOpen(event);
+      });
+    });
+
     document.getElementById("executiveTypeFilter").addEventListener("change", event => {
       executiveFilters.productType = event.target.value;
       logFilterChange("executive", "product_type", event.target.value);
@@ -10830,6 +11258,7 @@
     const defaultReportingMonday = mondayForDate();
     [
       [dashboardFilters, "dashboard"],
+      [myDashboardFilters, "myDashboard"],
       [executiveFilters, "executive"],
       [incidentFilters, "incident"],
       [timelineFilters, "timeline"]
@@ -10850,6 +11279,13 @@
       renderAll();
     }, defaultReportingMonday);
     dashboardFilters.week = document.getElementById("dashboardWeekFilter").value;
+    initWeekPicker(document.getElementById("myDashboardWeekFilter"), document.getElementById("myDashboardWeekPicker"), value => {
+      myDashboardFilters.week = value;
+      refreshDateFilterControls("myDashboard", myDashboardFilters);
+      logFilterChange("my_dashboard", "reporting_date", dateFilterLabel(myDashboardFilters));
+      renderMyDashboard();
+    }, defaultReportingMonday);
+    myDashboardFilters.week = document.getElementById("myDashboardWeekFilter").value;
     initWeekPicker(document.getElementById("executiveWeekFilter"), document.getElementById("executiveWeekPicker"), value => {
       executiveFilters.week = value;
       refreshDateFilterControls("executive", executiveFilters);
@@ -10873,6 +11309,7 @@
     }, defaultReportingMonday);
     timelineFilters.week = document.getElementById("timelineWeekFilter").value;
     refreshDateFilterControls("dashboard", dashboardFilters);
+    refreshDateFilterControls("myDashboard", myDashboardFilters);
     refreshDateFilterControls("executive", executiveFilters);
     refreshDateFilterControls("incident", incidentFilters);
     refreshDateFilterControls("timeline", timelineFilters);
