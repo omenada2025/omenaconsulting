@@ -6,9 +6,9 @@ The dashboard monitors product, feature, and UI/UX delivery. It helps the team s
 
 ## Roles
 
-- **Admin - dashboards only:** can view Portfolio Dashboard, Executive View, and Incidents & Delays.
-- **Master admin - reports and status:** can view dashboards, create status reports, edit reports they are allowed to manage, and use Status Center.
-- **Role Manager:** can view all dashboards and admin pages, manage users, review reports, generate owner feedback, and monitor work balance.
+- **Admin - dashboards only:** can view Portfolio Dashboard, Executive View, My Dashboard, and Incidents & Delays.
+- **Master admin - reports and status:** can view dashboards, use My Dashboard, create status reports, edit reports they are allowed to manage, and use Status Center.
+- **Role Manager:** can view all dashboards and admin pages, use My Dashboard for any owner, manage users, review reports, generate owner feedback, and monitor work balance.
 
 ## Weekly Status Workflow
 
@@ -71,6 +71,22 @@ Use it to review portfolio health, delayed work, products at risk, average progr
 
 Use it for leadership review. It summarizes the highest-priority risks, blockers, next actions, and schedule concerns.
 
+### My Dashboard
+
+Use it as the personal workspace for each PM or UI/UX owner. It automatically focuses on reports where the signed-in user is the owner or participant.
+
+My Dashboard shows:
+
+- Personal workstream count and project coverage.
+- At-risk, blocker, and schedule-watch metrics.
+- Average progress across the user's filtered work.
+- Items that need clearer next actions or missing information.
+- A personal action queue with blockers, decisions, next actions, and action owners.
+- A personal delivery timeline with dates, dependencies, milestones, and schedule classification.
+- Feedback suggestions based on report quality.
+
+Role Managers can switch the owner filter to review another user's personal dashboard. Master admins can open a workstream from My Dashboard and update it in Status Center.
+
 ### Incidents & Delays
 
 Use it to investigate delayed items, due-soon items, postponed work, blockers, and impacted projects.
@@ -87,6 +103,7 @@ Status Center combines submitted reports and editing in one workspace.
 - Use filters to focus by owner, type of product, reporting week, health, and role.
 - Use **History** to review saved changes and audit events.
 - Export filtered data to CSV, Excel, or PDF.
+- Use **My Dashboard** first when you want to update only your own workstreams.
 
 ## Owner Feedback
 
@@ -120,5 +137,5 @@ Each action should have an owner, target date, and status.
 - If the end date changes, always explain the reason.
 - If the report is at risk, identify the decision needed.
 - Close actions only after the work is truly resolved.
+- Start the week from **My Dashboard** to review your own action queue before updating reports.
 - Review Report Analysis before weekly leadership meetings.
-

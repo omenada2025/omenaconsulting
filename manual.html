@@ -285,6 +285,7 @@
         </div>
         <div class="pill-row">
           <span class="pill">Portfolio Dashboard</span>
+          <span class="pill">My Dashboard</span>
           <span class="pill">Status Center</span>
           <span class="pill">Report Analysis</span>
           <span class="pill">Owner Feedback</span>
@@ -336,6 +337,7 @@
           <ul>
             <li>Portfolio Dashboard</li>
             <li>Executive View</li>
+            <li>My Dashboard</li>
             <li>Incidents & Delays</li>
           </ul>
         </div>
@@ -344,6 +346,7 @@
           <h3>Reports and status</h3>
           <ul>
             <li>View dashboards</li>
+            <li>Use My Dashboard</li>
             <li>Create status reports</li>
             <li>Edit reports they can manage</li>
             <li>Use Status Center</li>
@@ -354,6 +357,7 @@
           <h3>Operations and access</h3>
           <ul>
             <li>Manage users</li>
+            <li>Review any owner in My Dashboard</li>
             <li>Review report quality</li>
             <li>Generate owner feedback</li>
             <li>Monitor work balance</li>
@@ -458,6 +462,10 @@
           <p class="muted small">Use for leadership review. It summarizes priority risks, blockers, next actions, and schedule concerns.</p>
         </div>
         <div class="card">
+          <span class="tag green">My Dashboard</span>
+          <p class="muted small">Use as a personal workspace for each PM or UI/UX owner. It shows the user's workstreams, action queue, schedule watch, timeline, and report-quality feedback.</p>
+        </div>
+        <div class="card">
           <span class="tag amber">Incidents & Delays</span>
           <p class="muted small">Investigate delayed items, due-soon items, postponed work, blockers, impacted projects, and incident signals.</p>
         </div>
@@ -469,20 +477,47 @@
     </section>
 
     <section class="section panel">
-      <h2>7. Status Center</h2>
+      <h2>7. My Dashboard</h2>
+      <p class="muted">My Dashboard is the personal workspace for PM and UI/UX owners. It helps each person start from their own work instead of scanning the full portfolio.</p>
+      <div class="grid-3">
+        <div class="card">
+          <span class="tag">Personal queue</span>
+          <h3>Know what needs attention</h3>
+          <p class="muted small">Shows workstreams where the signed-in user is the owner or participant, including missing next actions and unclear report details.</p>
+        </div>
+        <div class="card">
+          <span class="tag amber">Schedule watch</span>
+          <h3>Protect delivery dates</h3>
+          <p class="muted small">Highlights delays, due items, dependencies, milestones, baseline changes, and schedule classifications.</p>
+        </div>
+        <div class="card">
+          <span class="tag green">Improve reporting</span>
+          <h3>Use feedback before saving</h3>
+          <p class="muted small">Uses report analysis to suggest clearer next actions, recovery steps, and lessons for the next update.</p>
+        </div>
+      </div>
+      <div class="callout" style="margin-top: 16px;">
+        <strong>Recommended weekly habit</strong>
+        <p class="muted small">Open My Dashboard first, review the action queue, update any workstream that needs a clearer next action, then use Portfolio Dashboard or Executive View for the broader meeting.</p>
+      </div>
+    </section>
+
+    <section class="section panel">
+      <h2>8. Status Center</h2>
       <p class="muted">Status Center combines submitted reports and editing in one workspace.</p>
       <ul class="checklist">
         <li>Select a report card on the left to edit it on the right.</li>
         <li>Use filters to focus by owner, type of product, reporting week, health, and role.</li>
         <li>Use History to review saved changes and audit events.</li>
         <li>Export filtered data to CSV, Excel, or PDF.</li>
+        <li>Use My Dashboard first when you want to update only your own workstreams.</li>
         <li>Only delete reports when you are the owner or have the right permission.</li>
         <li>After saving, refresh the report list and confirm the card reflects the update.</li>
       </ul>
     </section>
 
     <section class="section panel">
-      <h2>8. Report Analysis And Owner Feedback</h2>
+      <h2>9. Report Analysis And Owner Feedback</h2>
       <div class="grid-2">
         <div class="card">
           <span class="tag red">Report Analysis</span>
@@ -508,7 +543,7 @@
     </section>
 
     <section class="section panel">
-      <h2>9. Action Items</h2>
+      <h2>10. Action Items</h2>
       <p class="muted">Action Items turns reports into follow-up work.</p>
       <div class="grid-3">
         <div class="card"><span class="tag red">Escalations</span><p class="muted small">Critical priority, at-risk health, or major delay signals.</p></div>
@@ -521,7 +556,7 @@
     </section>
 
     <section class="section panel">
-      <h2>10. Best Practices</h2>
+      <h2>11. Best Practices</h2>
       <ul class="checklist">
         <li>Use one clear owner per report.</li>
         <li>Keep participants separate from the owner.</li>
@@ -529,6 +564,7 @@
         <li>If the end date changes, always explain the reason.</li>
         <li>If the report is at risk, identify the decision needed.</li>
         <li>Close actions only after the work is truly resolved.</li>
+        <li>Start the week from My Dashboard to review your own queue before updating reports.</li>
         <li>Review Report Analysis before weekly leadership meetings.</li>
         <li>Use Owner Feedback to coach each PM or UI/UX owner.</li>
       </ul>
@@ -536,7 +572,7 @@
 
     <footer class="footer">
       <strong>Omena Consulting Dashboard Manual</strong>
-      <p class="small">Updated for the workflow controls: delay root cause, date change reason, corrective action owner, action target date, decision needed, action status, completeness score, and escalation rules.</p>
+      <p class="small">Updated for My Dashboard plus workflow controls: delay root cause, date change reason, corrective action owner, action target date, decision needed, action status, completeness score, and escalation rules.</p>
     </footer>
   </main>
 </body>
