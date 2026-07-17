@@ -1912,6 +1912,7 @@
         <button class="tab" data-view="reports" data-master-only>Status Center</button>
         <div class="nav-section" data-role-manager-only>Admin</div>
         <button class="tab" data-view="sourceProjects" data-role-manager-only>Source Project</button>
+        <button class="tab" data-view="managementReview" data-role-manager-only>Management Review</button>
         <button class="tab" data-view="reportAnalysis" data-role-manager-only>Report Analysis</button>
         <button class="tab" data-view="ownerFeedback" data-role-manager-only>Owner Feedback</button>
         <button class="tab" data-view="actionItems" data-role-manager-only>Action Items</button>
@@ -2429,6 +2430,106 @@
             </div>
           </div>
           <div class="report-list" id="sourceProjectList"></div>
+        </div>
+      </section>
+
+      <section class="view" id="managementReview" data-role-manager-view>
+        <div class="header">
+          <div>
+            <span class="page-kicker">Management meeting</span>
+            <h2>Management Review</h2>
+            <p class="muted">A meeting-ready view of team progress, schedule risk, blockers, owner load, and the decisions needed to move delivery faster.</p>
+          </div>
+          <button class="btn" type="button" data-logout>Logout</button>
+        </div>
+
+        <div class="guide-grid">
+          <div class="guide-card theme-blue">
+            <strong>1. Show progress</strong>
+            <p class="muted small">Use one page to explain workstreams, progress, and portfolio coverage.</p>
+          </div>
+          <div class="guide-card theme-green">
+            <strong>2. Explain risk</strong>
+            <p class="muted small">Separate blockers, schedule delays, and missing next actions.</p>
+          </div>
+          <div class="guide-card theme-amber">
+            <strong>3. Align actions</strong>
+            <p class="muted small">Turn the review into owner follow-up, escalation, and delivery decisions.</p>
+          </div>
+        </div>
+
+        <div class="panel filter-bar report-filter-bar">
+          <label>
+            Owner
+            <select id="managementOwnerFilter"></select>
+          </label>
+          <label>
+            Project
+            <select id="managementProductFilter"></select>
+          </label>
+          <label>
+            Date / reporting week
+            <select id="managementWeekFilter"></select>
+          </label>
+          <label>
+            Role
+            <select id="managementRoleFilter">
+              <option value="all">All roles</option>
+              <option value="Product Manager">Product Manager</option>
+              <option value="UI/UX">UI/UX</option>
+            </select>
+          </label>
+          <div class="full panel-title">
+            <div>
+              <strong>Meeting narrative</strong>
+              <p class="muted small">Use the narrative and cards below as your management meeting talking track.</p>
+            </div>
+            <button class="btn soft" type="button" id="copyManagementNarrativeBtn">Copy narrative</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>Executive narrative</h3>
+              <p class="muted small">Concise progress, risk, and action summary for the selected portfolio slice.</p>
+            </div>
+          </div>
+          <div class="report-list" id="managementNarrative"></div>
+        </div>
+
+        <div class="grid summary-grid" id="managementCards"></div>
+
+        <div class="panel" id="managementDrilldownPanel" hidden>
+          <div class="panel-title">
+            <div>
+              <h3 id="managementDrilldownTitle">Management details</h3>
+              <p class="muted small" id="managementDrilldownSubtitle"></p>
+            </div>
+            <button class="btn" type="button" id="managementDrilldownClose">Back to management overview</button>
+          </div>
+          <div class="report-list" id="managementDrilldownList"></div>
+        </div>
+
+        <div class="grid two-col">
+          <div class="panel">
+            <div class="panel-title">
+              <div>
+                <h3>Owner performance</h3>
+                <p class="muted small">Who has the most work, which owners need support, and where follow-up should start.</p>
+              </div>
+            </div>
+            <div class="report-list" id="managementOwnerPerformance"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">
+              <div>
+                <h3>Decision queue</h3>
+                <p class="muted small">Highest-priority workstreams that need management attention.</p>
+              </div>
+            </div>
+            <div class="report-list" id="managementDecisionQueue"></div>
+          </div>
         </div>
       </section>
 
@@ -3763,6 +3864,7 @@
     let selectedTimelineMetric = "";
     let selectedTimelineReportId = "";
     let selectedAnalysisMetric = "";
+    let selectedManagementMetric = "";
     let selectedWorkloadKey = "";
     let useLegacySupabasePayload = false;
     let actionLoggingDisabled = false;
@@ -3849,6 +3951,12 @@
       product: "all",
       week: "all",
       health: "all",
+      role: "all"
+    };
+    const managementFilters = {
+      owner: "all",
+      product: "all",
+      week: "all",
       role: "all"
     };
     const ownerFeedbackFilters = {
@@ -5682,7 +5790,7 @@
     }
 
     function canAccessView(id) {
-      if (canManageRoles()) return ["dashboard", "executive", "myDashboard", "workflow", "incidents", "timeline", "intake", "reports", "sourceProjects", "reportAnalysis", "ownerFeedback", "actionItems", "weeklyReview", "workload", "users", "userLog"].includes(id);
+      if (canManageRoles()) return ["dashboard", "executive", "myDashboard", "workflow", "incidents", "timeline", "intake", "reports", "sourceProjects", "managementReview", "reportAnalysis", "ownerFeedback", "actionItems", "weeklyReview", "workload", "users", "userLog"].includes(id);
       if (isMasterAdmin()) return ["dashboard", "executive", "myDashboard", "incidents", "timeline", "intake", "reports"].includes(id);
       return ["dashboard", "executive", "myDashboard", "incidents"].includes(id);
     }
@@ -5718,6 +5826,7 @@
       renderUserManagement();
       renderMyDashboard();
       renderSourceProjects();
+      renderManagementReview();
       renderReportAnalysis();
       renderDeliveryTimeline();
       renderWorkBalance();
@@ -6064,6 +6173,244 @@
           ? "Tighten next actions, clarify blockers, and confirm near-term delivery checkpoints."
           : "Keep the reporting cadence and preserve the current level of clarity.";
       return { tone, headline, body: `${body} ${riskLine}`, focus };
+    }
+
+    function managementReviewRows() {
+      return analysisRowsForFilters({
+        owner: managementFilters.owner,
+        product: managementFilters.product,
+        week: managementFilters.week,
+        health: "all",
+        role: managementFilters.role
+      });
+    }
+
+    function managementNarrativeText(items) {
+      const narrative = weeklyMetricsNarrative(items, {
+        owner: managementFilters.owner,
+        product: managementFilters.product,
+        week: managementFilters.week,
+        health: "all",
+        role: managementFilters.role
+      });
+      if (!items.length) return `${narrative.headline}\n\n${narrative.body}\n\nLeadership focus: ${narrative.focus}`;
+      const reportsInView = items.map(item => item.report);
+      const dateCounts = endDateCounts(reportsInView);
+      const blockers = reportsInView.filter(report => hasBlockerSignal(report)).length;
+      const missingNext = reportsInView.filter(report => !cleanText(report.next)).length;
+      const topOwners = managementOwnerStats(items).slice(0, 3).map(owner =>
+        `${owner.owner}: ${owner.workstreams} workstreams, ${owner.delayed} schedule delays, ${owner.blockers} blockers`
+      ).join("; ");
+      return [
+        narrative.headline,
+        narrative.body,
+        `Management focus: ${narrative.focus}`,
+        `Schedule readout: ${dateCounts.majorDelay} major delays, ${dateCounts.minorDelay} minor delays, ${dateCounts.ahead || 0} ahead of schedule, ${dateCounts.onTime || 0} on time.`,
+        `Action readout: ${blockers} blockers/risks and ${missingNext} reports missing a clear next action.`,
+        topOwners ? `Owner watch: ${topOwners}.` : ""
+      ].filter(Boolean).join("\n\n");
+    }
+
+    function managementMetricDefinitions(items) {
+      const reportsInView = items.map(item => item.report);
+      const dateCounts = endDateCounts(reportsInView);
+      const avgProgress = reportsInView.length
+        ? Math.round(reportsInView.reduce((sum, report) => sum + Number(report.progress || 0), 0) / reportsInView.length)
+        : 0;
+      const products = new Set(reportsInView.map(report => cleanText(report.product)).filter(Boolean)).size;
+      const delayed = dateCounts.majorDelay + dateCounts.minorDelay;
+      const blockers = reportsInView.filter(report => hasBlockerSignal(report)).length;
+      const missingNext = reportsInView.filter(report => !cleanText(report.next)).length;
+      const qualityGaps = items.reduce((sum, item) => sum + item.analysis.gaps.length, 0);
+      const onTrackSchedule = reportsInView.filter(report => {
+        const category = endDateStatus(report)?.category;
+        return category === "ahead" || category === "onTime";
+      }).length;
+      return [
+        { key: "workstreams", label: "Workstreams", value: items.length, tone: "blue", note: `${products} product${products === 1 ? "" : "s"} in view` },
+        { key: "progress", label: "Avg Progress", value: `${avgProgress}%`, tone: avgProgress < 50 ? "red" : avgProgress < 75 ? "amber" : "green", note: "Across selected reports" },
+        { key: "schedule", label: "Schedule Delay", value: delayed, tone: dateCounts.majorDelay ? "red" : delayed ? "amber" : "green", note: `${dateCounts.majorDelay} major / ${dateCounts.minorDelay} minor` },
+        { key: "blockers", label: "Blockers / Risks", value: blockers, tone: blockers ? "red" : "green", note: "Needs follow-up or decision" },
+        { key: "nextActions", label: "Missing Next Action", value: missingNext, tone: missingNext ? "amber" : "green", note: "Reports without a clear next step" },
+        { key: "quality", label: "Quality Gaps", value: qualityGaps, tone: qualityGaps ? "amber" : "green", note: "Missing or unclear report signals" },
+        { key: "onTime", label: "On Time / Ahead", value: onTrackSchedule, tone: "green", note: "Schedule is controlled" }
+      ];
+    }
+
+    function managementMetricItems(items, metric) {
+      if (!metric || metric === "workstreams") return items;
+      if (metric === "progress") return [...items].sort((a, b) => Number(a.report.progress || 0) - Number(b.report.progress || 0));
+      if (metric === "schedule") return items.filter(item => {
+        const category = endDateStatus(item.report)?.category;
+        return category === "minorDelay" || category === "majorDelay";
+      });
+      if (metric === "blockers") return items.filter(item => hasBlockerSignal(item.report));
+      if (metric === "nextActions") return items.filter(item => !cleanText(item.report.next));
+      if (metric === "quality") return items.filter(item => item.analysis.gaps.length || item.analysis.completeness.score < 85);
+      if (metric === "onTime") return items.filter(item => {
+        const category = endDateStatus(item.report)?.category;
+        return category === "ahead" || category === "onTime";
+      });
+      return items;
+    }
+
+    function managementMetricCopy(metric) {
+      const copy = {
+        workstreams: ["Workstream details", "All filtered reports included in this management review."],
+        progress: ["Lowest progress first", "Use this list to see workstreams that may need acceleration."],
+        schedule: ["Schedule delay details", "Major and minor schedule delays that need recovery discussion."],
+        blockers: ["Blocker and risk details", "Workstreams where blockers, At Risk health, or Critical priority are present."],
+        nextActions: ["Missing next actions", "Reports that need a clearer next step before the next review."],
+        quality: ["Quality gap details", "Reports with missing context, unclear actions, or incomplete signals."],
+        onTime: ["On time or ahead", "Workstreams with controlled schedule signals."]
+      };
+      return { title: copy[metric]?.[0] || "Management details", subtitle: copy[metric]?.[1] || "Filtered management review details." };
+    }
+
+    function managementOwnerStats(items) {
+      const groups = new Map();
+      items.forEach(item => {
+        const owners = splitPeople(item.report.owner);
+        (owners.length ? owners : ["Unassigned"]).forEach(owner => {
+          const display = normalizePersonDisplay(owner) || "Unassigned";
+          if (!groups.has(display)) groups.set(display, []);
+          groups.get(display).push(item);
+        });
+      });
+      return [...groups.entries()].map(([owner, ownerItems]) => {
+        const ownerReports = ownerItems.map(item => item.report);
+        const products = new Set(ownerReports.map(report => cleanText(report.product)).filter(Boolean));
+        const avgProgress = ownerReports.length
+          ? Math.round(ownerReports.reduce((sum, report) => sum + Number(report.progress || 0), 0) / ownerReports.length)
+          : 0;
+        const delayed = ownerReports.filter(report => {
+          const category = endDateStatus(report)?.category;
+          return category === "minorDelay" || category === "majorDelay";
+        }).length;
+        const blockers = ownerReports.filter(report => hasBlockerSignal(report)).length;
+        const needsAction = ownerItems.filter(item => item.analysis.tone === "red").length;
+        const missingNext = ownerReports.filter(report => !cleanText(report.next)).length;
+        const tone = needsAction || delayed || blockers ? "red" : avgProgress < 70 || missingNext ? "amber" : "green";
+        return {
+          owner,
+          workstreams: ownerItems.length,
+          products: products.size,
+          productNames: [...products].slice(0, 5).join(", "),
+          avgProgress,
+          delayed,
+          blockers,
+          missingNext,
+          needsAction,
+          tone,
+          recommendation: needsAction || delayed
+            ? "Start with recovery dates, blocker owners, and decisions needed."
+            : missingNext
+              ? "Ask for clearer next actions before the next weekly review."
+              : "Maintain cadence and keep report quality consistent."
+        };
+      }).sort((a, b) =>
+        b.needsAction - a.needsAction ||
+        b.delayed - a.delayed ||
+        b.blockers - a.blockers ||
+        b.workstreams - a.workstreams ||
+        a.owner.localeCompare(b.owner)
+      );
+    }
+
+    function managementDecisionRows(items) {
+      return items.filter(item =>
+        item.analysis.tone === "red" ||
+        item.report.priority === "Critical" ||
+        item.report.health === "red" ||
+        hasBlockerSignal(item.report) ||
+        endDateStatus(item.report)?.category === "majorDelay" ||
+        !cleanText(item.report.next)
+      ).slice(0, 10);
+    }
+
+    function renderManagementReview() {
+      const cards = document.getElementById("managementCards");
+      const narrative = document.getElementById("managementNarrative");
+      const ownerTarget = document.getElementById("managementOwnerPerformance");
+      const decisionTarget = document.getElementById("managementDecisionQueue");
+      if (!cards || !narrative || !ownerTarget || !decisionTarget) return;
+
+      fillSelect("managementOwnerFilter", uniqueOwners(), "All owners", managementFilters.owner);
+      fillSelect("managementProductFilter", reports.map(report => report.product), "All projects", managementFilters.product);
+      fillSelect("managementWeekFilter", reports.map(report => report.week), "All reporting weeks", managementFilters.week);
+      const roleSelect = document.getElementById("managementRoleFilter");
+      if (roleSelect) roleSelect.value = managementFilters.role;
+
+      const items = managementReviewRows();
+      const text = managementNarrativeText(items);
+      const narrativeTone = weeklyMetricsNarrative(items, managementFilters).tone;
+      narrative.innerHTML = `
+        <div class="report-card">
+          <span class="chip ${narrativeTone}">Meeting narrative</span>
+          <p>${escapeHtml(text).replace(/\n/g, "<br>")}</p>
+        </div>
+      `;
+
+      cards.innerHTML = managementMetricDefinitions(items).map(card => `
+        <button class="panel metric metric-button ${selectedManagementMetric === card.key ? "selected" : ""}" type="button" data-management-metric="${escapeHtml(card.key)}" aria-pressed="${selectedManagementMetric === card.key ? "true" : "false"}">
+          <span class="chip ${card.tone}">${escapeHtml(card.label)}</span>
+          <strong>${escapeHtml(card.value)}</strong>
+          <span class="muted small">${escapeHtml(card.note)}</span>
+          <span class="muted small">Click to view details</span>
+        </button>
+      `).join("");
+
+      const drilldownPanel = document.getElementById("managementDrilldownPanel");
+      const drilldownList = document.getElementById("managementDrilldownList");
+      if (drilldownPanel && drilldownList) {
+        const selectedItems = managementMetricItems(items, selectedManagementMetric);
+        const copy = managementMetricCopy(selectedManagementMetric);
+        document.getElementById("managementDrilldownTitle").textContent = copy.title;
+        document.getElementById("managementDrilldownSubtitle").textContent = copy.subtitle;
+        drilldownPanel.hidden = !selectedManagementMetric;
+        drilldownList.innerHTML = selectedItems.length
+          ? renderAnalysisList(selectedItems)
+          : `<div class="empty"><strong>No details available</strong>No reports match this management indicator and the current filters.</div>`;
+      }
+
+      const owners = managementOwnerStats(items);
+      ownerTarget.innerHTML = owners.length ? owners.map(owner => `
+        <div class="report-card">
+          <div class="panel-title">
+            <div>
+              <span class="chip ${owner.tone}">${escapeHtml(owner.owner)}</span>
+              <h3>${escapeHtml(owner.workstreams)} workstream${owner.workstreams === 1 ? "" : "s"} across ${escapeHtml(owner.products)} product${owner.products === 1 ? "" : "s"}</h3>
+              <p class="muted small">${escapeHtml(owner.productNames || "No products captured.")}</p>
+            </div>
+            <span class="chip ${owner.avgProgress < 50 ? "red" : owner.avgProgress < 75 ? "amber" : "green"}">${owner.avgProgress}% progress</span>
+          </div>
+          <div class="report-card-detail">
+            <div><strong>Schedule delays</strong><p class="muted small">${owner.delayed}</p></div>
+            <div><strong>Blockers / risks</strong><p class="muted small">${owner.blockers}</p></div>
+            <div><strong>Missing next action</strong><p class="muted small">${owner.missingNext}</p></div>
+            <div><strong>Management follow-up</strong><p class="muted small">${escapeHtml(owner.recommendation)}</p></div>
+          </div>
+        </div>
+      `).join("") : `<div class="empty"><strong>No owner data</strong>No owner performance is available for the current filters.</div>`;
+
+      const decisions = managementDecisionRows(items);
+      decisionTarget.innerHTML = decisions.length ? decisions.map(({ report, analysis, rank }) => `
+        <div class="report-card">
+          <div class="panel-title">
+            <div>
+              <span class="product-label">${escapeHtml(report.product || "No product")}</span>
+              <h3>${escapeHtml(reportTitle(report))}</h3>
+              <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.role || "No role")} - Rank #${escapeHtml(rank || "-")}${reportEndDate(report) ? ` - ${endDateMarkup(report)}` : ""}</p>
+            </div>
+            <span class="chip ${analysis.tone}">${escapeHtml(analysis.label)}</span>
+          </div>
+          <div class="report-card-detail">
+            <div><strong>Why it matters</strong><p class="muted small">${escapeHtml(analysis.gaps[0] || report.blocker || "Needs management review.")}</p></div>
+            <div><strong>Recommended action</strong><p class="muted small">${escapeHtml(analysis.suggestions[0] || "Confirm owner, date, and next checkpoint.")}</p></div>
+            <div><strong>Next action</strong><p class="muted small">${escapeHtml(report.next || "No next action captured.")}</p></div>
+          </div>
+        </div>
+      `).join("") : `<div class="empty"><strong>No management decisions needed</strong>No high-risk, delayed, blocked, or incomplete reports match the current filters.</div>`;
     }
 
     function renderWeeklyMetricsNarrative(items) {
@@ -7266,6 +7613,7 @@
       const sourceCount = sourceProjects().length;
       const workloadOwners = workBalanceStats().length;
       const analysisCount = typeof reportAnalysisRows === "function" ? reportAnalysisRows().length : reports.length;
+      const managementCount = typeof managementReviewRows === "function" ? managementReviewRows().length : reports.length;
       const steps = [
         {
           number: "01",
@@ -7299,6 +7647,16 @@
         },
         {
           number: "04",
+          view: "managementReview",
+          title: "Management Review",
+          audience: "Role Manager",
+          metric: `${managementCount} in review`,
+          purpose: "Prepare a meeting-ready view of team progress, schedule risk, blockers, owner performance, and decisions needed.",
+          outcome: "A clear management talking track before detailed report analysis.",
+          action: "Open Management Review"
+        },
+        {
+          number: "05",
           view: "reportAnalysis",
           title: "Report Analysis",
           audience: "Role Manager",
@@ -7308,7 +7666,7 @@
           action: "Open Report Analysis"
         },
         {
-          number: "05",
+          number: "06",
           view: "dashboard",
           title: "Portfolio Dashboard",
           audience: "All profiles",
@@ -7318,7 +7676,7 @@
           action: "Open Dashboard"
         },
         {
-          number: "06",
+          number: "07",
           view: "executive",
           title: "Executive View",
           audience: "All profiles",
@@ -7328,7 +7686,7 @@
           action: "Open Executive View"
         },
         {
-          number: "07",
+          number: "08",
           view: "incidents",
           title: "Incidents & Delays",
           audience: "All profiles",
@@ -7338,7 +7696,7 @@
           action: "Open Incidents"
         },
         {
-          number: "08",
+          number: "09",
           view: "workload",
           title: "Work Balance",
           audience: "Role Manager",
@@ -7348,7 +7706,7 @@
           action: "Open Work Balance"
         },
         {
-          number: "09",
+          number: "10",
           view: "users",
           title: "User Access",
           audience: "Role Manager",
@@ -7358,7 +7716,7 @@
           action: "Open User Access"
         },
         {
-          number: "10",
+          number: "11",
           view: "userLog",
           title: "User Log",
           audience: "Role Manager",
@@ -9735,6 +10093,9 @@
       if (id === "analysisOwnerFilter") analysisFilters.owner = nextValue;
       if (id === "analysisProductFilter") analysisFilters.product = nextValue;
       if (id === "analysisWeekFilter") analysisFilters.week = nextValue;
+      if (id === "managementOwnerFilter") managementFilters.owner = nextValue;
+      if (id === "managementProductFilter") managementFilters.product = nextValue;
+      if (id === "managementWeekFilter") managementFilters.week = nextValue;
       if (id === "ownerFeedbackOwnerFilter") ownerFeedbackFilters.owner = nextValue;
       if (id === "ownerFeedbackProductFilter") ownerFeedbackFilters.product = nextValue;
       if (id === "ownerFeedbackWeekFilter") ownerFeedbackFilters.week = nextValue;
@@ -10148,6 +10509,7 @@
       renderIncidentReport();
       renderDeliveryTimeline();
       renderSourceProjects();
+      renderManagementReview();
       renderReportAnalysis();
       renderOwnerFeedbackPage();
       renderActionItems();
@@ -10987,6 +11349,59 @@
       const report = reports.find(r => r.id === selectedTimelineReportId);
       logUserAction("timeline_report_selected", {}, { target_type: "report", target_id: selectedTimelineReportId || "none", ...reportLogFields(report) });
       renderDeliveryTimeline();
+    });
+
+    document.getElementById("managementOwnerFilter").addEventListener("change", event => {
+      managementFilters.owner = event.target.value;
+      selectedManagementMetric = "";
+      logFilterChange("management_review", "owner", event.target.value);
+      renderManagementReview();
+    });
+
+    document.getElementById("managementProductFilter").addEventListener("change", event => {
+      managementFilters.product = event.target.value;
+      selectedManagementMetric = "";
+      logFilterChange("management_review", "project", event.target.value);
+      renderManagementReview();
+    });
+
+    document.getElementById("managementWeekFilter").addEventListener("change", event => {
+      managementFilters.week = event.target.value;
+      selectedManagementMetric = "";
+      logFilterChange("management_review", "date", event.target.value);
+      renderManagementReview();
+    });
+
+    document.getElementById("managementRoleFilter").addEventListener("change", event => {
+      managementFilters.role = event.target.value;
+      selectedManagementMetric = "";
+      logFilterChange("management_review", "role", event.target.value);
+      renderManagementReview();
+    });
+
+    document.getElementById("managementCards").addEventListener("click", event => {
+      const card = event.target.closest("[data-management-metric]");
+      if (!card) return;
+      selectedManagementMetric = card.dataset.managementMetric || "";
+      logUserAction("management_review_metric_opened", { metric: selectedManagementMetric }, { target_type: "management_review_metric", target_id: selectedManagementMetric });
+      renderManagementReview();
+      document.getElementById("managementDrilldownPanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    document.getElementById("managementDrilldownClose").addEventListener("click", () => {
+      selectedManagementMetric = "";
+      logUserAction("management_review_metric_closed", {}, { target_type: "management_review_metric", target_id: "overview" });
+      renderManagementReview();
+      document.getElementById("managementCards")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    document.getElementById("copyManagementNarrativeBtn").addEventListener("click", event => {
+      const text = managementNarrativeText(managementReviewRows());
+      copyTextToClipboard(text).then(() => {
+        event.currentTarget.textContent = "Copied";
+        setTimeout(() => { event.currentTarget.textContent = "Copy narrative"; }, 1600);
+      });
+      logUserAction("management_review_narrative_copied", { filters: { ...managementFilters } }, { target_type: "management_review", target_id: "narrative" });
     });
 
     document.getElementById("analysisOwnerFilter").addEventListener("change", event => {
