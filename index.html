@@ -1912,7 +1912,7 @@
         <button class="tab" data-view="reports" data-master-only>Status Center</button>
         <div class="nav-section" data-role-manager-only>Admin</div>
         <button class="tab" data-view="sourceProjects" data-role-manager-only>Source Project</button>
-        <button class="tab" data-view="managementReview" data-role-manager-only>Management Review</button>
+        <button class="tab" data-view="managementReview" data-role-manager-only>Project Review</button>
         <button class="tab" data-view="reportAnalysis" data-role-manager-only>Report Analysis</button>
         <button class="tab" data-view="ownerFeedback" data-role-manager-only>Owner Feedback</button>
         <button class="tab" data-view="actionItems" data-role-manager-only>Action Items</button>
@@ -2436,36 +2436,36 @@
       <section class="view" id="managementReview" data-role-manager-view>
         <div class="header">
           <div>
-            <span class="page-kicker">Management meeting</span>
-            <h2>Management Review</h2>
-            <p class="muted">A meeting-ready view of team progress, schedule risk, blockers, owner load, and the decisions needed to move delivery faster.</p>
+            <span class="page-kicker">Project meeting</span>
+            <h2>Project Review</h2>
+            <p class="muted">A meeting-ready analysis by project: progress, delivery risk, blockers, owner coverage, and decisions needed to move each project forward.</p>
           </div>
           <button class="btn" type="button" data-logout>Logout</button>
         </div>
 
         <div class="guide-grid">
           <div class="guide-card theme-blue">
-            <strong>1. Show progress</strong>
-            <p class="muted small">Use one page to explain workstreams, progress, and portfolio coverage.</p>
+            <strong>1. Review by project</strong>
+            <p class="muted small">Start from each project and see its workstreams, owners, progress, and status signals.</p>
           </div>
           <div class="guide-card theme-green">
-            <strong>2. Explain risk</strong>
-            <p class="muted small">Separate blockers, schedule delays, and missing next actions.</p>
+            <strong>2. Explain delivery risk</strong>
+            <p class="muted small">Separate blockers, schedule delays, missing next actions, and quality gaps by project.</p>
           </div>
           <div class="guide-card theme-amber">
-            <strong>3. Align actions</strong>
-            <p class="muted small">Turn the review into owner follow-up, escalation, and delivery decisions.</p>
+            <strong>3. Align next decisions</strong>
+            <p class="muted small">Turn project review into owner follow-up, escalation, and clear delivery decisions.</p>
           </div>
         </div>
 
         <div class="panel filter-bar report-filter-bar">
           <label>
-            Owner
-            <select id="managementOwnerFilter"></select>
-          </label>
-          <label>
             Project
             <select id="managementProductFilter"></select>
+          </label>
+          <label>
+            Owner
+            <select id="managementOwnerFilter"></select>
           </label>
           <label>
             Date / reporting week
@@ -2482,7 +2482,7 @@
           <div class="full panel-title">
             <div>
               <strong>Meeting narrative</strong>
-              <p class="muted small">Use the narrative and cards below as your management meeting talking track.</p>
+              <p class="muted small">Use the narrative and project cards below as your project review talking track.</p>
             </div>
             <button class="btn soft" type="button" id="copyManagementNarrativeBtn">Copy narrative</button>
           </div>
@@ -2506,7 +2506,7 @@
               <h3 id="managementDrilldownTitle">Management details</h3>
               <p class="muted small" id="managementDrilldownSubtitle"></p>
             </div>
-            <button class="btn" type="button" id="managementDrilldownClose">Back to management overview</button>
+            <button class="btn" type="button" id="managementDrilldownClose">Back to project overview</button>
           </div>
           <div class="report-list" id="managementDrilldownList"></div>
         </div>
@@ -2515,11 +2515,11 @@
           <div class="panel">
             <div class="panel-title">
               <div>
-                <h3>Owner performance</h3>
-                <p class="muted small">Who has the most work, which owners need support, and where follow-up should start.</p>
+                <h3>Project performance</h3>
+                <p class="muted small">Projects ranked by schedule risk, blockers, progress, and missing next actions.</p>
               </div>
             </div>
-            <div class="report-list" id="managementOwnerPerformance"></div>
+            <div class="report-list" id="managementProjectPerformance"></div>
           </div>
           <div class="panel">
             <div class="panel-title">
@@ -6201,12 +6201,16 @@
       const topOwners = managementOwnerStats(items).slice(0, 3).map(owner =>
         `${owner.owner}: ${owner.workstreams} workstreams, ${owner.delayed} schedule delays, ${owner.blockers} blockers`
       ).join("; ");
+      const topProjects = managementProjectStats(items).slice(0, 3).map(project =>
+        `${project.project}: ${project.workstreams} workstreams, ${project.delayed} schedule delays, ${project.blockers} blockers`
+      ).join("; ");
       return [
         narrative.headline,
         narrative.body,
         `Management focus: ${narrative.focus}`,
         `Schedule readout: ${dateCounts.majorDelay} major delays, ${dateCounts.minorDelay} minor delays, ${dateCounts.ahead || 0} ahead of schedule, ${dateCounts.onTime || 0} on time.`,
         `Action readout: ${blockers} blockers/risks and ${missingNext} reports missing a clear next action.`,
+        topProjects ? `Project watch: ${topProjects}.` : "",
         topOwners ? `Owner watch: ${topOwners}.` : ""
       ].filter(Boolean).join("\n\n");
     }
@@ -6256,7 +6260,7 @@
 
     function managementMetricCopy(metric) {
       const copy = {
-        workstreams: ["Workstream details", "All filtered reports included in this management review."],
+        workstreams: ["Workstream details", "All filtered reports included in this project review."],
         progress: ["Lowest progress first", "Use this list to see workstreams that may need acceleration."],
         schedule: ["Schedule delay details", "Major and minor schedule delays that need recovery discussion."],
         blockers: ["Blocker and risk details", "Workstreams where blockers, At Risk health, or Critical priority are present."],
@@ -6264,7 +6268,7 @@
         quality: ["Quality gap details", "Reports with missing context, unclear actions, or incomplete signals."],
         onTime: ["On time or ahead", "Workstreams with controlled schedule signals."]
       };
-      return { title: copy[metric]?.[0] || "Management details", subtitle: copy[metric]?.[1] || "Filtered management review details." };
+      return { title: copy[metric]?.[0] || "Project details", subtitle: copy[metric]?.[1] || "Filtered project review details." };
     }
 
     function managementOwnerStats(items) {
@@ -6317,6 +6321,63 @@
       );
     }
 
+    function managementProjectStats(items) {
+      const groups = new Map();
+      items.forEach(item => {
+        const project = cleanText(item.report.product) || "Product not separated";
+        if (!groups.has(project)) groups.set(project, []);
+        groups.get(project).push(item);
+      });
+      return [...groups.entries()].map(([project, projectItems]) => {
+        const projectReports = projectItems.map(item => item.report);
+        const owners = [...new Set(projectReports.flatMap(report => splitPeople(report.owner)).map(normalizePersonDisplay).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+        const roles = [...new Set(projectReports.map(report => cleanText(report.role)).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+        const avgProgress = projectReports.length
+          ? Math.round(projectReports.reduce((sum, report) => sum + Number(report.progress || 0), 0) / projectReports.length)
+          : 0;
+        const delayed = projectReports.filter(report => {
+          const category = endDateStatus(report)?.category;
+          return category === "minorDelay" || category === "majorDelay";
+        }).length;
+        const majorDelay = projectReports.filter(report => endDateStatus(report)?.category === "majorDelay").length;
+        const blockers = projectReports.filter(report => hasBlockerSignal(report)).length;
+        const needsAction = projectItems.filter(item => item.analysis.tone === "red").length;
+        const missingNext = projectReports.filter(report => !cleanText(report.next)).length;
+        const critical = projectReports.filter(report => report.priority === "Critical" || report.health === "red").length;
+        const tone = majorDelay || critical || needsAction ? "red" : delayed || blockers || missingNext || avgProgress < 70 ? "amber" : "green";
+        const recommendation = majorDelay || critical
+          ? "Escalate the recovery plan, confirm the decision owner, and lock the next checkpoint."
+          : delayed || blockers
+            ? "Confirm blocker owner, target date, and dependency resolution path."
+            : missingNext
+              ? "Clarify next action so the project can be tracked in the next review."
+              : "Keep cadence and maintain current delivery visibility.";
+        return {
+          project,
+          workstreams: projectItems.length,
+          owners,
+          roles,
+          avgProgress,
+          delayed,
+          majorDelay,
+          blockers,
+          missingNext,
+          needsAction,
+          critical,
+          tone,
+          recommendation
+        };
+      }).sort((a, b) =>
+        b.majorDelay - a.majorDelay ||
+        b.needsAction - a.needsAction ||
+        b.critical - a.critical ||
+        b.delayed - a.delayed ||
+        b.blockers - a.blockers ||
+        a.avgProgress - b.avgProgress ||
+        a.project.localeCompare(b.project)
+      );
+    }
+
     function managementDecisionRows(items) {
       return items.filter(item =>
         item.analysis.tone === "red" ||
@@ -6331,9 +6392,9 @@
     function renderManagementReview() {
       const cards = document.getElementById("managementCards");
       const narrative = document.getElementById("managementNarrative");
-      const ownerTarget = document.getElementById("managementOwnerPerformance");
+      const projectTarget = document.getElementById("managementProjectPerformance");
       const decisionTarget = document.getElementById("managementDecisionQueue");
-      if (!cards || !narrative || !ownerTarget || !decisionTarget) return;
+      if (!cards || !narrative || !projectTarget || !decisionTarget) return;
 
       fillSelect("managementOwnerFilter", uniqueOwners(), "All owners", managementFilters.owner);
       fillSelect("managementProductFilter", reports.map(report => report.product), "All projects", managementFilters.product);
@@ -6373,25 +6434,25 @@
           : `<div class="empty"><strong>No details available</strong>No reports match this management indicator and the current filters.</div>`;
       }
 
-      const owners = managementOwnerStats(items);
-      ownerTarget.innerHTML = owners.length ? owners.map(owner => `
+      const projects = managementProjectStats(items);
+      projectTarget.innerHTML = projects.length ? projects.map(project => `
         <div class="report-card">
           <div class="panel-title">
             <div>
-              <span class="chip ${owner.tone}">${escapeHtml(owner.owner)}</span>
-              <h3>${escapeHtml(owner.workstreams)} workstream${owner.workstreams === 1 ? "" : "s"} across ${escapeHtml(owner.products)} product${owner.products === 1 ? "" : "s"}</h3>
-              <p class="muted small">${escapeHtml(owner.productNames || "No products captured.")}</p>
+              <span class="chip ${project.tone}">${escapeHtml(project.project)}</span>
+              <h3>${escapeHtml(project.workstreams)} workstream${project.workstreams === 1 ? "" : "s"} - ${escapeHtml(project.owners.length)} owner${project.owners.length === 1 ? "" : "s"}</h3>
+              <p class="muted small">${escapeHtml(project.owners.join(", ") || "No owner captured.")}</p>
             </div>
-            <span class="chip ${owner.avgProgress < 50 ? "red" : owner.avgProgress < 75 ? "amber" : "green"}">${owner.avgProgress}% progress</span>
+            <span class="chip ${project.avgProgress < 50 ? "red" : project.avgProgress < 75 ? "amber" : "green"}">${project.avgProgress}% progress</span>
           </div>
           <div class="report-card-detail">
-            <div><strong>Schedule delays</strong><p class="muted small">${owner.delayed}</p></div>
-            <div><strong>Blockers / risks</strong><p class="muted small">${owner.blockers}</p></div>
-            <div><strong>Missing next action</strong><p class="muted small">${owner.missingNext}</p></div>
-            <div><strong>Management follow-up</strong><p class="muted small">${escapeHtml(owner.recommendation)}</p></div>
+            <div><strong>Schedule delays</strong><p class="muted small">${project.delayed} total / ${project.majorDelay} major</p></div>
+            <div><strong>Blockers / risks</strong><p class="muted small">${project.blockers}</p></div>
+            <div><strong>Missing next action</strong><p class="muted small">${project.missingNext}</p></div>
+            <div><strong>Management follow-up</strong><p class="muted small">${escapeHtml(project.recommendation)}</p></div>
           </div>
         </div>
-      `).join("") : `<div class="empty"><strong>No owner data</strong>No owner performance is available for the current filters.</div>`;
+      `).join("") : `<div class="empty"><strong>No project data</strong>No project performance is available for the current filters.</div>`;
 
       const decisions = managementDecisionRows(items);
       decisionTarget.innerHTML = decisions.length ? decisions.map(({ report, analysis, rank }) => `
@@ -6405,7 +6466,7 @@
             <span class="chip ${analysis.tone}">${escapeHtml(analysis.label)}</span>
           </div>
           <div class="report-card-detail">
-            <div><strong>Why it matters</strong><p class="muted small">${escapeHtml(analysis.gaps[0] || report.blocker || "Needs management review.")}</p></div>
+            <div><strong>Why it matters</strong><p class="muted small">${escapeHtml(analysis.gaps[0] || report.blocker || "Needs project review.")}</p></div>
             <div><strong>Recommended action</strong><p class="muted small">${escapeHtml(analysis.suggestions[0] || "Confirm owner, date, and next checkpoint.")}</p></div>
             <div><strong>Next action</strong><p class="muted small">${escapeHtml(report.next || "No next action captured.")}</p></div>
           </div>
@@ -7648,12 +7709,12 @@
         {
           number: "04",
           view: "managementReview",
-          title: "Management Review",
+          title: "Project Review",
           audience: "Role Manager",
           metric: `${managementCount} in review`,
           purpose: "Prepare a meeting-ready view of team progress, schedule risk, blockers, owner performance, and decisions needed.",
           outcome: "A clear management talking track before detailed report analysis.",
-          action: "Open Management Review"
+          action: "Open Project Review"
         },
         {
           number: "05",
