@@ -1691,6 +1691,38 @@
       margin-top: 12px;
     }
 
+    .recipient-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .recipient-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    .recipient-option span {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .recipient-option.muted {
+      color: var(--muted);
+      background: #f8fafc;
+      cursor: not-allowed;
+    }
+
     .user-card {
       display: grid;
       gap: 12px;
@@ -2794,13 +2826,18 @@
           <div class="full panel-title">
             <div>
               <strong>Generate owner feedback</strong>
-              <p class="muted small">Select one owner to create direct coaching from that owner's reports. Use all owners only for a team-level summary.</p>
+              <p class="muted small">Select one owner to preview direct coaching, or select multiple recipients below to send one personalized review per owner.</p>
             </div>
             <div class="report-actions">
               <button class="btn primary" type="button" id="generateWeeklyReviewBtn">Generate owner feedback</button>
               <button class="btn soft" type="button" id="copyWeeklyReviewBtn">Copy feedback</button>
-              <button class="btn" type="button" id="emailWeeklyReviewBtn">Email owner</button>
+              <button class="btn" type="button" id="emailWeeklyReviewBtn">Email selected owners</button>
             </div>
+          </div>
+          <div class="full">
+            <strong>Email recipients</strong>
+            <p class="muted small">Owners with an email are available. Each owner receives feedback based only on their own reports and the current project/date/role filters.</p>
+            <div class="recipient-list" id="weeklyReviewRecipients"></div>
           </div>
         </div>
         <div class="inline-message success" id="weeklyReviewMessage" hidden></div>
@@ -3978,6 +4015,7 @@
       week: "all",
       role: "all"
     };
+    let selectedWeeklyReviewOwners = [];
     let reportHistoryOpen = false;
     let reportHistoryDate = "";
     let reportAuditLoadingId = "";
@@ -7127,6 +7165,94 @@
       target.hidden = false;
     }
 
+    function weeklyReviewRecipientRows() {
+      const rows = ownerFeedbackRows(analysisRowsForFilters({
+        owner: "all",
+        product: weeklyReviewFilters.product,
+        week: weeklyReviewFilters.week,
+        health: "all",
+        role: weeklyReviewFilters.role
+      }));
+      return rows
+        .map(row => ({ owner: row.owner, email: ownerEmailForName(row.owner), total: row.total }))
+        .filter(row => row.owner && row.owner !== "Unassigned")
+        .sort((a, b) => a.owner.localeCompare(b.owner));
+    }
+
+    function syncWeeklyReviewRecipients() {
+      const available = weeklyReviewRecipientRows();
+      const availableOwners = new Set(available.map(row => canonicalText(row.owner)));
+      selectedWeeklyReviewOwners = selectedWeeklyReviewOwners.filter(owner => availableOwners.has(canonicalText(owner)));
+      if (!selectedWeeklyReviewOwners.length && weeklyReviewFilters.owner !== "all" && availableOwners.has(canonicalText(weeklyReviewFilters.owner))) {
+        selectedWeeklyReviewOwners = [weeklyReviewFilters.owner];
+      }
+      return available;
+    }
+
+    function renderWeeklyReviewRecipients() {
+      const target = document.getElementById("weeklyReviewRecipients");
+      if (!target) return;
+      const recipients = syncWeeklyReviewRecipients();
+      target.innerHTML = recipients.length ? recipients.map(row => {
+        const checked = selectedWeeklyReviewOwners.some(owner => canonicalText(owner) === canonicalText(row.owner));
+        const disabled = !row.email;
+        return `
+          <label class="recipient-option ${disabled ? "muted" : ""}">
+            <input type="checkbox" data-weekly-review-recipient value="${escapeHtml(row.owner)}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}>
+            <span>${escapeHtml(row.owner)} <span class="muted small">(${escapeHtml(row.total)} report${row.total === 1 ? "" : "s"}${row.email ? ` - ${row.email}` : " - no email"})</span></span>
+          </label>
+        `;
+      }).join("") : `<div class="empty"><strong>No recipients available</strong>No owners with reports match the current project, date, and role filters.</div>`;
+    }
+
+    function weeklyReviewTextForOwner(owner) {
+      const previousFilters = { ...weeklyReviewFilters };
+      weeklyReviewFilters.owner = owner;
+      const items = analysisRowsForFilters(weeklyReviewFilters);
+      const text = weeklyReviewText(items);
+      Object.assign(weeklyReviewFilters, previousFilters);
+      return text;
+    }
+
+    function weeklyReviewSubjectForOwner(owner) {
+      return `Omena Consulting weekly feedback - ${owner} - ${weeklyReviewFilters.week === "all" ? "all dates" : reportingFieldLabel(weeklyReviewFilters.week)}`;
+    }
+
+    async function sendWeeklyReviewToOwner(owner) {
+      const email = ownerEmailForName(owner);
+      const text = weeklyReviewTextForOwner(owner);
+      const subject = weeklyReviewSubjectForOwner(owner);
+      if (!email) {
+        throw new Error(`No email found for ${owner}`);
+      }
+      const endpoint = credentialEmailEndpoint();
+      if (!endpoint) {
+        window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+        throw new Error("Email function is not configured. Opened an email draft for the first selected owner.");
+      }
+      const emailKey = config.emailFunctionAnonKey || config.anonKey;
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: emailKey,
+          Authorization: `Bearer ${emailKey}`
+        },
+        body: JSON.stringify({
+          mode: "feedback",
+          to: email,
+          displayName: owner,
+          subject,
+          message: text
+        })
+      });
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(`${owner}: ${detail || `HTTP ${response.status}`}`);
+      }
+      return response.json().catch(() => ({}));
+    }
+
     function weeklyReviewText(items) {
       const narrative = weeklyMetricsNarrative(items, weeklyReviewFilters);
       const actions = actionItemsFromAnalysis(items).slice(0, 8);
@@ -7204,6 +7330,7 @@
       const isOwnerSpecific = weeklyReviewFilters.owner !== "all";
       const selectedOwner = selectedWeeklyOwnerLabel();
       text.value = review;
+      renderWeeklyReviewRecipients();
       cards.innerHTML = [
         [isOwnerSpecific ? "Owner selected" : "Mode", isOwnerSpecific ? selectedOwner : "Team summary", isOwnerSpecific ? "blue" : "amber", isOwnerSpecific ? "Feedback is owner-specific" : "Select one owner for direct feedback"],
         ["Reports reviewed", items.length, "blue", "Current filters"],
@@ -11636,58 +11763,55 @@
       logUserAction("weekly_review_copied", { filters: { ...weeklyReviewFilters } }, { target_type: "weekly_review", target_id: "copy" });
     });
 
+    document.getElementById("weeklyReviewRecipients").addEventListener("change", event => {
+      const input = event.target.closest("[data-weekly-review-recipient]");
+      if (!input) return;
+      const owner = input.value;
+      if (input.checked) {
+        selectedWeeklyReviewOwners = uniquePeople([...selectedWeeklyReviewOwners, owner]);
+      } else {
+        selectedWeeklyReviewOwners = selectedWeeklyReviewOwners.filter(selected => canonicalText(selected) !== canonicalText(owner));
+      }
+      logUserAction("weekly_review_recipient_toggled", { owner, selected: input.checked }, { target_type: "weekly_review_recipient", target_id: owner });
+    });
+
     document.getElementById("emailWeeklyReviewBtn").addEventListener("click", async event => {
-      const text = document.getElementById("weeklyReviewText")?.value || weeklyReviewText(analysisRowsForFilters(weeklyReviewFilters));
-      const subject = `Omena Consulting weekly feedback - ${selectedWeeklyOwnerLabel()} - ${weeklyReviewFilters.week === "all" ? "all dates" : reportingFieldLabel(weeklyReviewFilters.week)}`;
-      const selectedOwner = weeklyReviewFilters.owner;
-      const email = selectedOwner === "all" ? "" : ownerEmailForName(selectedOwner);
-      if (!email) {
-        showWeeklyReviewMessage(selectedOwner === "all" ? "Select one owner to send feedback directly. Opened a team-level email draft instead." : `No email found for ${selectedOwner}. Opened an email draft instead.`, "danger");
-        window.location.href = `mailto:${email ? encodeURIComponent(email) : ""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
-        logUserAction("weekly_review_email_draft_opened", { filters: { ...weeklyReviewFilters } }, { target_type: "weekly_review", target_id: "email_draft" });
+      const recipients = syncWeeklyReviewRecipients()
+        .filter(row => selectedWeeklyReviewOwners.some(owner => canonicalText(owner) === canonicalText(row.owner)));
+      const sendable = recipients.filter(row => row.email);
+      if (!sendable.length) {
+        showWeeklyReviewMessage("Select at least one owner with an email before sending weekly feedback.", "danger");
+        return;
+      }
+      if (!credentialEmailEndpoint() && sendable.length > 1) {
+        showWeeklyReviewMessage("Automatic email is not configured. Select one owner at a time to open an email draft.", "danger");
         return;
       }
 
-      const endpoint = credentialEmailEndpoint();
-      if (!endpoint) {
-        showWeeklyReviewMessage("Email function is not configured. Opened an email draft instead.", "danger");
-        window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
-        return;
-      }
-
-      event.currentTarget.textContent = "Sending...";
+      event.currentTarget.textContent = `Sending ${sendable.length}...`;
       event.currentTarget.disabled = true;
-      showWeeklyReviewMessage(`Sending weekly feedback to ${selectedOwner} at ${email}...`);
-      try {
-        const emailKey = config.emailFunctionAnonKey || config.anonKey;
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: emailKey,
-            Authorization: `Bearer ${emailKey}`
-          },
-          body: JSON.stringify({
-            mode: "feedback",
-            to: email,
-            displayName: selectedOwner,
-            subject,
-            message: text
-          })
-        });
-        if (!response.ok) {
-          const detail = await response.text();
-          throw new Error(detail || `HTTP ${response.status}`);
+      showWeeklyReviewMessage(`Sending personalized weekly feedback to ${sendable.length} owner${sendable.length === 1 ? "" : "s"}...`);
+      const sent = [];
+      const failed = [];
+      for (const recipient of sendable) {
+        try {
+          await sendWeeklyReviewToOwner(recipient.owner);
+          sent.push(recipient.owner);
+          logUserAction("weekly_review_email_sent", { owner: recipient.owner, email: recipient.email, filters: { ...weeklyReviewFilters } }, { target_type: "weekly_review", target_id: recipient.owner });
+        } catch (error) {
+          failed.push(error instanceof Error ? error.message : `${recipient.owner}: unknown error`);
         }
-        const result = await response.json().catch(() => ({}));
-        showWeeklyReviewMessage(`Weekly feedback accepted by SendGrid for ${selectedOwner}${result.sent_at ? ` at ${formatDateTime(result.sent_at)}` : ""}.`);
-        logUserAction("weekly_review_email_sent", { owner: selectedOwner, email, filters: { ...weeklyReviewFilters } }, { target_type: "weekly_review", target_id: selectedOwner });
-      } catch (error) {
-        const detail = error instanceof Error ? error.message : "Unknown error";
-        showWeeklyReviewMessage(`Automatic email failed: ${detail} Opened an email draft instead.`, "danger");
-        window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
-      } finally {
-        event.currentTarget.textContent = "Email owner";
+      }
+      if (failed.length) {
+        showWeeklyReviewMessage(`Sent to ${sent.length} owner${sent.length === 1 ? "" : "s"}. Failed: ${failed.join(" | ")}`, sent.length ? "success" : "danger");
+      } else {
+        showWeeklyReviewMessage(`Weekly feedback sent to ${sent.join(", ")}.`);
+      }
+      event.currentTarget.textContent = "Email selected owners";
+      event.currentTarget.disabled = false;
+      try {
+        renderWeeklyReview();
+      } catch (_) {
         event.currentTarget.disabled = false;
       }
     });
