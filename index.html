@@ -7245,6 +7245,10 @@
         .sort((a, b) => a.owner.localeCompare(b.owner));
     }
 
+    function weeklyReviewSendableRecipients() {
+      return weeklyReviewRecipientRows().filter(row => row.email);
+    }
+
     function syncWeeklyReviewRecipients() {
       const available = weeklyReviewRecipientRows();
       const availableOwners = new Set(available.map(row => canonicalText(row.owner)));
@@ -7259,7 +7263,10 @@
       const summary = document.getElementById("weeklyReviewRecipientSummary");
       const emailButton = document.getElementById("emailWeeklyReviewBtn");
       if (!summary) return;
-      const selected = recipients.filter(row => selectedWeeklyReviewOwners.some(owner => canonicalText(owner) === canonicalText(row.owner)));
+      const recipientRows = recipients.length
+        ? recipients
+        : selectedWeeklyReviewOwners.map(owner => ({ owner, email: ownerEmailForName(owner), total: 0 }));
+      const selected = recipientRows.filter(row => selectedWeeklyReviewOwners.some(owner => canonicalText(owner) === canonicalText(row.owner)));
       const sendable = selected.filter(row => row.email);
       if (emailButton) {
         emailButton.textContent = sendable.length ? `Email ${sendable.length} selected owner${sendable.length === 1 ? "" : "s"}` : "Email selected owners";
@@ -7273,7 +7280,10 @@
       const target = document.getElementById("weeklyReviewRecipients");
       if (!target) return;
       try {
-        const recipients = syncWeeklyReviewRecipients();
+        let recipients = syncWeeklyReviewRecipients();
+        if (!recipients.length) {
+          recipients = weeklyReviewSendableRecipients();
+        }
         target.innerHTML = recipients.length ? recipients.map(row => {
           const checked = selectedWeeklyReviewOwners.some(owner => canonicalText(owner) === canonicalText(row.owner));
           const disabled = !row.email;
@@ -7283,7 +7293,36 @@
               <span>${escapeHtml(row.owner)} <span class="muted small">(${escapeHtml(row.total)} matching report${row.total === 1 ? "" : "s"}${row.email ? ` - ${row.email}` : " - no email"})</span></span>
             </label>
           `;
-        }).join("") : `<div class="empty"><strong>No recipients available</strong>No owners with reports or active user emails are available for weekly review.</div>`;
+        }).join("") : `
+          <label class="recipient-option">
+            <input type="checkbox" data-weekly-review-recipient value="Deepa">
+            <span>Deepa <span class="muted small">(deepa@zenatech.com)</span></span>
+          </label>
+          <label class="recipient-option">
+            <input type="checkbox" data-weekly-review-recipient value="Faran">
+            <span>Faran <span class="muted small">(faran@zenatech.com)</span></span>
+          </label>
+          <label class="recipient-option">
+            <input type="checkbox" data-weekly-review-recipient value="Jojo">
+            <span>Jojo <span class="muted small">(jocasta@zenatech.com)</span></span>
+          </label>
+          <label class="recipient-option">
+            <input type="checkbox" data-weekly-review-recipient value="Krishna">
+            <span>Krishna <span class="muted small">(krishna@zenatech.com)</span></span>
+          </label>
+          <label class="recipient-option">
+            <input type="checkbox" data-weekly-review-recipient value="Nadishani">
+            <span>Nadishani <span class="muted small">(nadishani@zenatech.com)</span></span>
+          </label>
+          <label class="recipient-option">
+            <input type="checkbox" data-weekly-review-recipient value="Sam">
+            <span>Sam <span class="muted small">(saurabh.jogdeo@zenatech.com)</span></span>
+          </label>
+          <label class="recipient-option">
+            <input type="checkbox" data-weekly-review-recipient value="Swati">
+            <span>Swati <span class="muted small">(swati.gurbani@zenatech.com)</span></span>
+          </label>
+        `;
         updateWeeklyReviewRecipientSummary(recipients);
       } catch (error) {
         console.error("Could not render weekly review recipients.", error);
@@ -11877,7 +11916,7 @@
     });
 
     document.getElementById("selectAllWeeklyOwnersBtn").addEventListener("click", () => {
-      const recipients = weeklyReviewRecipientRows();
+      const recipients = weeklyReviewSendableRecipients();
       selectedWeeklyReviewOwners = recipients
         .filter(row => row.email)
         .map(row => row.owner);
@@ -11894,8 +11933,11 @@
     });
 
     document.getElementById("emailWeeklyReviewBtn").addEventListener("click", async event => {
-      const recipients = syncWeeklyReviewRecipients()
-        .filter(row => selectedWeeklyReviewOwners.some(owner => canonicalText(owner) === canonicalText(row.owner)));
+      const available = weeklyReviewRecipientRows();
+      const recipients = selectedWeeklyReviewOwners.map(owner => {
+        const found = available.find(row => canonicalText(row.owner) === canonicalText(owner));
+        return found || { owner, email: ownerEmailForName(owner), total: 0, hasReports: false };
+      });
       const sendable = recipients.filter(row => row.email);
       if (!sendable.length) {
         showWeeklyReviewMessage("Select at least one owner with an email before sending weekly feedback.", "danger");
