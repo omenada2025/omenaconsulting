@@ -4468,6 +4468,10 @@
       return cleaned;
     }
 
+    function normalizePersonKey(value = "") {
+      return cleanText(normalizePersonDisplay(value)).toLocaleLowerCase();
+    }
+
     function ownerKey(value = "") {
       return cleanText(normalizePersonDisplay(value)).toLocaleLowerCase();
     }
