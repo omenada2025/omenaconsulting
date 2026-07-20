@@ -7197,20 +7197,41 @@
     }
 
     function weeklyReviewRecipientRows() {
-      const filteredRows = ownerFeedbackRows(analysisRowsForFilters({
-        owner: "all",
-        product: weeklyReviewFilters.product,
-        week: weeklyReviewFilters.week,
-        health: "all",
-        role: weeklyReviewFilters.role
-      }));
+      let filteredRows = [];
+      try {
+        filteredRows = ownerFeedbackRows(analysisRowsForFilters({
+          owner: "all",
+          product: weeklyReviewFilters.product,
+          week: weeklyReviewFilters.week,
+          health: "all",
+          role: weeklyReviewFilters.role
+        }));
+      } catch (error) {
+        console.warn("Could not build filtered weekly review owners.", error);
+      }
       const reportTotals = new Map(filteredRows.map(row => [canonicalText(row.owner), row.total]));
+      let userOwners = [];
+      try {
+        userOwners = normalizeUsers(loadUsers())
+          .filter(user => user.active !== false && user.deleted !== true)
+          .map(user => user.displayName || (user.username || "").split("@")[0]);
+      } catch (error) {
+        console.warn("Could not load weekly review user recipients.", error);
+      }
       const ownerNames = uniquePeople([
         ...uniqueOwners(),
         ...filteredRows.map(row => row.owner),
-        ...normalizeUsers(loadUsers())
-          .filter(user => user.active !== false && user.deleted !== true)
-          .map(user => user.displayName || (user.username || "").split("@")[0])
+        ...userOwners,
+        "Deepa",
+        "Faran",
+        "Jojo",
+        "Krishna",
+        "Nadishani",
+        "Reza",
+        "Riya",
+        "Sajjad",
+        "Sam",
+        "Swati"
       ]);
       return ownerNames
         .filter(owner => owner && owner !== "Unassigned")
@@ -7251,18 +7272,24 @@
     function renderWeeklyReviewRecipients() {
       const target = document.getElementById("weeklyReviewRecipients");
       if (!target) return;
-      const recipients = syncWeeklyReviewRecipients();
-      target.innerHTML = recipients.length ? recipients.map(row => {
-        const checked = selectedWeeklyReviewOwners.some(owner => canonicalText(owner) === canonicalText(row.owner));
-        const disabled = !row.email;
-        return `
-          <label class="recipient-option ${disabled ? "muted" : ""}">
-            <input type="checkbox" data-weekly-review-recipient value="${escapeHtml(row.owner)}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}>
-            <span>${escapeHtml(row.owner)} <span class="muted small">(${escapeHtml(row.total)} matching report${row.total === 1 ? "" : "s"}${row.email ? ` - ${row.email}` : " - no email"})</span></span>
-          </label>
-        `;
-      }).join("") : `<div class="empty"><strong>No recipients available</strong>No owners with reports or active user emails are available for weekly review.</div>`;
-      updateWeeklyReviewRecipientSummary(recipients);
+      try {
+        const recipients = syncWeeklyReviewRecipients();
+        target.innerHTML = recipients.length ? recipients.map(row => {
+          const checked = selectedWeeklyReviewOwners.some(owner => canonicalText(owner) === canonicalText(row.owner));
+          const disabled = !row.email;
+          return `
+            <label class="recipient-option ${disabled ? "muted" : ""}">
+              <input type="checkbox" data-weekly-review-recipient value="${escapeHtml(row.owner)}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}>
+              <span>${escapeHtml(row.owner)} <span class="muted small">(${escapeHtml(row.total)} matching report${row.total === 1 ? "" : "s"}${row.email ? ` - ${row.email}` : " - no email"})</span></span>
+            </label>
+          `;
+        }).join("") : `<div class="empty"><strong>No recipients available</strong>No owners with reports or active user emails are available for weekly review.</div>`;
+        updateWeeklyReviewRecipientSummary(recipients);
+      } catch (error) {
+        console.error("Could not render weekly review recipients.", error);
+        target.innerHTML = `<div class="empty"><strong>Recipient list could not load</strong>Refresh the page and try again. The feedback preview still works.</div>`;
+        updateWeeklyReviewRecipientSummary([]);
+      }
     }
 
     function weeklyReviewTextForOwner(owner) {
