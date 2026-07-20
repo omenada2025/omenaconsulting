@@ -1696,6 +1696,23 @@
       grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr));
       gap: 8px;
       margin-top: 10px;
+      max-height: 220px;
+      overflow: auto;
+    }
+
+    .recipient-panel {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #f8fbfc;
+      padding: 12px;
+    }
+
+    .recipient-toolbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
     }
 
     .recipient-option {
@@ -1721,6 +1738,10 @@
       color: var(--muted);
       background: #f8fafc;
       cursor: not-allowed;
+    }
+
+    .recipient-summary {
+      margin-top: 8px;
     }
 
     .user-card {
@@ -2834,10 +2855,20 @@
               <button class="btn" type="button" id="emailWeeklyReviewBtn">Email selected owners</button>
             </div>
           </div>
-          <div class="full">
-            <strong>Email recipients</strong>
-            <p class="muted small">Owners with an email are available. Each owner receives feedback based only on their own reports and the current project/date/role filters.</p>
+          <div class="full recipient-panel">
+            <div class="recipient-toolbar">
+              <div>
+                <strong>Email recipients</strong>
+                <p class="muted small">Choose the owners who should receive feedback. Each owner gets a personalized review based only on their own reports and the current project/date/role filters.</p>
+              </div>
+              <div class="report-actions">
+                <button class="btn soft" type="button" id="selectFilteredWeeklyOwnersBtn">Select filtered owners</button>
+                <button class="btn soft" type="button" id="selectAllWeeklyOwnersBtn">Select all with email</button>
+                <button class="btn" type="button" id="clearWeeklyOwnersBtn">Clear</button>
+              </div>
+            </div>
             <div class="recipient-list" id="weeklyReviewRecipients"></div>
+            <p class="muted small recipient-summary" id="weeklyReviewRecipientSummary">No owners selected.</p>
           </div>
         </div>
         <div class="inline-message success" id="weeklyReviewMessage" hidden></div>
@@ -7166,16 +7197,30 @@
     }
 
     function weeklyReviewRecipientRows() {
-      const rows = ownerFeedbackRows(analysisRowsForFilters({
+      const filteredRows = ownerFeedbackRows(analysisRowsForFilters({
         owner: "all",
         product: weeklyReviewFilters.product,
         week: weeklyReviewFilters.week,
         health: "all",
         role: weeklyReviewFilters.role
       }));
-      return rows
-        .map(row => ({ owner: row.owner, email: ownerEmailForName(row.owner), total: row.total }))
-        .filter(row => row.owner && row.owner !== "Unassigned")
+      const reportTotals = new Map(filteredRows.map(row => [canonicalText(row.owner), row.total]));
+      const ownerNames = uniquePeople([
+        ...uniqueOwners(),
+        ...filteredRows.map(row => row.owner),
+        ...normalizeUsers(loadUsers())
+          .filter(user => user.active !== false && user.deleted !== true)
+          .map(user => user.displayName || (user.username || "").split("@")[0])
+      ]);
+      return ownerNames
+        .filter(owner => owner && owner !== "Unassigned")
+        .map(owner => ({
+          owner,
+          email: ownerEmailForName(owner),
+          total: reportTotals.get(canonicalText(owner)) || 0,
+          hasReports: reportTotals.has(canonicalText(owner))
+        }))
+        .filter(row => row.email || row.hasReports)
         .sort((a, b) => a.owner.localeCompare(b.owner));
     }
 
@@ -7189,6 +7234,20 @@
       return available;
     }
 
+    function updateWeeklyReviewRecipientSummary(recipients) {
+      const summary = document.getElementById("weeklyReviewRecipientSummary");
+      const emailButton = document.getElementById("emailWeeklyReviewBtn");
+      if (!summary) return;
+      const selected = recipients.filter(row => selectedWeeklyReviewOwners.some(owner => canonicalText(owner) === canonicalText(row.owner)));
+      const sendable = selected.filter(row => row.email);
+      if (emailButton) {
+        emailButton.textContent = sendable.length ? `Email ${sendable.length} selected owner${sendable.length === 1 ? "" : "s"}` : "Email selected owners";
+      }
+      summary.textContent = sendable.length
+        ? `${sendable.length} selected: ${sendable.map(row => row.owner).join(", ")}.`
+        : "No owners selected. Use the checkboxes or quick select buttons above.";
+    }
+
     function renderWeeklyReviewRecipients() {
       const target = document.getElementById("weeklyReviewRecipients");
       if (!target) return;
@@ -7199,10 +7258,11 @@
         return `
           <label class="recipient-option ${disabled ? "muted" : ""}">
             <input type="checkbox" data-weekly-review-recipient value="${escapeHtml(row.owner)}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}>
-            <span>${escapeHtml(row.owner)} <span class="muted small">(${escapeHtml(row.total)} report${row.total === 1 ? "" : "s"}${row.email ? ` - ${row.email}` : " - no email"})</span></span>
+            <span>${escapeHtml(row.owner)} <span class="muted small">(${escapeHtml(row.total)} matching report${row.total === 1 ? "" : "s"}${row.email ? ` - ${row.email}` : " - no email"})</span></span>
           </label>
         `;
-      }).join("") : `<div class="empty"><strong>No recipients available</strong>No owners with reports match the current project, date, and role filters.</div>`;
+      }).join("") : `<div class="empty"><strong>No recipients available</strong>No owners with reports or active user emails are available for weekly review.</div>`;
+      updateWeeklyReviewRecipientSummary(recipients);
     }
 
     function weeklyReviewTextForOwner(owner) {
@@ -11726,6 +11786,9 @@
 
     document.getElementById("weeklyReviewOwnerFilter").addEventListener("change", event => {
       weeklyReviewFilters.owner = event.target.value;
+      if (weeklyReviewFilters.owner !== "all") {
+        selectedWeeklyReviewOwners = [weeklyReviewFilters.owner];
+      }
       logFilterChange("weekly_review", "owner", event.target.value);
       renderWeeklyReview();
     });
@@ -11773,6 +11836,34 @@
         selectedWeeklyReviewOwners = selectedWeeklyReviewOwners.filter(selected => canonicalText(selected) !== canonicalText(owner));
       }
       logUserAction("weekly_review_recipient_toggled", { owner, selected: input.checked }, { target_type: "weekly_review_recipient", target_id: owner });
+      updateWeeklyReviewRecipientSummary(weeklyReviewRecipientRows());
+    });
+
+    document.getElementById("selectFilteredWeeklyOwnersBtn").addEventListener("click", () => {
+      const recipients = weeklyReviewRecipientRows();
+      selectedWeeklyReviewOwners = recipients
+        .filter(row => row.email && row.hasReports)
+        .map(row => row.owner);
+      renderWeeklyReviewRecipients();
+      showWeeklyReviewMessage(`${selectedWeeklyReviewOwners.length} owner${selectedWeeklyReviewOwners.length === 1 ? "" : "s"} with matching reports selected.`);
+      logUserAction("weekly_review_recipients_selected", { mode: "filtered", owners: selectedWeeklyReviewOwners }, { target_type: "weekly_review_recipient", target_id: "filtered" });
+    });
+
+    document.getElementById("selectAllWeeklyOwnersBtn").addEventListener("click", () => {
+      const recipients = weeklyReviewRecipientRows();
+      selectedWeeklyReviewOwners = recipients
+        .filter(row => row.email)
+        .map(row => row.owner);
+      renderWeeklyReviewRecipients();
+      showWeeklyReviewMessage(`${selectedWeeklyReviewOwners.length} owner${selectedWeeklyReviewOwners.length === 1 ? "" : "s"} with email selected.`);
+      logUserAction("weekly_review_recipients_selected", { mode: "all_with_email", owners: selectedWeeklyReviewOwners }, { target_type: "weekly_review_recipient", target_id: "all_with_email" });
+    });
+
+    document.getElementById("clearWeeklyOwnersBtn").addEventListener("click", () => {
+      selectedWeeklyReviewOwners = [];
+      renderWeeklyReviewRecipients();
+      showWeeklyReviewMessage("Weekly review email recipients cleared.");
+      logUserAction("weekly_review_recipients_cleared", {}, { target_type: "weekly_review_recipient", target_id: "clear" });
     });
 
     document.getElementById("emailWeeklyReviewBtn").addEventListener("click", async event => {
