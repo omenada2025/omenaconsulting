@@ -2894,6 +2894,21 @@
           </div>
           <div class="report-list" id="weeklyReviewActions"></div>
         </div>
+
+        <div class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>Weekly send history</h3>
+              <p class="muted small" id="weeklyReviewHistorySummary">Tracks sent owner feedback so weekly KPIs can be generated later.</p>
+            </div>
+            <div class="report-actions">
+              <button class="btn soft" type="button" id="refreshWeeklyReviewHistoryBtn">Refresh history</button>
+              <button class="btn" type="button" id="exportWeeklyReviewHistoryBtn">Export CSV</button>
+            </div>
+          </div>
+          <div class="grid summary-grid" id="weeklyReviewHistoryCards"></div>
+          <div class="report-list compact-list" id="weeklyReviewHistoryList"></div>
+        </div>
       </section>
 
       <section class="view" id="workload" data-role-manager-view>
@@ -3880,6 +3895,7 @@
     const hasSupabaseConfig = Boolean(config.url && config.anonKey);
     const supabaseTable = config.table || "status_reports";
     const actionLogTable = config.actionLogTable || "user_action_logs";
+    const weeklyReviewSendsTable = config.weeklyReviewSendsTable || "weekly_review_sends";
     const usersTable = config.usersTable || "app_users";
     const supabaseRestUrl = hasSupabaseConfig ? `${config.url.replace(/\/$/, "")}/rest/v1` : "";
     const supabaseBaseUrl = hasSupabaseConfig ? `${supabaseRestUrl}/${supabaseTable}` : "";
@@ -3941,6 +3957,9 @@
     let pendingUserDelete = "";
     let userDirectoryRefreshPromise = null;
     let userActionLogs = [];
+    let weeklyReviewSends = [];
+    let weeklyReviewSendsLoaded = false;
+    let weeklyReviewSendsDisabled = false;
     let userLogLoadMessage = "Open this page or click Refresh log to load activity.";
     const userLogFilters = {
       user: "all",
@@ -7383,6 +7402,176 @@
       return response.json().catch(() => ({}));
     }
 
+    function weeklyReviewHistoryPeriodLabel(filters = weeklyReviewFilters) {
+      if (!filters.week || filters.week === "all") return "All dates";
+      return reportingFieldLabel(filters.week);
+    }
+
+    function weeklyReviewSendSnapshot(owner, email, status, errorMessage = "", batchId = "") {
+      const ownerFilters = { ...weeklyReviewFilters, owner };
+      const items = analysisRowsForFilters(ownerFilters);
+      const narrative = weeklyMetricsNarrative(items, ownerFilters);
+      const actions = actionItemsFromAnalysis(items);
+      return {
+        batch_id: batchId || getSessionId(),
+        owner,
+        email,
+        filter_product: weeklyReviewFilters.product || "all",
+        filter_week: weeklyReviewFilters.week || "all",
+        filter_role: weeklyReviewFilters.role || "all",
+        period_label: weeklyReviewHistoryPeriodLabel(),
+        report_count: items.length,
+        action_count: actions.length,
+        feedback_tone: narrative.tone || "green",
+        subject: weeklyReviewSubjectForOwner(owner),
+        message_preview: weeklyReviewTextForOwner(owner).slice(0, 1200),
+        status,
+        error_message: errorMessage || null,
+        sent_by_username: currentUser?.username || null,
+        sent_by_name: currentUser?.displayName || currentUser?.username || null,
+        sent_by_role: currentUser?.role || currentProfile || null
+      };
+    }
+
+    async function recordWeeklyReviewSend(snapshot) {
+      const localRow = {
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+        ...snapshot
+      };
+      weeklyReviewSends = [localRow, ...weeklyReviewSends].slice(0, 250);
+      if (!hasSupabaseConfig || weeklyReviewSendsDisabled) return localRow;
+      try {
+        const rows = await supabaseTableRequest(weeklyReviewSendsTable, "?select=*", {
+          method: "POST",
+          body: snapshot,
+          timeoutMs: 8000
+        });
+        const row = Array.isArray(rows) ? rows[0] : rows;
+        if (row) {
+          weeklyReviewSends = [row, ...weeklyReviewSends.filter(item => item.id !== localRow.id)].slice(0, 250);
+          weeklyReviewSendsLoaded = true;
+          return row;
+        }
+      } catch (error) {
+        console.warn("Weekly review send history unavailable:", error);
+        weeklyReviewSendsDisabled = true;
+      }
+      return localRow;
+    }
+
+    async function loadWeeklyReviewSendHistory({ force = false } = {}) {
+      if (!hasSupabaseConfig || weeklyReviewSendsDisabled) {
+        weeklyReviewSendsLoaded = true;
+        renderWeeklyReviewSendHistory();
+        return weeklyReviewSends;
+      }
+      if (weeklyReviewSendsLoaded && !force) {
+        renderWeeklyReviewSendHistory();
+        return weeklyReviewSends;
+      }
+      try {
+        const rows = await supabaseTableRequest(weeklyReviewSendsTable, "?select=*&order=created_at.desc&limit=250", {
+          prefer: "",
+          timeoutMs: 8000
+        });
+        weeklyReviewSends = Array.isArray(rows) ? rows : [];
+        weeklyReviewSendsLoaded = true;
+      } catch (error) {
+        console.warn("Could not load weekly review send history:", error);
+        weeklyReviewSendsDisabled = true;
+        weeklyReviewSendsLoaded = true;
+      }
+      renderWeeklyReviewSendHistory();
+      return weeklyReviewSends;
+    }
+
+    function weeklyReviewHistoryRows() {
+      return weeklyReviewSends.filter(row => {
+        const productMatch = weeklyReviewFilters.product === "all" || row.filter_product === weeklyReviewFilters.product;
+        const weekMatch = weeklyReviewFilters.week === "all" || row.filter_week === weeklyReviewFilters.week;
+        const roleMatch = weeklyReviewFilters.role === "all" || row.filter_role === weeklyReviewFilters.role;
+        const ownerMatch = weeklyReviewFilters.owner === "all" || canonicalText(row.owner) === canonicalText(weeklyReviewFilters.owner);
+        return productMatch && weekMatch && roleMatch && ownerMatch;
+      });
+    }
+
+    function renderWeeklyReviewSendHistory() {
+      const cards = document.getElementById("weeklyReviewHistoryCards");
+      const list = document.getElementById("weeklyReviewHistoryList");
+      const summary = document.getElementById("weeklyReviewHistorySummary");
+      if (!cards || !list || !summary) return;
+      if (!weeklyReviewSendsLoaded) {
+        summary.textContent = "Loading weekly send history...";
+        cards.innerHTML = "";
+        list.innerHTML = `<div class="empty"><strong>Loading send history</strong>Checking saved weekly review send records.</div>`;
+        return;
+      }
+      if (weeklyReviewSendsDisabled && !weeklyReviewSends.length) {
+        summary.textContent = "Weekly send history table is not available yet. Apply the Supabase migration to enable KPIs.";
+        cards.innerHTML = "";
+        list.innerHTML = `<div class="empty"><strong>History not configured</strong>Email sending still works. Run the weekly review history SQL migration to capture KPI-ready send records.</div>`;
+        return;
+      }
+      const rows = weeklyReviewHistoryRows();
+      const sentRows = rows.filter(row => row.status === "sent");
+      const failedRows = rows.filter(row => row.status === "failed");
+      const owners = new Set(sentRows.map(row => canonicalText(row.owner)));
+      const reportsCovered = sentRows.reduce((sum, row) => sum + Number(row.report_count || 0), 0);
+      cards.innerHTML = [
+        ["Emails sent", sentRows.length, "green", "Matching current filters"],
+        ["Owners reached", owners.size, "blue", "Unique owners emailed"],
+        ["Reports covered", reportsCovered, "amber", "Reports included in feedback"],
+        ["Failures", failedRows.length, failedRows.length ? "red" : "green", "Emails that did not send"]
+      ].map(([label, value, tone, note]) => `
+        <div class="panel metric">
+          <span class="chip ${tone}">${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
+          <span class="muted small">${escapeHtml(note)}</span>
+        </div>
+      `).join("");
+      summary.textContent = rows.length
+        ? `${rows.length} weekly send record${rows.length === 1 ? "" : "s"} found for the current filters.`
+        : "No weekly feedback has been sent for the current filters yet.";
+      list.innerHTML = rows.length ? rows.slice(0, 30).map(row => `
+        <div class="report-card">
+          <div class="panel-title">
+            <div>
+              <span class="chip ${row.status === "failed" ? "red" : "green"}">${escapeHtml(row.status === "failed" ? "Failed" : "Sent")}</span>
+              <h3>${escapeHtml(row.owner || "Unknown owner")}</h3>
+              <p class="muted small">${escapeHtml(row.email || "No email")} - ${escapeHtml(row.period_label || weeklyReviewHistoryPeriodLabel({ week: row.filter_week }))} - ${escapeHtml(formatDateTime(row.created_at))}</p>
+            </div>
+            <span class="chip blue">${escapeHtml(row.report_count || 0)} reports</span>
+          </div>
+          <p class="muted small"><strong>Actions:</strong> ${escapeHtml(row.action_count || 0)} - <strong>Project:</strong> ${escapeHtml(row.filter_product || "all")} - <strong>Role:</strong> ${escapeHtml(row.filter_role || "all")}</p>
+          ${row.error_message ? `<p class="muted small"><strong>Error:</strong> ${escapeHtml(row.error_message)}</p>` : ""}
+        </div>
+      `).join("") : `<div class="empty"><strong>No send history yet</strong>After you email owners, each personalized send appears here for KPI tracking.</div>`;
+    }
+
+    function exportWeeklyReviewSendHistory() {
+      const rows = weeklyReviewHistoryRows();
+      const columns = [
+        ["created_at", "Sent at"],
+        ["owner", "Owner"],
+        ["email", "Email"],
+        ["period_label", "Period"],
+        ["filter_product", "Project filter"],
+        ["filter_week", "Reporting week filter"],
+        ["filter_role", "Role filter"],
+        ["report_count", "Reports covered"],
+        ["action_count", "Actions generated"],
+        ["feedback_tone", "Feedback tone"],
+        ["status", "Status"],
+        ["error_message", "Error"],
+        ["sent_by_name", "Sent by"]
+      ];
+      const header = columns.map(([, label]) => csvEscape(label)).join(",");
+      const body = rows.map(row => columns.map(([key]) => csvEscape(row[key] ?? "")).join(",")).join("\n");
+      downloadBlob(`weekly-review-send-history-${formatDate(new Date())}.csv`, [header, body].filter(Boolean).join("\n"), "text/csv;charset=utf-8");
+      logUserAction("weekly_review_history_exported", { row_count: rows.length, filters: { ...weeklyReviewFilters } }, { target_type: "export", target_id: "weekly_review_history_csv" });
+    }
+
     function weeklyReviewText(items) {
       const narrative = weeklyMetricsNarrative(items, weeklyReviewFilters);
       const actions = actionItemsFromAnalysis(items).slice(0, 8);
@@ -7461,6 +7650,12 @@
       const selectedOwner = selectedWeeklyOwnerLabel();
       text.value = review;
       renderWeeklyReviewRecipients();
+      if (weeklyReviewSendsLoaded || weeklyReviewSendsDisabled) {
+        renderWeeklyReviewSendHistory();
+      } else {
+        renderWeeklyReviewSendHistory();
+        loadWeeklyReviewSendHistory();
+      }
       cards.innerHTML = [
         [isOwnerSpecific ? "Owner selected" : "Mode", isOwnerSpecific ? selectedOwner : "Team summary", isOwnerSpecific ? "blue" : "amber", isOwnerSpecific ? "Feedback is owner-specific" : "Select one owner for direct feedback"],
         ["Reports reviewed", items.length, "blue", "Current filters"],
@@ -11957,13 +12152,17 @@
       showWeeklyReviewMessage(`Sending personalized weekly feedback to ${sendable.length} owner${sendable.length === 1 ? "" : "s"}...`);
       const sent = [];
       const failed = [];
+      const batchId = crypto.randomUUID();
       for (const recipient of sendable) {
         try {
           await sendWeeklyReviewToOwner(recipient.owner);
           sent.push(recipient.owner);
+          await recordWeeklyReviewSend(weeklyReviewSendSnapshot(recipient.owner, recipient.email, "sent", "", batchId));
           logUserAction("weekly_review_email_sent", { owner: recipient.owner, email: recipient.email, filters: { ...weeklyReviewFilters } }, { target_type: "weekly_review", target_id: recipient.owner });
         } catch (error) {
-          failed.push(error instanceof Error ? error.message : `${recipient.owner}: unknown error`);
+          const message = error instanceof Error ? error.message : `${recipient.owner}: unknown error`;
+          failed.push(message);
+          await recordWeeklyReviewSend(weeklyReviewSendSnapshot(recipient.owner, recipient.email, "failed", message, batchId));
         }
       }
       if (failed.length) {
@@ -11975,10 +12174,21 @@
       event.currentTarget.disabled = false;
       try {
         renderWeeklyReview();
+        await loadWeeklyReviewSendHistory({ force: true });
       } catch (_) {
         event.currentTarget.disabled = false;
       }
     });
+
+    document.getElementById("refreshWeeklyReviewHistoryBtn")?.addEventListener("click", async event => {
+      event.currentTarget.textContent = "Refreshing...";
+      event.currentTarget.disabled = true;
+      await loadWeeklyReviewSendHistory({ force: true });
+      event.currentTarget.textContent = "Refresh history";
+      event.currentTarget.disabled = false;
+    });
+
+    document.getElementById("exportWeeklyReviewHistoryBtn")?.addEventListener("click", exportWeeklyReviewSendHistory);
 
     document.getElementById("workloadOwnershipSummary").addEventListener("click", event => {
       const card = event.target.closest("[data-workload-owner]");
