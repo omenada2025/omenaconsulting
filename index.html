@@ -1555,6 +1555,84 @@
       margin-bottom: 4px;
     }
 
+    .chart-stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .chart-block {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(246, 249, 251, 0.78);
+      min-width: 0;
+    }
+
+    .chart-block h4 {
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    .chart-row {
+      display: grid;
+      grid-template-columns: minmax(110px, 160px) 1fr auto;
+      gap: 10px;
+      align-items: center;
+      margin: 8px 0;
+      min-width: 0;
+    }
+
+    .chart-label {
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 800;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .chart-track {
+      height: 10px;
+      border-radius: 999px;
+      background: #e5edf5;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .chart-fill {
+      height: 100%;
+      min-width: 2px;
+      border-radius: inherit;
+      background: var(--accent);
+    }
+
+    .chart-fill.green { background: #4ea66f; }
+    .chart-fill.amber { background: #e5a936; }
+    .chart-fill.red { background: #be2f5b; }
+    .chart-fill.blue { background: #2f6f8f; }
+    .chart-fill.gray { background: #7a8792; }
+
+    .compact-list {
+      max-height: min(520px, 58vh);
+      overflow: auto;
+    }
+
+    .meeting-update-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .meeting-update-grid > div {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #f6f9fb;
+      padding: 10px;
+      min-width: 0;
+    }
+
     .user-log-list {
       max-height: min(700px, 72vh);
     }
@@ -1965,7 +2043,7 @@
         <button class="tab" data-view="reports" data-master-only>Status Center</button>
         <div class="nav-section" data-role-manager-only>Admin</div>
         <button class="tab" data-view="sourceProjects" data-role-manager-only>Source Project</button>
-        <button class="tab" data-view="managementReview" data-role-manager-only>Project Review</button>
+        <button class="tab" data-view="managementReview" data-role-manager-only>Manager Meeting</button>
         <button class="tab" data-view="reportAnalysis" data-role-manager-only>Report Analysis</button>
         <button class="tab" data-view="ownerFeedback" data-role-manager-only>Owner Feedback</button>
         <button class="tab" data-view="actionItems" data-role-manager-only>Action Items</button>
@@ -2489,25 +2567,25 @@
       <section class="view" id="managementReview" data-role-manager-view>
         <div class="header">
           <div>
-            <span class="page-kicker">Project meeting</span>
-            <h2>Project Review</h2>
-            <p class="muted">A meeting-ready analysis by project: progress, delivery risk, blockers, owner coverage, and decisions needed to move each project forward.</p>
+            <span class="page-kicker">Manager meeting</span>
+            <h2>Management Review Dashboard</h2>
+            <p class="muted">A presentation-ready view of portfolio progress, project updates, delivery risks, owner workload, decisions needed, wins, and weekly trends.</p>
           </div>
           <button class="btn" type="button" data-logout>Logout</button>
         </div>
 
         <div class="guide-grid">
           <div class="guide-card theme-blue">
-            <strong>1. Review by project</strong>
-            <p class="muted small">Start from each project and see its workstreams, owners, progress, and status signals.</p>
+            <strong>1. Open the meeting</strong>
+            <p class="muted small">Use the executive narrative and KPI cards to explain what changed this period.</p>
           </div>
           <div class="guide-card theme-green">
-            <strong>2. Explain delivery risk</strong>
-            <p class="muted small">Separate blockers, schedule delays, missing next actions, and quality gaps by project.</p>
+            <strong>2. Review project health</strong>
+            <p class="muted small">Show health mix, schedule movement, delay reasons, and owner workload.</p>
           </div>
           <div class="guide-card theme-amber">
-            <strong>3. Align next decisions</strong>
-            <p class="muted small">Turn project review into owner follow-up, escalation, and clear delivery decisions.</p>
+            <strong>3. Close with action</strong>
+            <p class="muted small">Use the decision queue, project updates, and wins to align the next management actions.</p>
           </div>
         </div>
 
@@ -2553,6 +2631,27 @@
 
         <div class="grid summary-grid" id="managementCards"></div>
 
+        <div class="grid two-col">
+          <div class="panel">
+            <div class="panel-title">
+              <div>
+                <h3>Portfolio health chart</h3>
+                <p class="muted small">Health, schedule, and delay root cause mix for the selected reports.</p>
+              </div>
+            </div>
+            <div class="chart-stack" id="managementCharts"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">
+              <div>
+                <h3>Owner workload</h3>
+                <p class="muted small">Workload and risk concentration by owner.</p>
+              </div>
+            </div>
+            <div class="report-list compact-list" id="managementOwnerWorkload"></div>
+          </div>
+        </div>
+
         <div class="panel" id="managementDrilldownPanel" hidden>
           <div class="panel-title">
             <div>
@@ -2568,8 +2667,8 @@
           <div class="panel">
             <div class="panel-title">
               <div>
-                <h3>Project performance</h3>
-                <p class="muted small">Projects ranked by schedule risk, blockers, progress, and missing next actions.</p>
+                <h3>Project updates</h3>
+                <p class="muted small">Meeting-ready update by project, ranked by delivery attention needed.</p>
               </div>
             </div>
             <div class="report-list" id="managementProjectPerformance"></div>
@@ -2582,6 +2681,27 @@
               </div>
             </div>
             <div class="report-list" id="managementDecisionQueue"></div>
+          </div>
+        </div>
+
+        <div class="grid two-col">
+          <div class="panel">
+            <div class="panel-title">
+              <div>
+                <h3>Wins to mention</h3>
+                <p class="muted small">Positive progress and completed work worth calling out in the meeting.</p>
+              </div>
+            </div>
+            <div class="report-list compact-list" id="managementWins"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">
+              <div>
+                <h3>Weekly trend</h3>
+                <p class="muted small">Volume, progress, delays, and blockers by reporting week.</p>
+              </div>
+            </div>
+            <div class="chart-stack" id="managementTrend"></div>
           </div>
         </div>
       </section>
@@ -6481,11 +6601,159 @@
       ).slice(0, 10);
     }
 
+    function chartToneForLabel(label = "") {
+      const value = String(label).toLowerCase();
+      if (value.includes("risk") || value.includes("major") || value.includes("delay") || value.includes("blocked")) return "red";
+      if (value.includes("progress") || value.includes("minor") || value.includes("missing") || value.includes("refinement")) return "amber";
+      if (value.includes("track") || value.includes("ahead") || value.includes("on time") || value.includes("closed")) return "green";
+      if (value.includes("paused")) return "gray";
+      return "blue";
+    }
+
+    function chartRowsFromCounts(counts, total, emptyLabel = "No data available") {
+      const entries = [...counts.entries()].filter(([, count]) => count > 0);
+      if (!entries.length) {
+        return `<div class="empty"><strong>${escapeHtml(emptyLabel)}</strong>No matching records for the current filters.</div>`;
+      }
+      return entries
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([label, count]) => {
+          const percent = total ? Math.round(count / total * 100) : 0;
+          const tone = chartToneForLabel(label);
+          return `
+            <div class="chart-row">
+              <span class="chart-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
+              <span class="chart-track"><span class="chart-fill ${tone}" style="width:${Math.max(percent, 3)}%"></span></span>
+              <span class="muted small">${count} (${percent}%)</span>
+            </div>
+          `;
+        }).join("");
+    }
+
+    function countByLabel(items, getter) {
+      const counts = new Map();
+      items.forEach(item => {
+        const label = cleanText(getter(item)) || "Not captured";
+        counts.set(label, (counts.get(label) || 0) + 1);
+      });
+      return counts;
+    }
+
+    function managementScheduleCounts(items) {
+      const counts = new Map([
+        ["Ahead of Schedule", 0],
+        ["On Time", 0],
+        ["Minor Delay", 0],
+        ["Major Delay", 0],
+        ["No end date", 0]
+      ]);
+      items.forEach(item => {
+        const status = endDateStatus(item.report);
+        const label = status?.label || "No end date";
+        counts.set(label, (counts.get(label) || 0) + 1);
+      });
+      return counts;
+    }
+
+    function managementChartBlocks(items) {
+      const total = items.length;
+      const healthCounts = countByLabel(items, item => labels[item.report.health] || item.report.health || "Not captured");
+      const scheduleCounts = managementScheduleCounts(items);
+      const delayCounts = countByLabel(
+        items.filter(item => {
+          const category = endDateStatus(item.report)?.category;
+          return category === "minorDelay" || category === "majorDelay" || hasBlockerSignal(item.report);
+        }),
+        item => item.report.delay_reason || "Root cause missing"
+      );
+      return `
+        <div class="chart-block">
+          <h4>Delivery health</h4>
+          ${chartRowsFromCounts(healthCounts, total, "No health data")}
+        </div>
+        <div class="chart-block">
+          <h4>Schedule classification</h4>
+          ${chartRowsFromCounts(scheduleCounts, total, "No schedule data")}
+        </div>
+        <div class="chart-block">
+          <h4>Delay / blocker root causes</h4>
+          ${chartRowsFromCounts(delayCounts, Math.max(1, [...delayCounts.values()].reduce((sum, count) => sum + count, 0)), "No delay root causes")}
+        </div>
+      `;
+    }
+
+    function managementTrendStats(items) {
+      const groups = new Map();
+      items.forEach(item => {
+        const week = cleanText(item.report.week) ? reportingWeekGroupLabel(item.report.week) : "No reporting week";
+        if (!groups.has(week)) groups.set(week, []);
+        groups.get(week).push(item);
+      });
+      return [...groups.entries()].map(([week, weekItems]) => {
+        const reportsForWeek = weekItems.map(item => item.report);
+        const avgProgress = reportsForWeek.length
+          ? Math.round(reportsForWeek.reduce((sum, report) => sum + Number(report.progress || 0), 0) / reportsForWeek.length)
+          : 0;
+        const delayed = reportsForWeek.filter(report => {
+          const category = endDateStatus(report)?.category;
+          return category === "minorDelay" || category === "majorDelay";
+        }).length;
+        const blockers = reportsForWeek.filter(report => hasBlockerSignal(report)).length;
+        return { week, count: weekItems.length, avgProgress, delayed, blockers };
+      }).sort((a, b) => a.week.localeCompare(b.week));
+    }
+
+    function renderManagementTrend(items) {
+      const trend = managementTrendStats(items);
+      const maxCount = Math.max(1, ...trend.map(row => row.count));
+      if (!trend.length) {
+        return `<div class="empty"><strong>No trend data</strong>No reporting weeks match the current filters.</div>`;
+      }
+      return `
+        <div class="chart-block">
+          <h4>Reporting volume by week</h4>
+          ${trend.map(row => `
+            <div class="chart-row">
+              <span class="chart-label" title="${escapeHtml(row.week)}">${escapeHtml(row.week)}</span>
+              <span class="chart-track"><span class="chart-fill blue" style="width:${Math.max(3, Math.round(row.count / maxCount * 100))}%"></span></span>
+              <span class="muted small">${row.count} reports</span>
+            </div>
+            <p class="muted small" style="margin: -4px 0 8px 0;">${row.avgProgress}% avg progress - ${row.delayed} delays - ${row.blockers} blockers</p>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function latestProjectReport(project, items) {
+      const projectItems = items
+        .filter(item => (cleanText(item.report.product) || "Product not separated") === project)
+        .sort((a, b) => {
+          const dateA = Date.parse(a.report.week || a.report.updated_at || a.report.created_at || 0);
+          const dateB = Date.parse(b.report.week || b.report.updated_at || b.report.created_at || 0);
+          return dateB - dateA;
+        });
+      return projectItems[0]?.report || null;
+    }
+
+    function managementWinRows(items) {
+      return items
+        .filter(item => cleanText(item.report.win))
+        .sort((a, b) =>
+          Number(b.report.progress || 0) - Number(a.report.progress || 0) ||
+          String(b.report.week || "").localeCompare(String(a.report.week || ""))
+        )
+        .slice(0, 8);
+    }
+
     function renderManagementReview() {
       const cards = document.getElementById("managementCards");
       const narrative = document.getElementById("managementNarrative");
       const projectTarget = document.getElementById("managementProjectPerformance");
       const decisionTarget = document.getElementById("managementDecisionQueue");
+      const chartsTarget = document.getElementById("managementCharts");
+      const ownerTarget = document.getElementById("managementOwnerWorkload");
+      const winsTarget = document.getElementById("managementWins");
+      const trendTarget = document.getElementById("managementTrend");
       if (!cards || !narrative || !projectTarget || !decisionTarget) return;
 
       fillSelect("managementOwnerFilter", uniqueOwners(), "All owners", managementFilters.owner);
@@ -6513,6 +6781,29 @@
         </button>
       `).join("");
 
+      if (chartsTarget) chartsTarget.innerHTML = managementChartBlocks(items);
+
+      if (ownerTarget) {
+        const owners = managementOwnerStats(items);
+        ownerTarget.innerHTML = owners.length ? owners.slice(0, 10).map(owner => `
+          <div class="report-card">
+            <div class="panel-title">
+              <div>
+                <span class="chip ${owner.tone}">${escapeHtml(owner.owner)}</span>
+                <h3>${owner.workstreams} workstream${owner.workstreams === 1 ? "" : "s"} across ${owner.products} project${owner.products === 1 ? "" : "s"}</h3>
+                <p class="muted small">${escapeHtml(owner.productNames || "No project names captured.")}</p>
+              </div>
+              <span class="chip ${owner.avgProgress < 50 ? "red" : owner.avgProgress < 75 ? "amber" : "green"}">${owner.avgProgress}%</span>
+            </div>
+            <div class="meeting-update-grid">
+              <div><strong>Delays</strong><p class="muted small">${owner.delayed}</p></div>
+              <div><strong>Blockers</strong><p class="muted small">${owner.blockers}</p></div>
+              <div><strong>Focus</strong><p class="muted small">${escapeHtml(owner.recommendation)}</p></div>
+            </div>
+          </div>
+        `).join("") : `<div class="empty"><strong>No owner workload</strong>No owner data matches the current filters.</div>`;
+      }
+
       const drilldownPanel = document.getElementById("managementDrilldownPanel");
       const drilldownList = document.getElementById("managementDrilldownList");
       if (drilldownPanel && drilldownList) {
@@ -6537,11 +6828,24 @@
             </div>
             <span class="chip ${project.avgProgress < 50 ? "red" : project.avgProgress < 75 ? "amber" : "green"}">${project.avgProgress}% progress</span>
           </div>
-          <div class="report-card-detail">
+          ${(() => {
+            const latest = latestProjectReport(project.project, items);
+            const schedule = latest ? endDateStatus(latest) : null;
+            return `
+              <div class="meeting-update-grid">
+                <div><strong>Current update</strong><p class="muted small">${escapeHtml(latest?.summary || "No recent summary captured.")}</p></div>
+                <div><strong>Win</strong><p class="muted small">${escapeHtml(latest?.win || "No win captured.")}</p></div>
+                <div><strong>Blocker / risk</strong><p class="muted small">${escapeHtml(latest?.blocker || "No blocker captured.")}</p></div>
+                <div><strong>Next action</strong><p class="muted small">${escapeHtml(latest?.next || "No next action captured.")}</p></div>
+                <div><strong>Schedule</strong><p class="muted small">${schedule ? `<span class="chip ${schedule.tone}">${escapeHtml(schedule.label)}</span>` : "No end date captured."}</p></div>
+                <div><strong>Management follow-up</strong><p class="muted small">${escapeHtml(project.recommendation)}</p></div>
+              </div>
+            `;
+          })()}
+          <div class="meeting-update-grid">
             <div><strong>Schedule delays</strong><p class="muted small">${project.delayed} total / ${project.majorDelay} major</p></div>
             <div><strong>Blockers / risks</strong><p class="muted small">${project.blockers}</p></div>
             <div><strong>Missing next action</strong><p class="muted small">${project.missingNext}</p></div>
-            <div><strong>Management follow-up</strong><p class="muted small">${escapeHtml(project.recommendation)}</p></div>
           </div>
         </div>
       `).join("") : `<div class="empty"><strong>No project data</strong>No project performance is available for the current filters.</div>`;
@@ -6564,6 +6868,25 @@
           </div>
         </div>
       `).join("") : `<div class="empty"><strong>No management decisions needed</strong>No high-risk, delayed, blocked, or incomplete reports match the current filters.</div>`;
+
+      if (winsTarget) {
+        const wins = managementWinRows(items);
+        winsTarget.innerHTML = wins.length ? wins.map(({ report }) => `
+          <div class="report-card">
+            <div class="panel-title">
+              <div>
+                <span class="product-label">${escapeHtml(report.product || "No product")}</span>
+                <h3>${escapeHtml(reportTitle(report))}</h3>
+                <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.week || "No reporting week")}</p>
+              </div>
+              <span class="chip green">Win</span>
+            </div>
+            <p>${escapeHtml(report.win)}</p>
+          </div>
+        `).join("") : `<div class="empty"><strong>No wins captured</strong>Add wins to reports so the meeting can recognize progress.</div>`;
+      }
+
+      if (trendTarget) trendTarget.innerHTML = renderManagementTrend(items);
     }
 
     function renderWeeklyMetricsNarrative(items) {
@@ -8161,12 +8484,12 @@
         {
           number: "04",
           view: "managementReview",
-          title: "Project Review",
+          title: "Manager Meeting",
           audience: "Role Manager",
           metric: `${managementCount} in review`,
           purpose: "Prepare a meeting-ready view of team progress, schedule risk, blockers, owner performance, and decisions needed.",
           outcome: "A clear management talking track before detailed report analysis.",
-          action: "Open Project Review"
+          action: "Open Manager Meeting"
         },
         {
           number: "05",
