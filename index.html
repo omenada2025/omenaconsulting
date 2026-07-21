@@ -6182,15 +6182,25 @@
       }).join("") : `<div class="empty"><strong>No source projects imported</strong>Open the SharePoint workbook, copy the table including headers, then paste and import it here.</div>`;
     }
 
+    function reportFilterMatch(report, filters = {}) {
+      const ownerFilter = filters.owner || "all";
+      const productFilter = filters.product || "all";
+      const weekFilter = filters.week || "all";
+      const healthFilter = filters.health || "all";
+      const roleFilter = filters.role || "all";
+      const reportProduct = cleanText(report.product);
+      const reportWeek = cleanText(report.week);
+      const reportRole = cleanText(report.role || inferRole(report));
+      return reportHasPerson(report.owner, ownerFilter) &&
+        (productFilter === "all" || canonicalText(reportProduct) === canonicalText(productFilter)) &&
+        (weekFilter === "all" || reportWeek === weekFilter || reportingWeekGroupLabel(reportWeek) === reportingWeekGroupLabel(weekFilter)) &&
+        (!healthFilter || healthFilter === "all" || report.health === healthFilter) &&
+        (!roleFilter || roleFilter === "all" || canonicalText(reportRole) === canonicalText(roleFilter));
+    }
+
     function analysisRowsForFilters(filters = analysisFilters) {
       return reports
-        .filter(report =>
-          reportHasPerson(report.owner, filters.owner) &&
-          (filters.product === "all" || report.product === filters.product) &&
-          (filters.week === "all" || report.week === filters.week) &&
-          (!filters.health || filters.health === "all" || report.health === filters.health) &&
-          (!filters.role || filters.role === "all" || report.role === filters.role)
-        )
+        .filter(report => reportFilterMatch(report, filters))
         .map(report => ({ report, analysis: analyzeReportQuality(report) }))
         .sort((a, b) =>
           b.analysis.score - a.analysis.score ||
