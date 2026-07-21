@@ -2629,6 +2629,16 @@
           <div class="report-list" id="managementNarrative"></div>
         </div>
 
+        <div class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>Product executive narratives</h3>
+              <p class="muted small">One meeting-ready talking point per product: status, risk, next action, and decision needed.</p>
+            </div>
+          </div>
+          <div class="report-list" id="managementProductNarratives"></div>
+        </div>
+
         <div class="grid summary-grid" id="managementCards"></div>
 
         <div class="grid two-col">
@@ -6600,6 +6610,66 @@
       );
     }
 
+    function managementProductNarratives(items) {
+      return managementProjectStats(items).map(project => {
+        const projectItems = items.filter(item => (cleanText(item.report.product) || "Product not separated") === project.project);
+        const reportsForProject = projectItems.map(item => item.report);
+        const latest = latestProjectReport(project.project, items);
+        const scheduleCounts = endDateCounts(reportsForProject);
+        const healthCounts = reportsForProject.reduce((counts, report) => {
+          counts[report.health] = (counts[report.health] || 0) + 1;
+          return counts;
+        }, {});
+        const scheduleLabel = project.majorDelay
+          ? `${project.majorDelay} major schedule delay${project.majorDelay === 1 ? "" : "s"}`
+          : project.delayed
+            ? `${project.delayed} minor schedule delay${project.delayed === 1 ? "" : "s"}`
+            : scheduleCounts.ahead
+              ? `${scheduleCounts.ahead} workstream${scheduleCounts.ahead === 1 ? "" : "s"} ahead of schedule`
+              : "schedule is controlled";
+        const healthLabel = [
+          healthCounts.green ? `${healthCounts.green} on track` : "",
+          healthCounts.amber ? `${healthCounts.amber} in progress` : "",
+          healthCounts.red ? `${healthCounts.red} at risk` : "",
+          healthCounts.gray ? `${healthCounts.gray} paused` : ""
+        ].filter(Boolean).join(", ") || "health not captured";
+        const mainSignal = project.majorDelay || project.critical
+          ? "Escalation needed"
+          : project.delayed || project.blockers
+            ? "Needs follow-up"
+            : project.missingNext
+              ? "Needs clearer next action"
+              : "Progress is under control";
+        const talkTrack = `${project.project}: ${project.workstreams} workstream${project.workstreams === 1 ? "" : "s"} across ${project.owners.length || 0} owner${project.owners.length === 1 ? "" : "s"}, ${project.avgProgress}% average progress, ${healthLabel}. Schedule signal: ${scheduleLabel}. ${latest?.summary ? `Latest update: ${latest.summary}` : "Latest update is not captured."}`;
+        return {
+          ...project,
+          latest,
+          mainSignal,
+          talkTrack,
+          decision: project.recommendation,
+          next: latest?.next || "Confirm the next action, owner, and target date before the next review.",
+          blocker: latest?.blocker || "No blocker captured in the latest update.",
+          win: latest?.win || "No win captured in the latest update."
+        };
+      });
+    }
+
+    function managementProductNarrativeText(items) {
+      const narratives = managementProductNarratives(items);
+      if (!narratives.length) return "Product executive narratives\n\nNo product narratives are available for the current filters.";
+      return [
+        "Product executive narratives",
+        ...narratives.map(project => [
+          `${project.project} - ${project.mainSignal}`,
+          project.talkTrack,
+          `Decision / management action: ${project.decision}`,
+          `Next action: ${project.next}`,
+          `Blocker / risk: ${project.blocker}`,
+          `Win: ${project.win}`
+        ].join("\n"))
+      ].join("\n\n");
+    }
+
     function managementDecisionRows(items) {
       return items.filter(item =>
         item.analysis.tone === "red" ||
@@ -6758,6 +6828,7 @@
     function renderManagementReview() {
       const cards = document.getElementById("managementCards");
       const narrative = document.getElementById("managementNarrative");
+      const productNarrativesTarget = document.getElementById("managementProductNarratives");
       const projectTarget = document.getElementById("managementProjectPerformance");
       const decisionTarget = document.getElementById("managementDecisionQueue");
       const chartsTarget = document.getElementById("managementCharts");
@@ -6781,6 +6852,29 @@
           <p>${escapeHtml(text).replace(/\n/g, "<br>")}</p>
         </div>
       `;
+
+      if (productNarrativesTarget) {
+        const productNarratives = managementProductNarratives(items);
+        productNarrativesTarget.innerHTML = productNarratives.length ? productNarratives.map(project => `
+          <div class="report-card">
+            <div class="panel-title">
+              <div>
+                <span class="chip ${project.tone}">${escapeHtml(project.mainSignal)}</span>
+                <h3>${escapeHtml(project.project)}</h3>
+                <p class="muted small">${project.workstreams} workstream${project.workstreams === 1 ? "" : "s"} - ${project.avgProgress}% average progress - ${escapeHtml(project.owners.join(", ") || "No owner captured")}</p>
+              </div>
+              <span class="chip ${project.majorDelay || project.critical ? "red" : project.delayed || project.blockers ? "amber" : "green"}">${project.delayed} delay${project.delayed === 1 ? "" : "s"}</span>
+            </div>
+            <p>${escapeHtml(project.talkTrack)}</p>
+            <div class="meeting-update-grid">
+              <div><strong>Decision / management action</strong><p class="muted small">${escapeHtml(project.decision)}</p></div>
+              <div><strong>Next action</strong><p class="muted small">${escapeHtml(project.next)}</p></div>
+              <div><strong>Blocker / risk</strong><p class="muted small">${escapeHtml(project.blocker)}</p></div>
+              <div><strong>Win</strong><p class="muted small">${escapeHtml(project.win)}</p></div>
+            </div>
+          </div>
+        `).join("") : `<div class="empty"><strong>No product narratives</strong>No reports match the current filters.</div>`;
+      }
 
       cards.innerHTML = managementMetricDefinitions(items).map(card => `
         <button class="panel metric metric-button ${selectedManagementMetric === card.key ? "selected" : ""}" type="button" data-management-metric="${escapeHtml(card.key)}" aria-pressed="${selectedManagementMetric === card.key ? "true" : "false"}">
@@ -12242,7 +12336,8 @@
     });
 
     document.getElementById("copyManagementNarrativeBtn").addEventListener("click", event => {
-      const text = managementNarrativeText(managementReviewRows());
+      const items = managementReviewRows();
+      const text = `${managementNarrativeText(items)}\n\n${managementProductNarrativeText(items)}`;
       copyTextToClipboard(text).then(() => {
         event.currentTarget.textContent = "Copied";
         setTimeout(() => { event.currentTarget.textContent = "Copy narrative"; }, 1600);
