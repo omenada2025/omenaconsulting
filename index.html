@@ -325,6 +325,7 @@
     .view { display: none; }
     .view.active { display: block; }
     [hidden] { display: none !important; }
+    body.executive-admin-profile [data-hide-executive-admin] { display: none !important; }
 
     .grid {
       display: grid;
@@ -6125,6 +6126,7 @@
 
     function applyProfileAccess() {
       updateSignedInIdentity();
+      document.body.classList.toggle("executive-admin-profile", isExecutiveAdmin());
       document.querySelectorAll("[data-master-only]").forEach(element => {
         element.hidden = !canManageReports();
       });
@@ -6138,7 +6140,9 @@
         element.hidden = !canManageRoles();
       });
       document.querySelectorAll("[data-hide-executive-admin]").forEach(element => {
-        element.hidden = isExecutiveAdmin();
+        const hideForExecutiveAdmin = isExecutiveAdmin();
+        element.hidden = hideForExecutiveAdmin;
+        element.style.display = hideForExecutiveAdmin ? "none" : "";
       });
       renderUserManagement();
       renderHome();
