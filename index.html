@@ -2084,8 +2084,8 @@
       <nav class="tabs" aria-label="Primary">
         <div class="nav-section">Start</div>
         <button class="tab active" data-view="home" title="Choose the right workflow for today">Home</button>
-        <div class="nav-section">My Work</div>
-        <button class="tab" data-view="myDashboard" title="Personal dashboard for your workstreams, dates, risks, and next actions">My Dashboard</button>
+        <div class="nav-section" data-hide-executive-admin>My Work</div>
+        <button class="tab" data-view="myDashboard" data-hide-executive-admin title="Personal dashboard for your workstreams, dates, risks, and next actions">My Dashboard</button>
         <button class="tab" data-view="reports" data-master-only>Update Reports</button>
         <div class="nav-section">Portfolio</div>
         <button class="tab" data-view="dashboard" title="Portfolio health, workstreams, dates, risks, wins, blockers, and next actions">Portfolio Dashboard</button>
@@ -6106,7 +6106,7 @@
     function canAccessView(id) {
       if (canManageRoles()) return ["home", "dashboard", "executive", "myDashboard", "workflow", "incidents", "timeline", "intake", "reports", "sourceProjects", "managementReview", "reportAnalysis", "ownerFeedback", "actionItems", "weeklyReview", "workload", "users", "userLog"].includes(id);
       if (isMasterAdmin()) return ["home", "dashboard", "executive", "myDashboard", "incidents", "timeline", "intake", "reports"].includes(id);
-      return ["home", "dashboard", "executive", "myDashboard", "incidents"].includes(id);
+      return ["home", "dashboard", "executive", "incidents"].includes(id);
     }
 
     function requireMasterAdmin(action = "manage reports") {
@@ -6136,6 +6136,9 @@
       });
       document.querySelectorAll("[data-role-manager-view]").forEach(element => {
         element.hidden = !canManageRoles();
+      });
+      document.querySelectorAll("[data-hide-executive-admin]").forEach(element => {
+        element.hidden = isExecutiveAdmin();
       });
       renderUserManagement();
       renderHome();
