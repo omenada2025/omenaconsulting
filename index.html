@@ -10418,10 +10418,11 @@
       }, { delayed: 0, dueSoon: 0, postponed: 0, majorDelay: 0, minorDelay: 0, blocker: 0 });
       const projectGroups = [...source.reduce((acc, report) => {
         const product = cleanText(report.product) || "No product";
-        if (!acc.has(product)) acc.set(product, []);
-        acc.get(product).push(report);
+        const key = canonicalText(product) || "no product";
+        if (!acc.has(key)) acc.set(key, { label: product, rows: [] });
+        acc.get(key).rows.push(report);
         return acc;
-      }, new Map()).entries()].sort((a, b) => {
+      }, new Map()).values()].map(group => [group.label, group.rows]).sort((a, b) => {
         const aCounts = endDateCounts(a[1]);
         const bCounts = endDateCounts(b[1]);
         return bCounts.delayed - aCounts.delayed
@@ -10482,12 +10483,14 @@
       const scoped = source.filter(report => report.role === role);
       const total = scoped.length;
       const atRisk = scoped.filter(report => report.health === "red" || report.priority === "Critical").length;
+      const products = uniqueCount(scoped, "product");
+      const riskyProducts = uniqueCount(scoped.filter(report => report.health === "red" || report.priority === "Critical"), "product");
       const avg = total ? Math.round(scoped.reduce((sum, report) => sum + Number(report.progress || 0), 0) / total) : 0;
-      return { total, atRisk, avg };
+      return { total, atRisk, products, riskyProducts, avg };
     }
 
     function uniqueCount(source, key) {
-      return new Set(source.map(report => report[key]).filter(Boolean)).size;
+      return new Set(source.map(report => canonicalText(report[key])).filter(Boolean)).size;
     }
 
     function productsNeedingAttention(source) {
@@ -10509,10 +10512,13 @@
     function productGroupsForMetric(source) {
       return [...source.reduce((acc, report) => {
         const product = cleanText(report.product) || "No product";
-        if (!acc.has(product)) acc.set(product, []);
-        acc.get(product).push(report);
+        const key = canonicalText(product) || "no product";
+        if (!acc.has(key)) acc.set(key, { label: product, rows: [] });
+        acc.get(key).rows.push(report);
         return acc;
-      }, new Map()).entries()].sort((a, b) => a[0].localeCompare(b[0]));
+      }, new Map()).values()]
+        .map(group => [group.label, group.rows])
+        .sort((a, b) => a[0].localeCompare(b[0]));
     }
 
     function portfolioDetailCard(report) {
@@ -10623,9 +10629,9 @@
       const riskyProducts = productsNeedingAttention(source);
       const dateCounts = endDateCounts(source);
       const metrics = [
-        ["products", "Products", products, "blue", "With active workstreams", `${pm.total} PM items`, `${ux.total} UI/UX items`],
+        ["products", "Products", products, "blue", "With active workstreams", `${pm.products} PM projects`, `${ux.products} UI/UX projects`],
         ["workstreams", "Workstreams", total, "blue", "Features or workstreams tracked", `${pm.total} PM`, `${ux.total} UI/UX`],
-        ["risk", "Products at Risk", riskyProducts, riskyProducts ? "red" : "green", `${atRisk} workstreams need attention`, `${pm.atRisk} PM`, `${ux.atRisk} UI/UX`],
+        ["risk", "Products at Risk", riskyProducts, riskyProducts ? "red" : "green", `${atRisk} workstreams need attention`, `${pm.riskyProducts} PM projects`, `${ux.riskyProducts} UI/UX projects`],
         ["delayed", "Schedule Delay", dateCounts.majorDelay + dateCounts.minorDelay, dateCounts.majorDelay ? "red" : dateCounts.minorDelay ? "amber" : "green", "Minor + major delay", `${dateCounts.majorDelay} major`, `${dateCounts.minorDelay} minor`],
         ["progress", "Avg Progress", `${avg}%`, avg < 50 ? "red" : avg < 75 ? "amber" : "green", "Across filtered reports", `${pm.avg}% PM`, `${ux.avg}% UI/UX`],
       ];
