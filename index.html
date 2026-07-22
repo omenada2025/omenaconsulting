@@ -349,6 +349,56 @@
       margin-bottom: 16px;
     }
 
+    .home-action-grid {
+      grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+      margin-bottom: 16px;
+    }
+
+    .home-action-card {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+      min-height: 190px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .home-action-card h3 {
+      margin: 0;
+    }
+
+    .home-action-card .btn {
+      margin-top: auto;
+    }
+
+    .home-flow-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .home-flow-item {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,.72);
+    }
+
+    .home-flow-number {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      color: var(--brand);
+      background: #eaf5fb;
+    }
+
     .filter-bar {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
@@ -2032,25 +2082,28 @@
         </div>
       </div>
       <nav class="tabs" aria-label="Primary">
-        <div class="nav-section">Dashboards</div>
-        <button class="tab active" data-view="dashboard" title="Portfolio health, workstreams, dates, risks, wins, blockers, and next actions">Portfolio Dashboard</button>
-        <button class="tab" data-view="executive" title="Leadership summary focused on attention items and decisions">Executive View</button>
+        <div class="nav-section">Start</div>
+        <button class="tab active" data-view="home" title="Choose the right workflow for today">Home</button>
+        <div class="nav-section">My Work</div>
         <button class="tab" data-view="myDashboard" title="Personal dashboard for your workstreams, dates, risks, and next actions">My Dashboard</button>
-        <button class="tab" data-view="workflow" data-role-manager-only title="End-to-end workflow guide for using the dashboard">Workflow Guide</button>
-        <div class="nav-section">Monitor</div>
-        <button class="tab" data-view="incidents" title="Major delays, minor delays, blockers, at-risk, and critical workstreams">Incidents & Delays</button>
+        <button class="tab" data-view="reports" data-master-only>Update Reports</button>
+        <div class="nav-section">Portfolio</div>
+        <button class="tab" data-view="dashboard" title="Portfolio health, workstreams, dates, risks, wins, blockers, and next actions">Portfolio Dashboard</button>
+        <button class="tab" data-view="executive" title="Leadership summary focused on attention items and decisions">Executive View</button>
         <button class="tab" data-view="timeline" data-master-only title="Delivery timeline, dependencies, milestones, and schedule progress">Delivery Timeline</button>
-        <button class="tab" data-view="reports" data-master-only>Status Center</button>
-        <div class="nav-section" data-role-manager-only>Admin</div>
-        <button class="tab" data-view="sourceProjects" data-role-manager-only>Source Project</button>
+        <button class="tab" data-view="incidents" title="Major delays, minor delays, blockers, at-risk, and critical workstreams">Incidents & Delays</button>
+        <div class="nav-section" data-role-manager-only>Management</div>
         <button class="tab" data-view="managementReview" data-role-manager-only>Manager Meeting</button>
-        <button class="tab" data-view="reportAnalysis" data-role-manager-only>Report Analysis</button>
-        <button class="tab" data-view="ownerFeedback" data-role-manager-only>Owner Feedback</button>
+        <button class="tab" data-view="reportAnalysis" data-role-manager-only>Report Quality Review</button>
+        <button class="tab" data-view="ownerFeedback" data-role-manager-only>Coaching Feedback</button>
         <button class="tab" data-view="actionItems" data-role-manager-only>Action Items</button>
-        <button class="tab" data-view="weeklyReview" data-role-manager-only>Owner Weekly Feedback</button>
+        <button class="tab" data-view="weeklyReview" data-role-manager-only>Send Weekly Feedback</button>
         <button class="tab" data-view="workload" data-role-manager-only>Work Balance</button>
+        <div class="nav-section" data-role-manager-only>Admin</div>
+        <button class="tab" data-view="sourceProjects" data-role-manager-only>Project Source List</button>
         <button class="tab" data-view="users" data-role-manager-only>User Access</button>
         <button class="tab" data-view="userLog" data-role-manager-only>User Log</button>
+        <button class="tab" data-view="workflow" data-role-manager-only title="End-to-end workflow guide for using the dashboard">Workflow Guide</button>
       </nav>
       <div class="signed-in-card" id="signedInCard" hidden>
         <div class="signed-in-eyebrow">Signed in as</div>
@@ -2062,7 +2115,41 @@
     </aside>
 
     <main>
-      <section class="view active" id="dashboard">
+      <section class="view active" id="home">
+        <div class="header">
+          <div>
+            <span class="page-kicker">Command center</span>
+            <h2>What do you want to do today?</h2>
+            <p class="muted">Start with the workflow you need. The dashboard keeps the detailed pages available, but this home view helps you move with less hunting.</p>
+          </div>
+          <button class="btn" type="button" data-logout>Logout</button>
+        </div>
+
+        <div class="grid home-action-grid" id="homeActionCards"></div>
+
+        <div class="grid two-col">
+          <div class="panel">
+            <div class="panel-title">
+              <div>
+                <h3>Recommended workflow</h3>
+                <p class="muted small">Use this order when preparing weekly status and manager reviews.</p>
+              </div>
+            </div>
+            <div class="home-flow-list" id="homeWorkflowList"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">
+              <div>
+                <h3>Current focus</h3>
+                <p class="muted small">A quick read of what needs attention before choosing a page.</p>
+              </div>
+            </div>
+            <div class="report-list compact-list" id="homeFocusList"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="dashboard">
         <div class="header">
           <div>
             <span class="page-kicker">Portfolio command center</span>
@@ -2070,7 +2157,7 @@
             <p class="muted" id="dashboardSubtitle">Review the active product portfolio, filter by week, product type, owner, role, and health, then click workstream cards to open wins, blockers, and next actions in context.</p>
           </div>
           <div class="top-actions">
-            <button class="btn primary" data-jump="reports" data-master-only>Open Status Center</button>
+            <button class="btn primary" data-jump="reports" data-master-only>Open Update Reports</button>
             <button class="btn" type="button" data-logout>Logout</button>
           </div>
         </div>
@@ -2310,7 +2397,7 @@
             <div class="panel-title">
               <div>
                 <h3>My Workstreams</h3>
-                <p class="muted small">Click Update to open the selected report in Status Center.</p>
+                <p class="muted small">Click Update to open the selected report in Update Reports.</p>
               </div>
             </div>
             <div class="report-list compact-list" id="myWorkstreamList"></div>
@@ -2326,7 +2413,7 @@
             <p class="muted">Use this map to understand what each workspace does, who owns it, and where to go next. Available actions adapt to your assigned profile.</p>
           </div>
           <div class="top-actions">
-            <button class="btn primary" data-jump="reports" data-master-only>Open Status Center</button>
+            <button class="btn primary" data-jump="reports" data-master-only>Open Update Reports</button>
             <button class="btn" type="button" data-logout>Logout</button>
           </div>
         </div>
@@ -2367,7 +2454,7 @@
             <p class="muted" id="executiveSubtitle">A focused view for portfolio health, risky workstreams, owner follow-up, delivery dates, and the next actions that need leadership attention.</p>
           </div>
           <div class="top-actions">
-            <button class="btn primary" data-jump="reports" data-master-only>Open Status Center</button>
+            <button class="btn primary" data-jump="reports" data-master-only>Open Update Reports</button>
             <button class="btn" type="button" data-logout>Logout</button>
           </div>
         </div>
@@ -2512,7 +2599,7 @@
         <div class="header">
           <div>
             <span class="page-kicker">Source portfolio</span>
-            <h2>Source Project</h2>
+            <h2>Project Source List</h2>
             <p class="muted">Import and review the SharePoint project source list before comparing it with dashboard status reports.</p>
           </div>
           <div class="top-actions">
@@ -2720,7 +2807,7 @@
         <div class="header">
           <div>
             <span class="page-kicker">Quality review</span>
-            <h2>Report Analysis</h2>
+            <h2>Report Quality Review</h2>
             <p class="muted">Prioritize reports that need action, see what is missing, and export the filtered analysis.</p>
           </div>
           <button class="btn" type="button" data-logout>Logout</button>
@@ -3136,7 +3223,7 @@
               <select name="role">
                 <option value="admin">Admin - dashboards and incidents only</option>
                 <option value="roles">Role Manager - full access and users</option>
-                <option value="master">Master admin - dashboards, incidents, and status center</option>
+              <option value="master">Master admin - dashboards, incidents, and update reports</option>
               </select>
             </label>
             <label>
@@ -3351,7 +3438,7 @@
             <p class="muted" id="timelineSubtitle">Track workstreams by start date, end date, milestone, dependency, and schedule status. Use it like a lightweight Gantt view for delivery follow-up.</p>
           </div>
           <div class="top-actions">
-            <button class="btn primary" data-jump="reports" type="button">Open Status Center</button>
+            <button class="btn primary" data-jump="reports" type="button">Open Update Reports</button>
             <button class="btn" type="button" data-logout>Logout</button>
           </div>
         </div>
@@ -3461,7 +3548,7 @@
             <p class="muted">Capture one feature or workstream update for a product. After saving, dashboards, report history, date alerts, and exports update automatically.</p>
           </div>
           <div class="top-actions">
-            <button class="btn" data-jump="reports" type="button">Back to Status Center</button>
+            <button class="btn" data-jump="reports" type="button">Back to Update Reports</button>
             <button class="btn" type="button" data-logout>Logout</button>
           </div>
         </div>
@@ -3712,7 +3799,7 @@
         <div class="header">
           <div>
             <span class="page-kicker">Status center</span>
-            <h2>Status Center</h2>
+            <h2>Update Reports</h2>
             <p class="muted">Create new weekly updates, review submitted reports, edit saved details, export data, and audit history from one workspace.</p>
           </div>
           <div class="top-actions">
@@ -5919,6 +6006,7 @@
       document.getElementById("loginScreen").hidden = true;
       updateSignedInIdentity();
       applyProfileAccess();
+      switchView("home");
     }
 
     function restoreSession() {
@@ -5996,7 +6084,7 @@
       updateSignedInIdentity();
       document.body.classList.add("login-required");
       document.getElementById("loginScreen").hidden = false;
-      switchView("dashboard");
+      switchView("home");
     }
 
     function isMasterAdmin() {
@@ -6012,22 +6100,22 @@
     }
 
     function canAccessView(id) {
-      if (canManageRoles()) return ["dashboard", "executive", "myDashboard", "workflow", "incidents", "timeline", "intake", "reports", "sourceProjects", "managementReview", "reportAnalysis", "ownerFeedback", "actionItems", "weeklyReview", "workload", "users", "userLog"].includes(id);
-      if (isMasterAdmin()) return ["dashboard", "executive", "myDashboard", "incidents", "timeline", "intake", "reports"].includes(id);
-      return ["dashboard", "executive", "myDashboard", "incidents"].includes(id);
+      if (canManageRoles()) return ["home", "dashboard", "executive", "myDashboard", "workflow", "incidents", "timeline", "intake", "reports", "sourceProjects", "managementReview", "reportAnalysis", "ownerFeedback", "actionItems", "weeklyReview", "workload", "users", "userLog"].includes(id);
+      if (isMasterAdmin()) return ["home", "dashboard", "executive", "myDashboard", "incidents", "timeline", "intake", "reports"].includes(id);
+      return ["home", "dashboard", "executive", "myDashboard", "incidents"].includes(id);
     }
 
     function requireMasterAdmin(action = "manage reports") {
       if (canManageReports()) return true;
       alert(`${ROLE_LABELS[currentProfile] || "Admin"} profile cannot ${action}. Use Master admin or Role Manager for report management.`);
-      switchView("dashboard");
+      switchView("home");
       return false;
     }
 
     function requireRoleManager(action = "manage roles") {
       if (canManageRoles()) return true;
       alert(`${ROLE_LABELS[currentProfile] || "Admin"} profile cannot ${action}. Use Role Manager for access management.`);
-      switchView("dashboard");
+      switchView("home");
       return false;
     }
 
@@ -6046,6 +6134,7 @@
         element.hidden = !canManageRoles();
       });
       renderUserManagement();
+      renderHome();
       renderMyDashboard();
       renderSourceProjects();
       renderManagementReview();
@@ -6055,7 +6144,7 @@
       renderWorkflowGuide();
       renderUserLog();
       if (!canAccessView(getActiveView())) {
-        switchView("dashboard");
+        switchView("home");
       }
     }
 
@@ -8436,7 +8525,7 @@
               <select data-role-user="${escapeHtml(user.username)}">
                 <option value="admin" ${user.role === "admin" ? "selected" : ""}>Admin - dashboards and incidents only</option>
                 <option value="roles" ${user.role === "roles" ? "selected" : ""}>Role Manager - full access and users</option>
-                <option value="master" ${user.role === "master" ? "selected" : ""}>Master admin - dashboards, incidents, and status center</option>
+              <option value="master" ${user.role === "master" ? "selected" : ""}>Master admin - dashboards, incidents, and update reports</option>
               </select>
             </label>
           </header>
@@ -8617,6 +8706,132 @@
       logUserAction("user_log_exported", { format: "csv", row_count: rows.length, filters: { ...userLogFilters } }, { target_type: "export", target_id: "user_log_csv" });
     }
 
+    function homeActionDefinitions() {
+      const dashboardReports = typeof getDashboardReports === "function" ? getDashboardReports() : reports;
+      const dashboardCount = dashboardReports.length;
+      const myCount = typeof getMyDashboardReports === "function" ? getMyDashboardReports().length : 0;
+      const incidentCount = typeof getIncidentReports === "function" ? getIncidentReports().length : reports.filter(report => {
+        const flags = incidentFlags(report);
+        return flags.delayed || flags.dueSoon || flags.postponed || isRiskReport(report);
+      }).length;
+      const managementCount = typeof managementReviewRows === "function" ? managementReviewRows().length : reports.length;
+      const analysisCount = typeof reportAnalysisRows === "function" ? reportAnalysisRows().length : reports.length;
+      const managedUsers = normalizeUsers(loadUsers()).filter(user => !isDefaultUser(user.username)).length;
+      return [
+        {
+          view: canManageReports() ? "reports" : "myDashboard",
+          tone: "blue",
+          title: canManageReports() ? "Submit or update status" : "Review my work",
+          metric: canManageReports() ? `${reports.length} saved reports` : `${myCount} my items`,
+          description: canManageReports()
+            ? "Create a weekly update, edit existing reports, review history, and export report data."
+            : "See your assigned workstreams, schedule watch, blockers, and next actions.",
+          action: canManageReports() ? "Open Update Reports" : "Open My Dashboard"
+        },
+        {
+          view: "dashboard",
+          tone: incidentCount ? "amber" : "green",
+          title: "Monitor portfolio",
+          metric: `${dashboardCount} visible updates`,
+          description: "Review product health, progress, schedule status, wins, blockers, and next actions.",
+          action: "Open Portfolio Dashboard"
+        },
+        {
+          view: canManageRoles() ? "managementReview" : "executive",
+          tone: "blue",
+          title: "Prepare a meeting",
+          metric: canManageRoles() ? `${managementCount} in review` : "Leadership summary",
+          description: canManageRoles()
+            ? "Use product overview, decision queue, owner workload, and executive narratives for management meetings."
+            : "Use the executive view to focus on attention items and decisions.",
+          action: canManageRoles() ? "Open Manager Meeting" : "Open Executive View"
+        },
+        {
+          view: canManageRoles() ? "users" : "incidents",
+          tone: canManageRoles() ? "amber" : incidentCount ? "red" : "green",
+          title: canManageRoles() ? "Manage system" : "Track incidents",
+          metric: canManageRoles() ? `${managedUsers} managed users` : `${incidentCount} risk signals`,
+          description: canManageRoles()
+            ? "Manage users, source projects, logs, report quality, feedback, and action items."
+            : "Monitor delays, blockers, at-risk workstreams, and critical priorities.",
+          action: canManageRoles() ? "Open User Access" : "Open Incidents"
+        },
+        {
+          view: "reportAnalysis",
+          tone: "amber",
+          title: "Improve report quality",
+          metric: `${analysisCount} analyzed`,
+          description: "Find missing context, unclear next actions, recurring gaps, and faster delivery options.",
+          action: "Open Report Quality Review",
+          roleManagerOnly: true
+        }
+      ].filter(action => (!action.roleManagerOnly || canManageRoles()) && canAccessView(action.view));
+    }
+
+    function homeFocusItems() {
+      const source = typeof getDashboardReports === "function" ? getDashboardReports() : reports;
+      const dashboardCount = source.length;
+      const incidentCount = typeof getIncidentReports === "function" ? getIncidentReports().length : 0;
+      const dateCounts = endDateCounts(source);
+      const missingNext = source.filter(report => !cleanText(report.next)).length;
+      return [
+        ["Portfolio in view", `${dashboardCount} updates`, dashboardCount ? "blue" : "gray", dashboardCount ? "Use Portfolio Dashboard for the operational view." : "No reports match the current dashboard filters."],
+        ["Delivery risk", `${incidentCount} signals`, incidentCount ? "red" : "green", incidentCount ? "Open Incidents & Delays before the meeting." : "No incident signals in the current view."],
+        ["Schedule delay", `${dateCounts.majorDelay} major / ${dateCounts.minorDelay} minor`, dateCounts.majorDelay ? "red" : dateCounts.minorDelay ? "amber" : "green", "Based on current dashboard filters."],
+        ["Missing next actions", `${missingNext}`, missingNext ? "amber" : "green", missingNext ? "Ask owners to clarify the next step." : "Next actions look complete in the current view."]
+      ];
+    }
+
+    function renderHome() {
+      const cards = document.getElementById("homeActionCards");
+      const flow = document.getElementById("homeWorkflowList");
+      const focus = document.getElementById("homeFocusList");
+      if (!cards || !flow || !focus) return;
+
+      cards.innerHTML = homeActionDefinitions().map(action => `
+        <button class="panel home-action-card metric-button" type="button" data-jump="${escapeHtml(action.view)}">
+          <span class="chip ${escapeHtml(action.tone)}">${escapeHtml(action.metric)}</span>
+          <h3>${escapeHtml(action.title)}</h3>
+          <p class="muted">${escapeHtml(action.description)}</p>
+          <span class="btn primary">${escapeHtml(action.action)}</span>
+        </button>
+      `).join("");
+
+      const workflow = [
+        ["1", "Submit status", canManageReports() ? "Update Reports" : "My Dashboard", canManageReports() ? "reports" : "myDashboard"],
+        ["2", "Monitor portfolio", "Portfolio Dashboard", "dashboard"],
+        ["3", "Review risks", "Incidents & Delays", "incidents"],
+        ["4", "Prepare meeting", canManageRoles() ? "Manager Meeting" : "Executive View", canManageRoles() ? "managementReview" : "executive"],
+        ["5", "Send follow-up", "Send Weekly Feedback", "weeklyReview"]
+      ].filter(([, , , view]) => canAccessView(view));
+      flow.innerHTML = workflow.map(([number, title, label, view]) => `
+        <button class="home-flow-item" type="button" data-jump="${escapeHtml(view)}">
+          <span class="home-flow-number">${escapeHtml(number)}</span>
+          <span><strong>${escapeHtml(title)}</strong><br><span class="muted small">${escapeHtml(label)}</span></span>
+          <span class="muted small">Open</span>
+        </button>
+      `).join("");
+
+      focus.innerHTML = homeFocusItems().map(([label, value, tone, note]) => `
+        <div class="report-card">
+          <div class="panel-title">
+            <div>
+              <span class="chip ${escapeHtml(tone)}">${escapeHtml(label)}</span>
+              <h3>${escapeHtml(value)}</h3>
+              <p class="muted small">${escapeHtml(note)}</p>
+            </div>
+          </div>
+        </div>
+      `).join("");
+
+      [...cards.querySelectorAll("[data-jump]"), ...flow.querySelectorAll("[data-jump]")].forEach(btn => {
+        btn.addEventListener("click", async () => {
+          switchView(btn.dataset.jump);
+          await refreshSharedDashboards();
+        });
+      });
+    }
+
     function workflowVisibleSteps() {
       const dashboardCount = typeof getDashboardReports === "function" ? getDashboardReports().length : reports.length;
       const incidentCount = typeof getIncidentReports === "function" ? getIncidentReports().length : reports.filter(report => incidentFlags(report).delayed || incidentFlags(report).dueSoon || incidentFlags(report).postponed || isRiskReport(report)).length;
@@ -8629,22 +8844,22 @@
         {
           number: "01",
           view: "sourceProjects",
-          title: "Source Project",
+          title: "Project Source List",
           audience: "Role Manager",
           metric: `${sourceCount} imported`,
           purpose: "Import or paste the source project workbook so missing status coverage is visible before weekly reporting.",
           outcome: "A clean project source list connected to dashboard follow-up.",
-          action: "Open Source Project"
+          action: "Open Project Source List"
         },
         {
           number: "02",
           view: "reports",
-          title: "Status Center",
+          title: "Update Reports",
           audience: "Master Admin / Role Manager",
           metric: `${reports.length} saved reports`,
           purpose: "Create new weekly updates, edit saved reports, review history, and export report data.",
           outcome: "Current status, owner, dates, risks, wins, blockers, and next action are saved in one place.",
-          action: "Open Status Center"
+          action: "Open Update Reports"
         },
         {
           number: "03",
@@ -8669,12 +8884,12 @@
         {
           number: "05",
           view: "reportAnalysis",
-          title: "Report Analysis",
+          title: "Report Quality Review",
           audience: "Role Manager",
           metric: `${analysisCount} analyzed`,
           purpose: "Review report gaps, fix suggestions, faster delivery options, lessons learned, and weekly metrics narrative.",
           outcome: "A practical quality review before the portfolio and executive dashboards are discussed.",
-          action: "Open Report Analysis"
+          action: "Open Report Quality Review"
         },
         {
           number: "06",
@@ -9137,7 +9352,7 @@
 
     function switchView(id) {
       if (!canAccessView(id)) {
-        id = "dashboard";
+        id = "home";
       }
       document.querySelectorAll(".view").forEach(view => view.classList.toggle("active", view.id === id));
       const activeTab = id === "intake" ? "reports" : id;
@@ -9146,7 +9361,7 @@
     }
 
     function getActiveView() {
-      return document.querySelector(".view.active")?.id || "dashboard";
+      return document.querySelector(".view.active")?.id || "home";
     }
 
     async function refreshSharedDashboards() {
@@ -9820,7 +10035,7 @@
             </div>
           </div>
         `;
-      }).join("") : `<div class="empty"><strong>No timeline yet</strong>Add start and end dates in Status Center to build your personal timeline.</div>`;
+      }).join("") : `<div class="empty"><strong>No timeline yet</strong>Add start and end dates in Update Reports to build your personal timeline.</div>`;
 
       const feedbackRows = source
         .map(report => ({ report, analysis: analyzeReportQuality(report) }))
@@ -10036,7 +10251,7 @@
       subtitle.textContent = copy[selectedTimelineMetric]?.[1] || "Filtered delivery details.";
       list.innerHTML = rows.length
         ? rows.map(timelineDetailCard).join("")
-        : `<div class="empty"><strong>No matching timeline details</strong>Change the filters or add milestone/dependency information in Status Center.</div>`;
+        : `<div class="empty"><strong>No matching timeline details</strong>Change the filters or add milestone/dependency information in Update Reports.</div>`;
     }
 
     function renderDeliveryTimeline() {
@@ -10109,7 +10324,7 @@
         ${selectedTimelineReportId === report.id ? timelineDetailCard(report) : ""}
           `;
         }).join("")}
-      ` : `<div class="empty"><strong>No timeline records</strong>Add start/end dates in Status Center or adjust the filters.</div>`;
+      ` : `<div class="empty"><strong>No timeline records</strong>Add start/end dates in Update Reports or adjust the filters.</div>`;
 
       criticalTarget.innerHTML = critical.length ? critical.slice(0, 8).map(timelineDetailCard).join("") : `<div class="empty"><strong>No critical path signals</strong>No delayed, blocked, or dependent workstreams match the current filters.</div>`;
     }
@@ -10937,7 +11152,7 @@
         <html>
           <head>
             <meta charset="utf-8">
-            <title>Status Center Reports</title>
+            <title>Update Reports</title>
             <style>
               body { font-family: Arial, sans-serif; color: #17212b; padding: 24px; }
               h1 { font-size: 22px; margin: 0 0 6px; }
@@ -10949,7 +11164,7 @@
             </style>
           </head>
           <body>
-            <h1>Status Center Reports</h1>
+            <h1>Update Reports</h1>
             <p>${rows.length} filtered report${rows.length === 1 ? "" : "s"} exported from Omena Consulting.</p>
             ${table}
           </body>
@@ -11049,7 +11264,7 @@
         <html>
           <head>
             <meta charset="utf-8">
-            <title>Report Analysis</title>
+            <title>Report Quality Review</title>
             <style>
               body { font-family: Arial, sans-serif; color: #17212b; padding: 24px; }
               h1 { font-size: 22px; margin: 0 0 6px; }
@@ -11061,7 +11276,7 @@
             </style>
           </head>
           <body>
-            <h1>Report Analysis</h1>
+            <h1>Report Quality Review</h1>
             <p>${rows.length} filtered report${rows.length === 1 ? "" : "s"} exported from Omena Consulting. Filters: date ${escapeHtml(analysisFilters.week === "all" ? "all" : reportingWeekGroupLabel(analysisFilters.week))}, project ${escapeHtml(analysisFilters.product)}, owner ${escapeHtml(analysisFilters.owner)}, role ${escapeHtml(analysisFilters.role)}.</p>
             ${analysisExportTable(rows)}
           </body>
@@ -11509,6 +11724,7 @@
         ? `Showing ${filteredCount} of ${reports.length} updates for ${selectedPeriod}. Latest available reporting period: ${latestPeriod}.`
         : "No updates are available yet. Add a status report to start building the portfolio view.";
       renderMetrics();
+      renderHome();
       renderMyDashboard();
       renderExecutiveDashboard();
       renderHealth();
