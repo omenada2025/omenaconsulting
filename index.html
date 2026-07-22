@@ -2720,9 +2720,10 @@
         <div class="panel">
           <div class="panel-title">
             <div>
-              <h3>Product overview</h3>
-              <p class="muted small">Weekly view plus overall product health, trend, risks, next action, and decision needed.</p>
+              <h3>Weekly project brief by product</h3>
+              <p class="muted small">One meeting-ready brief per project: what changed, risk, next action, and leadership ask.</p>
             </div>
+            <button class="btn soft" type="button" id="copyWeeklyProjectBriefBtn">Copy weekly project brief</button>
           </div>
           <div class="report-list" id="managementProductNarratives"></div>
         </div>
@@ -6837,6 +6838,38 @@
       ].join("\n\n");
     }
 
+    function managementWeeklyProjectBriefText(items) {
+      const narratives = managementProductNarratives(items);
+      const periodLabel = managementFilters.week === "all"
+        ? "selected reporting period"
+        : reportingWeekGroupLabel(managementFilters.week);
+      if (!narratives.length) {
+        return `Weekly project brief - ${periodLabel}\n\nNo project reports are available for the current filters.`;
+      }
+      return [
+        `Weekly project brief - ${periodLabel}`,
+        `Use this as the manager meeting talking track. Each project includes the current signal, brief explanation, next action, and leadership ask.`,
+        ...narratives.map((project, index) => {
+          const status = `${project.mainSignal}; ${project.period.avgProgress}% average progress; ${project.period.scheduleLabel}`;
+          const latest = project.latest;
+          const update = cleanText(latest?.summary) || project.talkTrack;
+          const risk = cleanText(project.blocker) || "No blocker or risk was reported.";
+          const next = cleanText(project.next) || "Confirm the next action, owner, and target date.";
+          const ask = cleanText(project.decision) || "No leadership decision is required right now.";
+          const win = cleanText(project.win);
+          return [
+            `${index + 1}. ${project.project}`,
+            `Status: ${status}.`,
+            `Brief explanation: ${update}`,
+            win ? `Win: ${win}` : "",
+            `Risk / blocker: ${risk}`,
+            `Next action: ${next}`,
+            `Leadership ask: ${ask}`
+          ].filter(Boolean).join("\n");
+        })
+      ].join("\n\n");
+    }
+
     function managementDecisionRows(items) {
       return items.filter(item =>
         item.analysis.tone === "red" ||
@@ -7032,13 +7065,13 @@
               </div>
               <span class="chip ${project.tone}">${project.period.avgProgress}% this period</span>
             </summary>
-            <p>${escapeHtml(project.talkTrack)}</p>
+            <p><strong>Brief explanation:</strong> ${escapeHtml(project.latest?.summary || project.talkTrack)}</p>
             <div class="meeting-update-grid">
               <div><strong>Selected period</strong><p class="muted small">${project.period.avgProgress}% progress - ${escapeHtml(project.period.healthMix)} - ${escapeHtml(project.period.scheduleLabel)}</p></div>
               <div><strong>Overall product health</strong><p class="muted small">${project.overall.avgProgress}% average - ${escapeHtml(project.overall.healthMix)} - ${escapeHtml(project.overall.scheduleLabel)}</p></div>
               <div><strong>Trend</strong><p class="muted small">${escapeHtml(project.trend)}</p></div>
               <div><strong>Recurring risk</strong><p class="muted small">${escapeHtml(project.overall.repeatedBlockers.join("; ") || project.overall.rootCauses.join("; ") || "No recurring risk captured.")}</p></div>
-              <div><strong>Decision / management action</strong><p class="muted small">${escapeHtml(project.decision)}</p></div>
+              <div><strong>Leadership ask</strong><p class="muted small">${escapeHtml(project.decision)}</p></div>
               <div><strong>Next action</strong><p class="muted small">${escapeHtml(project.next)}</p></div>
               <div><strong>Blocker / risk</strong><p class="muted small">${escapeHtml(project.blocker)}</p></div>
               <div><strong>Win</strong><p class="muted small">${escapeHtml(project.win)}</p></div>
@@ -12790,6 +12823,15 @@
         setTimeout(() => { event.currentTarget.textContent = "Copy narrative"; }, 1600);
       });
       logUserAction("management_review_narrative_copied", { filters: { ...managementFilters } }, { target_type: "management_review", target_id: "narrative" });
+    });
+
+    document.getElementById("copyWeeklyProjectBriefBtn").addEventListener("click", event => {
+      const items = managementReviewRows();
+      copyTextToClipboard(managementWeeklyProjectBriefText(items)).then(() => {
+        event.currentTarget.textContent = "Copied";
+        setTimeout(() => { event.currentTarget.textContent = "Copy weekly project brief"; }, 1600);
+      });
+      logUserAction("management_weekly_project_brief_copied", { filters: { ...managementFilters } }, { target_type: "management_review", target_id: "weekly_project_brief" });
     });
 
     document.getElementById("analysisOwnerFilter").addEventListener("change", event => {
