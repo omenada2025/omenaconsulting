@@ -2118,9 +2118,9 @@
       <section class="view active" id="home">
         <div class="header">
           <div>
-            <span class="page-kicker">Command center</span>
-            <h2>What do you want to do today?</h2>
-            <p class="muted">Start with the workflow you need. The dashboard keeps the detailed pages available, but this home view helps you move with less hunting.</p>
+            <span class="page-kicker" id="homeKicker">Command center</span>
+            <h2 id="homeTitle">What do you want to do today?</h2>
+            <p class="muted" id="homeSubtitle">Start with the workflow you need. The dashboard keeps the detailed pages available, but this home view helps you move with less hunting.</p>
           </div>
           <button class="btn" type="button" data-logout>Logout</button>
         </div>
@@ -2131,8 +2131,8 @@
           <div class="panel">
             <div class="panel-title">
               <div>
-                <h3>Recommended workflow</h3>
-                <p class="muted small">Use this order when preparing weekly status and manager reviews.</p>
+                <h3 id="homeFlowTitle">Recommended workflow</h3>
+                <p class="muted small" id="homeFlowSubtitle">Use this order when preparing weekly status and manager reviews.</p>
               </div>
             </div>
             <div class="home-flow-list" id="homeWorkflowList"></div>
@@ -2140,8 +2140,8 @@
           <div class="panel">
             <div class="panel-title">
               <div>
-                <h3>Current focus</h3>
-                <p class="muted small">A quick read of what needs attention before choosing a page.</p>
+                <h3 id="homeFocusTitle">Current focus</h3>
+                <p class="muted small" id="homeFocusSubtitle">A quick read of what needs attention before choosing a page.</p>
               </div>
             </div>
             <div class="report-list compact-list" id="homeFocusList"></div>
@@ -6095,6 +6095,10 @@
       return normalizeRole(currentProfile) === "roles";
     }
 
+    function isExecutiveAdmin() {
+      return normalizeRole(currentProfile) === "admin";
+    }
+
     function canManageReports() {
       return ["master", "roles"].includes(normalizeRole(currentProfile));
     }
@@ -8717,6 +8721,7 @@
       const managementCount = typeof managementReviewRows === "function" ? managementReviewRows().length : reports.length;
       const analysisCount = typeof reportAnalysisRows === "function" ? reportAnalysisRows().length : reports.length;
       const managedUsers = normalizeUsers(loadUsers()).filter(user => !isDefaultUser(user.username)).length;
+      if (isExecutiveAdmin()) return executiveHomeActionDefinitions(dashboardReports);
       return [
         {
           view: canManageReports() ? "reports" : "myDashboard",
@@ -8768,12 +8773,74 @@
       ].filter(action => (!action.roleManagerOnly || canManageRoles()) && canAccessView(action.view));
     }
 
+    function executiveHomeActionDefinitions(source) {
+      const total = source.length;
+      const products = uniqueCount(source, "product");
+      const riskyProducts = productsNeedingAttention(source);
+      const dateCounts = endDateCounts(source);
+      const avg = total ? Math.round(source.reduce((sum, report) => sum + Number(report.progress || 0), 0) / total) : 0;
+      const decisions = source.filter(report => isRiskReport(report) || hasBlockerSignal(report) || !cleanText(report.next)).length;
+      return [
+        {
+          view: "dashboard",
+          tone: riskyProducts ? "amber" : "green",
+          title: "Portfolio health",
+          metric: `${products} active products`,
+          description: `${total} workstreams in view. Use this to understand overall progress, health, and delivery confidence.`,
+          action: "Open Portfolio Dashboard"
+        },
+        {
+          view: "dashboard",
+          tone: riskyProducts ? "red" : "green",
+          title: "Products at risk",
+          metric: `${riskyProducts} products`,
+          description: riskyProducts ? "Products with At Risk health, Critical priority, blockers, or schedule concerns." : "No products are currently flagged as at risk.",
+          action: "Review Risk Products"
+        },
+        {
+          view: "incidents",
+          tone: dateCounts.majorDelay ? "red" : dateCounts.minorDelay ? "amber" : "green",
+          title: "Major delays",
+          metric: `${dateCounts.majorDelay} major / ${dateCounts.minorDelay} minor`,
+          description: "Schedule alerts based on planned delivery movement and current end dates.",
+          action: "Open Incidents & Delays"
+        },
+        {
+          view: "executive",
+          tone: decisions ? "amber" : "green",
+          title: "Decisions needed",
+          metric: `${decisions} items`,
+          description: "Blockers, missing next actions, and risks that may need leadership follow-up.",
+          action: "Open Executive View"
+        },
+        {
+          view: "dashboard",
+          tone: avg < 50 ? "red" : avg < 75 ? "amber" : "green",
+          title: "Average progress",
+          metric: `${avg}%`,
+          description: "Overall delivery movement across the filtered portfolio.",
+          action: "Review Progress"
+        }
+      ].filter(action => canAccessView(action.view));
+    }
+
     function homeFocusItems() {
       const source = typeof getDashboardReports === "function" ? getDashboardReports() : reports;
       const dashboardCount = source.length;
       const incidentCount = typeof getIncidentReports === "function" ? getIncidentReports().length : 0;
       const dateCounts = endDateCounts(source);
       const missingNext = source.filter(report => !cleanText(report.next)).length;
+      if (isExecutiveAdmin()) {
+        const riskyProducts = productsNeedingAttention(source);
+        const decisions = source.filter(report => isRiskReport(report) || hasBlockerSignal(report) || !cleanText(report.next)).length;
+        const blockers = source.filter(hasBlockerSignal).length;
+        return [
+          ["Portfolio snapshot", `${uniqueCount(source, "product")} products / ${dashboardCount} workstreams`, dashboardCount ? "blue" : "gray", "Current portfolio view for CEO/CTO review."],
+          ["Leadership attention", `${riskyProducts} products at risk`, riskyProducts ? "red" : "green", riskyProducts ? "Start with products that have risk or critical signals." : "No product needs executive attention in this view."],
+          ["Decision queue", `${decisions} items`, decisions ? "amber" : "green", decisions ? "Review blockers and missing next actions." : "No immediate leadership decisions detected."],
+          ["Blockers / risks", `${blockers}`, blockers ? "red" : "green", blockers ? "Open Incidents & Delays for details." : "No blockers captured in the current view."]
+        ];
+      }
       return [
         ["Portfolio in view", `${dashboardCount} updates`, dashboardCount ? "blue" : "gray", dashboardCount ? "Use Portfolio Dashboard for the operational view." : "No reports match the current dashboard filters."],
         ["Delivery risk", `${incidentCount} signals`, incidentCount ? "red" : "green", incidentCount ? "Open Incidents & Delays before the meeting." : "No incident signals in the current view."],
@@ -8782,11 +8849,54 @@
       ];
     }
 
+    function executiveHomeProductWatch(source) {
+      return productGroupsForMetric(source)
+        .map(([product, rows]) => {
+          const counts = endDateCounts(rows);
+          const blockerCount = rows.filter(hasBlockerSignal).length;
+          const riskCount = rows.filter(isRiskReport).length;
+          const missingNext = rows.filter(report => !cleanText(report.next)).length;
+          const avg = rows.length ? Math.round(rows.reduce((sum, report) => sum + Number(report.progress || 0), 0) / rows.length) : 0;
+          const score = counts.majorDelay * 5 + counts.minorDelay * 2 + blockerCount * 3 + riskCount * 3 + missingNext;
+          return { product, rows, counts, blockerCount, riskCount, missingNext, avg, score };
+        })
+        .filter(item => item.score > 0)
+        .sort((a, b) => b.score - a.score || a.product.localeCompare(b.product))
+        .slice(0, 5);
+    }
+
+    function executiveHomeDecisionQueue(source) {
+      return source
+        .filter(report => isRiskReport(report) || hasBlockerSignal(report) || !cleanText(report.next))
+        .sort((a, b) =>
+          Number(b.impact || 0) - Number(a.impact || 0) ||
+          Number(b.time || 0) - Number(a.time || 0) ||
+          Number(a.progress || 0) - Number(b.progress || 0)
+        )
+        .slice(0, 6);
+    }
+
     function renderHome() {
       const cards = document.getElementById("homeActionCards");
       const flow = document.getElementById("homeWorkflowList");
       const focus = document.getElementById("homeFocusList");
       if (!cards || !flow || !focus) return;
+      const source = typeof getDashboardReports === "function" ? getDashboardReports() : reports;
+      const executive = isExecutiveAdmin();
+      const setText = (id, text) => {
+        const element = document.getElementById(id);
+        if (element) element.textContent = text;
+      };
+
+      setText("homeKicker", executive ? "Executive briefing" : "Command center");
+      setText("homeTitle", executive ? "CEO / CTO Portfolio Briefing" : "What do you want to do today?");
+      setText("homeSubtitle", executive
+        ? "Executive snapshot of portfolio health, delivery risk, blockers, and decisions that need leadership attention."
+        : "Start with the workflow you need. The dashboard keeps the detailed pages available, but this home view helps you move with less hunting.");
+      setText("homeFlowTitle", executive ? "Top products needing attention" : "Recommended workflow");
+      setText("homeFlowSubtitle", executive ? "Highest-risk products first, based on delays, blockers, missing next actions, and critical signals." : "Use this order when preparing weekly status and manager reviews.");
+      setText("homeFocusTitle", executive ? "Leadership decision queue" : "Current focus");
+      setText("homeFocusSubtitle", executive ? "Items that may need CEO/CTO action, escalation, or follow-up." : "A quick read of what needs attention before choosing a page.");
 
       cards.innerHTML = homeActionDefinitions().map(action => `
         <button class="panel home-action-card metric-button" type="button" data-jump="${escapeHtml(action.view)}">
@@ -8796,6 +8906,43 @@
           <span class="btn primary">${escapeHtml(action.action)}</span>
         </button>
       `).join("");
+
+      if (executive) {
+        const productWatch = executiveHomeProductWatch(source);
+        flow.innerHTML = productWatch.length ? productWatch.map((item, index) => `
+          <button class="home-flow-item" type="button" data-jump="dashboard">
+            <span class="home-flow-number">${index + 1}</span>
+            <span>
+              <strong>${escapeHtml(item.product)}</strong><br>
+              <span class="muted small">${item.rows.length} workstream${item.rows.length === 1 ? "" : "s"} - ${item.avg}% avg progress - ${item.counts.majorDelay} major delay - ${item.blockerCount} blocker/risk</span>
+            </span>
+            <span class="chip ${item.counts.majorDelay || item.riskCount ? "red" : "amber"}">${item.score}</span>
+          </button>
+        `).join("") : `<div class="empty"><strong>No executive attention items</strong>No risky products, schedule delays, blockers, or missing next actions are visible in the current portfolio view.</div>`;
+
+        const decisions = executiveHomeDecisionQueue(source);
+        focus.innerHTML = decisions.length ? decisions.map(report => `
+          <button class="report-card metric-button" type="button" data-jump="executive">
+            <div class="panel-title">
+              <div>
+                <span class="product-label">${escapeHtml(report.product || "No product")}</span>
+                <h3>${escapeHtml(reportTitle(report))}</h3>
+                <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.role || "No role")} - ${escapeHtml(labels[report.health] || report.health || "No health")}</p>
+              </div>
+              <span class="chip ${healthClass(report)}">${escapeHtml(report.priority || "Normal")}</span>
+            </div>
+            <p class="muted small"><strong>Needs attention:</strong> ${escapeHtml(cleanText(report.blocker) || cleanText(report.next) || "Confirm the next action and owner.")}</p>
+          </button>
+        `).join("") : `<div class="empty"><strong>No decisions needed</strong>No blockers, critical risks, or missing next actions are visible in the current portfolio view.</div>`;
+
+        [...cards.querySelectorAll("[data-jump]"), ...flow.querySelectorAll("[data-jump]"), ...focus.querySelectorAll("[data-jump]")].forEach(btn => {
+          btn.addEventListener("click", async () => {
+            switchView(btn.dataset.jump);
+            await refreshSharedDashboards();
+          });
+        });
+        return;
+      }
 
       const workflow = [
         ["1", "Submit status", canManageReports() ? "Update Reports" : "My Dashboard", canManageReports() ? "reports" : "myDashboard"],
