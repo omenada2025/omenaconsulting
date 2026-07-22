@@ -2095,6 +2095,7 @@
         <button class="tab" data-view="incidents" title="Major delays, minor delays, blockers, at-risk, and critical workstreams">Incidents & Delays</button>
         <div class="nav-section" data-role-manager-only>Management</div>
         <button class="tab" data-view="managementReview" data-role-manager-only>Manager Meeting</button>
+        <button class="tab" data-view="weeklyProjectBrief" data-role-manager-only>Weekly Project Brief</button>
         <button class="tab" data-view="reportAnalysis" data-role-manager-only>Report Quality Review</button>
         <button class="tab" data-view="ownerFeedback" data-role-manager-only>Coaching Feedback</button>
         <button class="tab" data-view="actionItems" data-role-manager-only>Action Items</button>
@@ -2717,17 +2718,6 @@
           <div class="report-list" id="managementNarrative"></div>
         </div>
 
-        <div class="panel">
-          <div class="panel-title">
-            <div>
-              <h3>Weekly project brief by product</h3>
-              <p class="muted small">One meeting-ready brief per project: what changed, risk, next action, and leadership ask.</p>
-            </div>
-            <button class="btn soft" type="button" id="copyWeeklyProjectBriefBtn">Copy weekly project brief</button>
-          </div>
-          <div class="report-list" id="managementProductNarratives"></div>
-        </div>
-
         <div class="grid summary-grid" id="managementCards"></div>
 
         <div class="grid two-col">
@@ -2802,6 +2792,95 @@
             </div>
             <div class="chart-stack" id="managementTrend"></div>
           </div>
+        </div>
+      </section>
+
+      <section class="view" id="weeklyProjectBrief" data-role-manager-view>
+        <div class="header">
+          <div>
+            <span class="page-kicker">Weekly project brief</span>
+            <h2>Weekly Project Brief by Product</h2>
+            <p class="muted">Generate a meeting-ready weekly summary for each project, with charts for health, schedule, progress, and risk concentration.</p>
+          </div>
+          <button class="btn" type="button" data-logout>Logout</button>
+        </div>
+
+        <div class="guide-grid">
+          <div class="guide-card theme-blue">
+            <strong>1. Select the week</strong>
+            <p class="muted small">Pick the reporting week or review all available weeks for a broader project readout.</p>
+          </div>
+          <div class="guide-card theme-green">
+            <strong>2. Read the indicators</strong>
+            <p class="muted small">Use charts to quickly explain health mix, schedule movement, and delivery risk.</p>
+          </div>
+          <div class="guide-card theme-amber">
+            <strong>3. Present the brief</strong>
+            <p class="muted small">Each project card gives a short explanation, blocker, next action, and leadership ask.</p>
+          </div>
+        </div>
+
+        <div class="panel filter-bar report-filter-bar">
+          <label>
+            Project
+            <select id="projectBriefProductFilter"></select>
+          </label>
+          <label>
+            Owner
+            <select id="projectBriefOwnerFilter"></select>
+          </label>
+          <label>
+            Date / reporting week
+            <select id="projectBriefWeekFilter"></select>
+          </label>
+          <label>
+            Role
+            <select id="projectBriefRoleFilter">
+              <option value="all">All roles</option>
+              <option value="Product Manager">Product Manager</option>
+              <option value="UI/UX">UI/UX</option>
+            </select>
+          </label>
+          <div class="full panel-title">
+            <div>
+              <strong>Project talking track</strong>
+              <p class="muted small">Copy a concise weekly brief, or use the cards below directly in the manager meeting.</p>
+            </div>
+            <button class="btn soft" type="button" id="copyWeeklyProjectBriefBtn">Copy weekly project brief</button>
+          </div>
+        </div>
+
+        <div class="grid summary-grid" id="projectBriefCards"></div>
+
+        <div class="grid two-col">
+          <div class="panel">
+            <div class="panel-title">
+              <div>
+                <h3>Indicative charts</h3>
+                <p class="muted small">Visual signals to support the weekly project conversation.</p>
+              </div>
+            </div>
+            <div class="chart-stack" id="projectBriefCharts"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">
+              <div>
+                <h3>Brief narrative</h3>
+                <p class="muted small">Text version ready to paste into meeting notes.</p>
+              </div>
+            </div>
+            <textarea id="projectBriefText" rows="14" readonly></textarea>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>Project briefs</h3>
+              <p class="muted small">One short project update per product, ranked by delivery attention needed.</p>
+            </div>
+          </div>
+          <div class="report-list" id="projectBriefNarratives"></div>
         </div>
       </section>
 
@@ -4260,6 +4339,12 @@
       role: "all"
     };
     const managementFilters = {
+      owner: "all",
+      product: "all",
+      week: "all",
+      role: "all"
+    };
+    const projectBriefFilters = {
       owner: "all",
       product: "all",
       week: "all",
@@ -6106,7 +6191,7 @@
     }
 
     function canAccessView(id) {
-      if (canManageRoles()) return ["home", "dashboard", "executive", "myDashboard", "workflow", "incidents", "timeline", "intake", "reports", "sourceProjects", "managementReview", "reportAnalysis", "ownerFeedback", "actionItems", "weeklyReview", "workload", "users", "userLog"].includes(id);
+      if (canManageRoles()) return ["home", "dashboard", "executive", "myDashboard", "workflow", "incidents", "timeline", "intake", "reports", "sourceProjects", "managementReview", "weeklyProjectBrief", "reportAnalysis", "ownerFeedback", "actionItems", "weeklyReview", "workload", "users", "userLog"].includes(id);
       if (isMasterAdmin()) return ["home", "dashboard", "executive", "myDashboard", "incidents", "timeline", "intake", "reports"].includes(id);
       return ["home", "dashboard", "executive", "incidents"].includes(id);
     }
@@ -6150,6 +6235,7 @@
       renderMyDashboard();
       renderSourceProjects();
       renderManagementReview();
+      renderWeeklyProjectBrief();
       renderReportAnalysis();
       renderDeliveryTimeline();
       renderWorkBalance();
@@ -6781,16 +6867,16 @@
       };
     }
 
-    function managementProductNarratives(items) {
+    function managementProductNarratives(items, filters = managementFilters) {
       const visibleProjects = managementProjectStats(items);
       return visibleProjects.map(project => {
         const periodItems = items.filter(item => (cleanText(item.report.product) || "Product not separated") === project.project);
         const overallItems = analysisRowsForFilters({
-          owner: managementFilters.owner,
+          owner: filters.owner,
           product: "all",
           week: "all",
           health: "all",
-          role: managementFilters.role
+          role: filters.role
         }).filter(item => (cleanText(item.report.product) || "Product not separated") === project.project);
         const period = managementProductStat(project.project, periodItems, items);
         const overall = managementProductStat(project.project, overallItems, overallItems);
@@ -6800,7 +6886,7 @@
           : progressDelta > 0
             ? `${progressDelta} points above the overall average`
             : `${Math.abs(progressDelta)} points below the overall average`;
-        const periodLabel = managementFilters.week === "all" ? "selected reporting period" : reportingWeekGroupLabel(managementFilters.week);
+        const periodLabel = filters.week === "all" ? "selected reporting period" : reportingWeekGroupLabel(filters.week);
         const mainSignal = period.statusLabel;
         const talkTrack = `${project.project}: in the ${periodLabel}, ${period.workstreams} workstream${period.workstreams === 1 ? "" : "s"} were reviewed with ${period.avgProgress}% average progress, ${period.healthMix}, and ${period.scheduleLabel}. Overall, the product has ${overall.workstreams} report${overall.workstreams === 1 ? "" : "s"}, ${overall.avgProgress}% average progress, ${overall.healthMix}, and progress is ${trend}.`;
         const decision = period.recommendation || overall.recommendation;
@@ -6821,8 +6907,8 @@
       });
     }
 
-    function managementProductNarrativeText(items) {
-      const narratives = managementProductNarratives(items);
+    function managementProductNarrativeText(items, filters = managementFilters) {
+      const narratives = managementProductNarratives(items, filters);
       if (!narratives.length) return "Product overview\n\nNo product overview is available for the current filters.";
       return [
         "Product overview by product",
@@ -6838,11 +6924,11 @@
       ].join("\n\n");
     }
 
-    function managementWeeklyProjectBriefText(items) {
-      const narratives = managementProductNarratives(items);
-      const periodLabel = managementFilters.week === "all"
+    function managementWeeklyProjectBriefText(items, filters = managementFilters) {
+      const narratives = managementProductNarratives(items, filters);
+      const periodLabel = filters.week === "all"
         ? "selected reporting period"
-        : reportingWeekGroupLabel(managementFilters.week);
+        : reportingWeekGroupLabel(filters.week);
       if (!narratives.length) {
         return `Weekly project brief - ${periodLabel}\n\nNo project reports are available for the current filters.`;
       }
@@ -6960,6 +7046,132 @@
           ${chartRowsFromCounts(delayCounts, Math.max(1, [...delayCounts.values()].reduce((sum, count) => sum + count, 0)), "No delay root causes")}
         </div>
       `;
+    }
+
+    function weeklyProjectBriefRows() {
+      return analysisRowsForFilters({
+        owner: projectBriefFilters.owner,
+        product: projectBriefFilters.product,
+        week: projectBriefFilters.week,
+        health: "all",
+        role: projectBriefFilters.role
+      });
+    }
+
+    function projectBriefProgressCounts(items) {
+      const counts = new Map([
+        ["0-25%", 0],
+        ["26-50%", 0],
+        ["51-75%", 0],
+        ["76-100%", 0]
+      ]);
+      items.forEach(item => {
+        const progress = Number(item.report.progress || 0);
+        const label = progress <= 25 ? "0-25%" : progress <= 50 ? "26-50%" : progress <= 75 ? "51-75%" : "76-100%";
+        counts.set(label, (counts.get(label) || 0) + 1);
+      });
+      return counts;
+    }
+
+    function projectBriefRiskCounts(items) {
+      const counts = new Map();
+      managementProjectStats(items).forEach(project => {
+        const riskScore = project.majorDelay * 3 + project.delayed * 2 + project.blockers + project.critical + project.missingNext;
+        if (riskScore > 0) counts.set(project.project, riskScore);
+      });
+      return counts;
+    }
+
+    function projectBriefChartBlocks(items) {
+      const total = items.length;
+      const healthCounts = countByLabel(items, item => labels[item.report.health] || item.report.health || "Not captured");
+      const scheduleCounts = managementScheduleCounts(items);
+      const progressCounts = projectBriefProgressCounts(items);
+      const riskCounts = projectBriefRiskCounts(items);
+      return `
+        <div class="chart-block">
+          <h4>Health mix</h4>
+          ${chartRowsFromCounts(healthCounts, total, "No health data")}
+        </div>
+        <div class="chart-block">
+          <h4>Schedule classification</h4>
+          ${chartRowsFromCounts(scheduleCounts, total, "No schedule data")}
+        </div>
+        <div class="chart-block">
+          <h4>Progress distribution</h4>
+          ${chartRowsFromCounts(progressCounts, total, "No progress data")}
+        </div>
+        <div class="chart-block">
+          <h4>Risk concentration by project</h4>
+          ${chartRowsFromCounts(riskCounts, Math.max(1, [...riskCounts.values()].reduce((sum, count) => sum + count, 0)), "No project risk signals")}
+        </div>
+      `;
+    }
+
+    function projectBriefMetricDefinitions(items) {
+      const reportsInView = items.map(item => item.report);
+      const projectStats = managementProjectStats(items);
+      const dateCounts = endDateCounts(reportsInView);
+      const avgProgress = reportsInView.length
+        ? Math.round(reportsInView.reduce((sum, report) => sum + Number(report.progress || 0), 0) / reportsInView.length)
+        : 0;
+      const riskProjects = projectStats.filter(project => project.majorDelay || project.critical || project.needsAction || project.blockers).length;
+      return [
+        { label: "Projects", value: projectStats.length, tone: "blue", note: "Products with updates" },
+        { label: "Workstreams", value: items.length, tone: "blue", note: "Reports in this brief" },
+        { label: "At-risk projects", value: riskProjects, tone: riskProjects ? "red" : "green", note: "Need management attention" },
+        { label: "Schedule delay", value: dateCounts.majorDelay + dateCounts.minorDelay, tone: dateCounts.majorDelay ? "red" : dateCounts.minorDelay ? "amber" : "green", note: `${dateCounts.majorDelay} major / ${dateCounts.minorDelay} minor` },
+        { label: "Avg progress", value: `${avgProgress}%`, tone: avgProgress < 50 ? "red" : avgProgress < 75 ? "amber" : "green", note: "Across brief reports" }
+      ];
+    }
+
+    function renderWeeklyProjectBrief() {
+      const cards = document.getElementById("projectBriefCards");
+      const charts = document.getElementById("projectBriefCharts");
+      const text = document.getElementById("projectBriefText");
+      const list = document.getElementById("projectBriefNarratives");
+      if (!cards || !charts || !text || !list) return;
+
+      fillSelect("projectBriefOwnerFilter", uniqueOwners(), "All owners", projectBriefFilters.owner);
+      fillSelect("projectBriefProductFilter", reports.map(report => report.product), "All projects", projectBriefFilters.product);
+      fillSelect("projectBriefWeekFilter", reports.map(report => report.week), "All reporting weeks", projectBriefFilters.week);
+      const roleSelect = document.getElementById("projectBriefRoleFilter");
+      if (roleSelect) roleSelect.value = projectBriefFilters.role;
+
+      const items = weeklyProjectBriefRows();
+      const narratives = managementProductNarratives(items, projectBriefFilters);
+      cards.innerHTML = projectBriefMetricDefinitions(items).map(card => `
+        <div class="panel metric">
+          <span class="chip ${card.tone}">${escapeHtml(card.label)}</span>
+          <strong>${escapeHtml(card.value)}</strong>
+          <span class="muted small">${escapeHtml(card.note)}</span>
+        </div>
+      `).join("");
+      charts.innerHTML = projectBriefChartBlocks(items);
+      text.value = managementWeeklyProjectBriefText(items, projectBriefFilters);
+      list.innerHTML = narratives.length ? narratives.map(project => `
+        <details class="report-card" open>
+          <summary class="panel-title">
+            <div>
+              <span class="chip ${project.tone}">${escapeHtml(project.mainSignal)}</span>
+              <h3>${escapeHtml(project.project)}</h3>
+              <p class="muted small">${project.period.workstreams} in selected period - ${project.overall.workstreams} overall reports - ${escapeHtml(project.period.owners.join(", ") || project.overall.owners.join(", ") || "No owner captured")}</p>
+            </div>
+            <span class="chip ${project.tone}">${project.period.avgProgress}% this period</span>
+          </summary>
+          <p><strong>Brief explanation:</strong> ${escapeHtml(project.latest?.summary || project.talkTrack)}</p>
+          <div class="meeting-update-grid">
+            <div><strong>Selected period</strong><p class="muted small">${project.period.avgProgress}% progress - ${escapeHtml(project.period.healthMix)} - ${escapeHtml(project.period.scheduleLabel)}</p></div>
+            <div><strong>Overall product health</strong><p class="muted small">${project.overall.avgProgress}% average - ${escapeHtml(project.overall.healthMix)} - ${escapeHtml(project.overall.scheduleLabel)}</p></div>
+            <div><strong>Trend</strong><p class="muted small">${escapeHtml(project.trend)}</p></div>
+            <div><strong>Risk concentration</strong><p class="muted small">${escapeHtml(project.overall.repeatedBlockers.join("; ") || project.overall.rootCauses.join("; ") || "No recurring risk captured.")}</p></div>
+            <div><strong>Leadership ask</strong><p class="muted small">${escapeHtml(project.decision)}</p></div>
+            <div><strong>Next action</strong><p class="muted small">${escapeHtml(project.next)}</p></div>
+            <div><strong>Blocker / risk</strong><p class="muted small">${escapeHtml(project.blocker)}</p></div>
+            <div><strong>Win</strong><p class="muted small">${escapeHtml(project.win)}</p></div>
+          </div>
+        </details>
+      `).join("") : `<div class="empty"><strong>No project briefs</strong>No reports match the current filters.</div>`;
     }
 
     function managementTrendStats(items) {
@@ -11515,6 +11727,9 @@
       if (id === "managementOwnerFilter") managementFilters.owner = nextValue;
       if (id === "managementProductFilter") managementFilters.product = nextValue;
       if (id === "managementWeekFilter") managementFilters.week = nextValue;
+      if (id === "projectBriefOwnerFilter") projectBriefFilters.owner = nextValue;
+      if (id === "projectBriefProductFilter") projectBriefFilters.product = nextValue;
+      if (id === "projectBriefWeekFilter") projectBriefFilters.week = nextValue;
       if (id === "ownerFeedbackOwnerFilter") ownerFeedbackFilters.owner = nextValue;
       if (id === "ownerFeedbackProductFilter") ownerFeedbackFilters.product = nextValue;
       if (id === "ownerFeedbackWeekFilter") ownerFeedbackFilters.week = nextValue;
@@ -11930,6 +12145,7 @@
       renderDeliveryTimeline();
       renderSourceProjects();
       renderManagementReview();
+      renderWeeklyProjectBrief();
       renderReportAnalysis();
       renderOwnerFeedbackPage();
       renderActionItems();
@@ -12825,13 +13041,37 @@
       logUserAction("management_review_narrative_copied", { filters: { ...managementFilters } }, { target_type: "management_review", target_id: "narrative" });
     });
 
+    document.getElementById("projectBriefOwnerFilter").addEventListener("change", event => {
+      projectBriefFilters.owner = event.target.value;
+      logFilterChange("weekly_project_brief", "owner", event.target.value);
+      renderWeeklyProjectBrief();
+    });
+
+    document.getElementById("projectBriefProductFilter").addEventListener("change", event => {
+      projectBriefFilters.product = event.target.value;
+      logFilterChange("weekly_project_brief", "project", event.target.value);
+      renderWeeklyProjectBrief();
+    });
+
+    document.getElementById("projectBriefWeekFilter").addEventListener("change", event => {
+      projectBriefFilters.week = event.target.value;
+      logFilterChange("weekly_project_brief", "date", event.target.value);
+      renderWeeklyProjectBrief();
+    });
+
+    document.getElementById("projectBriefRoleFilter").addEventListener("change", event => {
+      projectBriefFilters.role = event.target.value;
+      logFilterChange("weekly_project_brief", "role", event.target.value);
+      renderWeeklyProjectBrief();
+    });
+
     document.getElementById("copyWeeklyProjectBriefBtn").addEventListener("click", event => {
-      const items = managementReviewRows();
-      copyTextToClipboard(managementWeeklyProjectBriefText(items)).then(() => {
+      const items = weeklyProjectBriefRows();
+      copyTextToClipboard(managementWeeklyProjectBriefText(items, projectBriefFilters)).then(() => {
         event.currentTarget.textContent = "Copied";
         setTimeout(() => { event.currentTarget.textContent = "Copy weekly project brief"; }, 1600);
       });
-      logUserAction("management_weekly_project_brief_copied", { filters: { ...managementFilters } }, { target_type: "management_review", target_id: "weekly_project_brief" });
+      logUserAction("weekly_project_brief_copied", { filters: { ...projectBriefFilters } }, { target_type: "weekly_project_brief", target_id: "copy" });
     });
 
     document.getElementById("analysisOwnerFilter").addEventListener("change", event => {
