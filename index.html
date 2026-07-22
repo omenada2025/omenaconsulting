@@ -2632,8 +2632,8 @@
         <div class="panel">
           <div class="panel-title">
             <div>
-              <h3>Product executive narratives</h3>
-              <p class="muted small">One meeting-ready talking point per product: status, risk, next action, and decision needed.</p>
+              <h3>Product overview</h3>
+              <p class="muted small">Weekly view plus overall product health, trend, risks, next action, and decision needed.</p>
             </div>
           </div>
           <div class="report-list" id="managementProductNarratives"></div>
@@ -6610,58 +6610,125 @@
       );
     }
 
+    function managementProductHealthLabel(stat) {
+      if (!stat) return "No data";
+      if (stat.majorDelay || stat.critical || stat.needsAction) return "Critical attention";
+      if (stat.delayed || stat.blockers || stat.missingNext || stat.avgProgress < 70) return "Needs management follow-up";
+      return "Healthy delivery";
+    }
+
+    function managementProductTone(stat) {
+      if (!stat) return "gray";
+      if (stat.majorDelay || stat.critical || stat.needsAction) return "red";
+      if (stat.delayed || stat.blockers || stat.missingNext || stat.avgProgress < 70) return "amber";
+      return "green";
+    }
+
+    function managementProductScheduleLabel(stat) {
+      if (!stat) return "No schedule data";
+      if (stat.majorDelay) return `${stat.majorDelay} major delay${stat.majorDelay === 1 ? "" : "s"}`;
+      if (stat.delayed) return `${stat.delayed} schedule delay${stat.delayed === 1 ? "" : "s"}`;
+      if (stat.scheduleCounts.ahead) return `${stat.scheduleCounts.ahead} ahead of schedule`;
+      if (stat.scheduleCounts.onTime) return `${stat.scheduleCounts.onTime} on time`;
+      return "No active schedule alert";
+    }
+
+    function managementProductHealthMix(reportsForProject) {
+      const counts = reportsForProject.reduce((acc, report) => {
+        const label = labels[report.health] || report.health || "Not captured";
+        acc[label] = (acc[label] || 0) + 1;
+        return acc;
+      }, {});
+      return Object.entries(counts)
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([label, count]) => `${count} ${label}`)
+        .join(", ") || "No health captured";
+    }
+
+    function managementProductStat(project, projectItems, allItems) {
+      const reportsForProject = projectItems.map(item => item.report);
+      const projectStats = managementProjectStats(projectItems)[0] || {
+        project,
+        workstreams: projectItems.length,
+        owners: [],
+        avgProgress: 0,
+        delayed: 0,
+        majorDelay: 0,
+        blockers: 0,
+        missingNext: 0,
+        needsAction: 0,
+        critical: 0,
+        tone: "gray",
+        recommendation: "No management recommendation yet."
+      };
+      const latest = latestProjectReport(project, allItems);
+      const scheduleCounts = endDateCounts(reportsForProject);
+      const qualityGaps = projectItems.reduce((sum, item) => sum + item.analysis.gaps.length, 0);
+      const rootCauses = topRepeatedText(reportsForProject.map(report => report.delay_reason), 2);
+      const repeatedBlockers = topRepeatedText(reportsForProject.map(report => report.blocker), 2);
+      return {
+        ...projectStats,
+        latest,
+        scheduleCounts,
+        qualityGaps,
+        rootCauses,
+        repeatedBlockers,
+        healthMix: managementProductHealthMix(reportsForProject),
+        tone: managementProductTone(projectStats),
+        statusLabel: managementProductHealthLabel(projectStats),
+        scheduleLabel: managementProductScheduleLabel({ ...projectStats, scheduleCounts })
+      };
+    }
+
     function managementProductNarratives(items) {
-      return managementProjectStats(items).map(project => {
-        const projectItems = items.filter(item => (cleanText(item.report.product) || "Product not separated") === project.project);
-        const reportsForProject = projectItems.map(item => item.report);
-        const latest = latestProjectReport(project.project, items);
-        const scheduleCounts = endDateCounts(reportsForProject);
-        const healthCounts = reportsForProject.reduce((counts, report) => {
-          counts[report.health] = (counts[report.health] || 0) + 1;
-          return counts;
-        }, {});
-        const scheduleLabel = project.majorDelay
-          ? `${project.majorDelay} major schedule delay${project.majorDelay === 1 ? "" : "s"}`
-          : project.delayed
-            ? `${project.delayed} minor schedule delay${project.delayed === 1 ? "" : "s"}`
-            : scheduleCounts.ahead
-              ? `${scheduleCounts.ahead} workstream${scheduleCounts.ahead === 1 ? "" : "s"} ahead of schedule`
-              : "schedule is controlled";
-        const healthLabel = [
-          healthCounts.green ? `${healthCounts.green} on track` : "",
-          healthCounts.amber ? `${healthCounts.amber} in progress` : "",
-          healthCounts.red ? `${healthCounts.red} at risk` : "",
-          healthCounts.gray ? `${healthCounts.gray} paused` : ""
-        ].filter(Boolean).join(", ") || "health not captured";
-        const mainSignal = project.majorDelay || project.critical
-          ? "Escalation needed"
-          : project.delayed || project.blockers
-            ? "Needs follow-up"
-            : project.missingNext
-              ? "Needs clearer next action"
-              : "Progress is under control";
-        const talkTrack = `${project.project}: ${project.workstreams} workstream${project.workstreams === 1 ? "" : "s"} across ${project.owners.length || 0} owner${project.owners.length === 1 ? "" : "s"}, ${project.avgProgress}% average progress, ${healthLabel}. Schedule signal: ${scheduleLabel}. ${latest?.summary ? `Latest update: ${latest.summary}` : "Latest update is not captured."}`;
+      const visibleProjects = managementProjectStats(items);
+      return visibleProjects.map(project => {
+        const periodItems = items.filter(item => (cleanText(item.report.product) || "Product not separated") === project.project);
+        const overallItems = analysisRowsForFilters({
+          owner: managementFilters.owner,
+          product: "all",
+          week: "all",
+          health: "all",
+          role: managementFilters.role
+        }).filter(item => (cleanText(item.report.product) || "Product not separated") === project.project);
+        const period = managementProductStat(project.project, periodItems, items);
+        const overall = managementProductStat(project.project, overallItems, overallItems);
+        const progressDelta = period.avgProgress - overall.avgProgress;
+        const trend = Math.abs(progressDelta) <= 3
+          ? "stable versus overall history"
+          : progressDelta > 0
+            ? `${progressDelta} points above the overall average`
+            : `${Math.abs(progressDelta)} points below the overall average`;
+        const periodLabel = managementFilters.week === "all" ? "selected reporting period" : reportingWeekGroupLabel(managementFilters.week);
+        const mainSignal = period.statusLabel;
+        const talkTrack = `${project.project}: in the ${periodLabel}, ${period.workstreams} workstream${period.workstreams === 1 ? "" : "s"} were reviewed with ${period.avgProgress}% average progress, ${period.healthMix}, and ${period.scheduleLabel}. Overall, the product has ${overall.workstreams} report${overall.workstreams === 1 ? "" : "s"}, ${overall.avgProgress}% average progress, ${overall.healthMix}, and progress is ${trend}.`;
+        const decision = period.recommendation || overall.recommendation;
         return {
-          ...project,
-          latest,
+          project: project.project,
+          tone: period.tone,
           mainSignal,
+          period,
+          overall,
+          latest: period.latest || overall.latest,
+          trend,
           talkTrack,
-          decision: project.recommendation,
-          next: latest?.next || "Confirm the next action, owner, and target date before the next review.",
-          blocker: latest?.blocker || "No blocker captured in the latest update.",
-          win: latest?.win || "No win captured in the latest update."
+          decision,
+          next: period.latest?.next || overall.latest?.next || "Confirm the next action, owner, and target date before the next review.",
+          blocker: period.latest?.blocker || overall.repeatedBlockers[0] || "No blocker captured in the latest update.",
+          win: period.latest?.win || overall.latest?.win || "No win captured in the latest update."
         };
       });
     }
 
     function managementProductNarrativeText(items) {
       const narratives = managementProductNarratives(items);
-      if (!narratives.length) return "Product executive narratives\n\nNo product narratives are available for the current filters.";
+      if (!narratives.length) return "Product overview\n\nNo product overview is available for the current filters.";
       return [
-        "Product executive narratives",
+        "Product overview by product",
         ...narratives.map(project => [
           `${project.project} - ${project.mainSignal}`,
           project.talkTrack,
+          `Overall readout: ${project.overall.workstreams} total reports, ${project.overall.avgProgress}% average progress, ${project.overall.scheduleLabel}, ${project.overall.blockers} blockers/risks, ${project.overall.qualityGaps} quality gaps.`,
           `Decision / management action: ${project.decision}`,
           `Next action: ${project.next}`,
           `Blocker / risk: ${project.blocker}`,
@@ -6856,23 +6923,27 @@
       if (productNarrativesTarget) {
         const productNarratives = managementProductNarratives(items);
         productNarrativesTarget.innerHTML = productNarratives.length ? productNarratives.map(project => `
-          <div class="report-card">
-            <div class="panel-title">
+          <details class="report-card" open>
+            <summary class="panel-title">
               <div>
                 <span class="chip ${project.tone}">${escapeHtml(project.mainSignal)}</span>
                 <h3>${escapeHtml(project.project)}</h3>
-                <p class="muted small">${project.workstreams} workstream${project.workstreams === 1 ? "" : "s"} - ${project.avgProgress}% average progress - ${escapeHtml(project.owners.join(", ") || "No owner captured")}</p>
+                <p class="muted small">${project.period.workstreams} in selected period - ${project.overall.workstreams} overall reports - ${escapeHtml(project.period.owners.join(", ") || project.overall.owners.join(", ") || "No owner captured")}</p>
               </div>
-              <span class="chip ${project.majorDelay || project.critical ? "red" : project.delayed || project.blockers ? "amber" : "green"}">${project.delayed} delay${project.delayed === 1 ? "" : "s"}</span>
-            </div>
+              <span class="chip ${project.tone}">${project.period.avgProgress}% this period</span>
+            </summary>
             <p>${escapeHtml(project.talkTrack)}</p>
             <div class="meeting-update-grid">
+              <div><strong>Selected period</strong><p class="muted small">${project.period.avgProgress}% progress - ${escapeHtml(project.period.healthMix)} - ${escapeHtml(project.period.scheduleLabel)}</p></div>
+              <div><strong>Overall product health</strong><p class="muted small">${project.overall.avgProgress}% average - ${escapeHtml(project.overall.healthMix)} - ${escapeHtml(project.overall.scheduleLabel)}</p></div>
+              <div><strong>Trend</strong><p class="muted small">${escapeHtml(project.trend)}</p></div>
+              <div><strong>Recurring risk</strong><p class="muted small">${escapeHtml(project.overall.repeatedBlockers.join("; ") || project.overall.rootCauses.join("; ") || "No recurring risk captured.")}</p></div>
               <div><strong>Decision / management action</strong><p class="muted small">${escapeHtml(project.decision)}</p></div>
               <div><strong>Next action</strong><p class="muted small">${escapeHtml(project.next)}</p></div>
               <div><strong>Blocker / risk</strong><p class="muted small">${escapeHtml(project.blocker)}</p></div>
               <div><strong>Win</strong><p class="muted small">${escapeHtml(project.win)}</p></div>
             </div>
-          </div>
+          </details>
         `).join("") : `<div class="empty"><strong>No product narratives</strong>No reports match the current filters.</div>`;
       }
 
