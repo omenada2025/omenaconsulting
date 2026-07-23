@@ -7101,10 +7101,18 @@
       const health = cleanText(report.health).toLowerCase();
       const stage = cleanText(report.stage).toLowerCase();
       const actionStatus = cleanText(report.action_status).toLowerCase();
+      const endDate = reportEndDate(report);
+      const progress = Number(report.progress || 0);
       const inactiveStages = ["closed", "complete", "completed", "done", "cancelled", "canceled"];
-      return health !== "gray" &&
-        actionStatus !== "closed" &&
-        !inactiveStages.includes(stage);
+      const inactiveActionStatuses = ["closed", "complete", "completed", "done", "cancelled", "canceled"];
+      const isInactiveStage = inactiveStages.some(value => stage === value || stage.includes(value));
+      const isInactiveAction = inactiveActionStatuses.includes(actionStatus);
+      return Boolean(endDate) &&
+        progress < 100 &&
+        health !== "gray" &&
+        health !== "paused" &&
+        !isInactiveAction &&
+        !isInactiveStage;
     }
 
     function activeProjectCount(items) {
@@ -7151,7 +7159,7 @@
       const riskProjects = projectStats.filter(project => project.majorDelay || project.critical || project.needsAction || project.blockers).length;
       const activeProjects = activeProjectCount(items);
       return [
-        { label: "Active projects", value: activeProjects, tone: "green", note: "Currently being worked" },
+        { label: "Active projects", value: activeProjects, tone: "green", note: "Open workstreams with end date" },
         { label: "Projects reported", value: projectStats.length, tone: "blue", note: "Unique products in this brief" },
         { label: "Workstreams", value: items.length, tone: "blue", note: "Reports in this brief" },
         { label: "At-risk projects", value: riskProjects, tone: riskProjects ? "red" : "green", note: "Need management attention" },
