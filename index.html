@@ -3651,6 +3651,7 @@
 
         <div class="panel">
           <form id="statusForm">
+            <div class="inline-message success" id="statusFormMessage" hidden></div>
             <div class="form-section">
               <div class="form-section-title">
                 <div>
@@ -4664,6 +4665,20 @@
       return error?.code === "23505" || /duplicate key value/i.test(error?.message || "");
     }
 
+    function isActionStatusConstraintError(error) {
+      const detail = [error?.message, error?.details, error?.hint].filter(Boolean).join(" ");
+      return /action_status/i.test(detail) && /check constraint|violates/i.test(detail);
+    }
+
+    function forceSafeActionStatus(payload) {
+      if (Array.isArray(payload)) return payload.map(item => forceSafeActionStatus(item));
+      if (!payload || typeof payload !== "object") return payload;
+      return {
+        ...payload,
+        action_status: "Open"
+      };
+    }
+
     function reportSaveErrorMessage(error, action = "save") {
       if (!error) return `Could not ${action} this report. Check Supabase configuration or connection.`;
       if (isDuplicateReportError(error)) {
@@ -4675,6 +4690,9 @@
       if (error.message?.includes("Saturday or Sunday") || error.message?.includes("Select a product")) {
         return error.message;
       }
+      if (isActionStatusConstraintError(error)) {
+        return `Could not ${action} this report because the database action status rule is outdated. I tried a safe retry, but the database still rejected it. Run the latest Supabase schema update and try again.`;
+      }
       const detail = [error.message, error.details, error.hint].filter(Boolean).join(" ");
       return detail
         ? `Could not ${action} this report: ${detail}`
@@ -4682,12 +4700,21 @@
     }
 
     async function supabaseWrite(path, options = {}) {
+      const preparedBody = options.body !== undefined ? toSupabasePayload(options.body) : undefined;
       try {
         return await supabaseRequest(path, {
           ...options,
-          body: options.body !== undefined ? toSupabasePayload(options.body) : undefined
+          body: preparedBody
         });
       } catch (error) {
+        if (isActionStatusConstraintError(error) && options.actionStatusRetry !== false && preparedBody !== undefined) {
+          console.warn("Supabase action_status constraint rejected the submitted value. Retrying with action_status=Open.", error);
+          return supabaseRequest(path, {
+            ...options,
+            actionStatusRetry: false,
+            body: forceSafeActionStatus(preparedBody)
+          });
+        }
         if (!isMissingColumnError(error) || useLegacySupabasePayload || options.legacyRetry === false) {
           throw error;
         }
@@ -11815,6 +11842,22 @@
       target.textContent = "";
     }
 
+    function showStatusFormMessage(message, tone = "success") {
+      const target = document.getElementById("statusFormMessage");
+      if (!target) return;
+      target.className = `inline-message ${tone}`;
+      target.textContent = message;
+      target.hidden = false;
+      target.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+
+    function hideStatusFormMessage() {
+      const target = document.getElementById("statusFormMessage");
+      if (!target) return;
+      target.hidden = true;
+      target.textContent = "";
+    }
+
     function renderDetail() {
       const report = reports.find(r => r.id === selectedReportId);
       const detail = document.getElementById("reportDetail");
@@ -12635,6 +12678,7 @@
       const saveBtn = document.getElementById("saveReportBtn");
       saveBtn.disabled = true;
       saveBtn.textContent = "Saving...";
+      hideStatusFormMessage();
       try {
         const report = readReportForm(form);
         await createReport(report);
@@ -12650,18 +12694,20 @@
         setWeekdayDateValue(document.getElementById("statusWeekFilter"), mondayForDate());
         setWeekdayDateValue(form.week, mondayForDate());
         saveBtn.textContent = "Saved";
+        showStatusFormMessage("Report saved successfully.");
         setTimeout(() => { saveBtn.textContent = "Save Report"; }, 1400);
         switchView("dashboard");
       } catch (error) {
         console.error(error);
         saveBtn.textContent = "Save Report";
-        alert(reportSaveErrorMessage(error, "save"));
+        showStatusFormMessage(reportSaveErrorMessage(error, "save"), "danger");
       } finally {
         saveBtn.disabled = false;
       }
     });
 
     document.getElementById("statusForm").addEventListener("reset", event => {
+      hideStatusFormMessage();
       setTimeout(() => {
         event.currentTarget.querySelectorAll("[data-product-picker]").forEach(picker => {
           picker.dataset.selected = "";

@@ -70,6 +70,13 @@ add column if not exists action_status text not null default 'Open'
 check (action_status in ('Open', 'In Progress', 'Waiting on decision', 'Blocked', 'Closed'));
 
 alter table public.status_reports
+drop constraint if exists status_reports_action_status_check;
+
+alter table public.status_reports
+add constraint status_reports_action_status_check
+check (action_status in ('Open', 'In Progress', 'Waiting on decision', 'Blocked', 'Closed'));
+
+alter table public.status_reports
 add column if not exists product_type text not null default 'Legacy'
 check (product_type in ('Legacy', 'New product'));
 
