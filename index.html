@@ -6269,19 +6269,10 @@
         element.hidden = hideForExecutiveAdmin;
         element.style.display = hideForExecutiveAdmin ? "none" : "";
       });
-      renderUserManagement();
-      renderHome();
-      renderMyDashboard();
-      renderSourceProjects();
-      renderManagementReview();
-      renderWeeklyProjectBrief();
-      renderReportAnalysis();
-      renderDeliveryTimeline();
-      renderWorkBalance();
-      renderWorkflowGuide();
-      renderUserLog();
       if (!canAccessView(getActiveView())) {
         switchView("home");
+      } else {
+        renderAllSafely("profile access");
       }
     }
 
@@ -12255,10 +12246,25 @@
     }
 
     function renderAllSafely(context = "render") {
+      document.getElementById(getActiveView())?.querySelector(".view-render-error")?.remove();
       try {
         renderAll();
       } catch (error) {
         console.error(`Dashboard ${context} failed after data was saved:`, error);
+        const activeView = getActiveView();
+        const activeSection = document.getElementById(activeView);
+        activeSection?.querySelector(".view-render-error")?.remove();
+        if (activeSection) {
+          const message = document.createElement("div");
+          message.className = "inline-message danger view-render-error";
+          message.textContent = "This page could not finish loading. Refresh the data or change the filters, then try again.";
+          const header = activeSection.querySelector(".page-hero, .panel, .card, h1");
+          if (header?.parentNode) {
+            header.parentNode.insertBefore(message, header.nextSibling);
+          } else {
+            activeSection.prepend(message);
+          }
+        }
         setSyncStatus("Saved to Supabase; refresh the page if the view looks stale");
       }
     }
