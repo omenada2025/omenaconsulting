@@ -9250,9 +9250,8 @@
         `).join("") : `<div class="empty"><strong>No decisions needed</strong>No blockers, critical risks, or missing next actions are visible in the current portfolio view.</div>`;
 
         [...cards.querySelectorAll("[data-jump]"), ...flow.querySelectorAll("[data-jump]"), ...focus.querySelectorAll("[data-jump]")].forEach(btn => {
-          btn.addEventListener("click", async () => {
-            switchView(btn.dataset.jump);
-            await refreshSharedDashboards();
+          btn.addEventListener("click", () => {
+            safeNavigateToView(btn.dataset.jump, "home card navigation");
           });
         });
         return;
@@ -9286,9 +9285,8 @@
       `).join("");
 
       [...cards.querySelectorAll("[data-jump]"), ...flow.querySelectorAll("[data-jump]")].forEach(btn => {
-        btn.addEventListener("click", async () => {
-          switchView(btn.dataset.jump);
-          await refreshSharedDashboards();
+        btn.addEventListener("click", () => {
+          safeNavigateToView(btn.dataset.jump, "home workflow navigation");
         });
       });
     }
@@ -9457,12 +9455,8 @@
         </article>
       `).join("");
       list.querySelectorAll("[data-jump]").forEach(btn => {
-        btn.addEventListener("click", async () => {
-          switchView(btn.dataset.jump);
-          if (btn.dataset.jump === "users") {
-            await refreshUserManagementFromCloud();
-          }
-          await refreshSharedDashboards();
+        btn.addEventListener("click", () => {
+          safeNavigateToView(btn.dataset.jump, "workflow navigation");
         });
       });
     }
@@ -9818,6 +9812,8 @@
       document.querySelectorAll(".view").forEach(view => view.classList.toggle("active", view.id === id));
       const activeTab = id === "intake" ? "reports" : id;
       document.querySelectorAll(".tab").forEach(tab => tab.classList.toggle("active", tab.dataset.view === activeTab));
+      const activeButton = [...document.querySelectorAll(".tab")].find(tab => tab.dataset.view === activeTab && !tab.hidden);
+      activeButton?.scrollIntoView({ block: "nearest" });
       logUserAction("view_opened", { view: id }, { target_type: "view", target_id: id });
       renderAllSafely(`switch to ${id}`);
     }
@@ -9829,6 +9825,36 @@
     async function refreshSharedDashboards() {
       if (!hasSupabaseConfig || getActiveView() === "intake") return;
       await fetchReports({ preserveSelectedId: true });
+    }
+
+    const REPORT_REFRESH_VIEWS = new Set(["dashboard", "executive", "myDashboard", "reports", "incidents", "timeline"]);
+
+    function refreshReportsForNavigation(viewId) {
+      if (!REPORT_REFRESH_VIEWS.has(viewId)) return;
+      refreshSharedDashboards().catch(error => {
+        console.warn("Navigation data refresh unavailable:", error);
+      });
+    }
+
+    async function navigateToView(viewId) {
+      switchView(viewId);
+      const activeView = getActiveView();
+      if (activeView === "users") {
+        await refreshUserManagementFromCloud();
+        return;
+      }
+      if (activeView === "userLog") {
+        await refreshUserLog();
+        return;
+      }
+      refreshReportsForNavigation(activeView);
+    }
+
+    function safeNavigateToView(viewId, context = "navigation") {
+      navigateToView(viewId).catch(error => {
+        console.warn(`${context} failed:`, error);
+        renderAllSafely(context);
+      });
     }
 
     function healthClass(report) {
@@ -12434,28 +12460,14 @@
     });
 
     document.querySelectorAll("[data-view]").forEach(tab => {
-      tab.addEventListener("click", async () => {
-        switchView(tab.dataset.view);
-        if (tab.dataset.view === "users") {
-          await refreshUserManagementFromCloud();
-        }
-        if (tab.dataset.view === "userLog") {
-          await refreshUserLog();
-        }
-        await refreshSharedDashboards();
+      tab.addEventListener("click", () => {
+        safeNavigateToView(tab.dataset.view, "menu navigation");
       });
     });
 
     document.querySelectorAll("[data-jump]").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        switchView(btn.dataset.jump);
-        if (btn.dataset.jump === "users") {
-          await refreshUserManagementFromCloud();
-        }
-        if (btn.dataset.jump === "userLog") {
-          await refreshUserLog();
-        }
-        await refreshSharedDashboards();
+      btn.addEventListener("click", () => {
+        safeNavigateToView(btn.dataset.jump, "shortcut navigation");
       });
     });
 
