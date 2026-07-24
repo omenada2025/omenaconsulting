@@ -5393,7 +5393,7 @@
         reports = loadReports();
         preserveSelection();
         setSyncStatus("Local browser storage");
-        renderAll();
+        renderAllSafely("load local reports");
         return;
       }
 
@@ -5405,7 +5405,7 @@
         reports = loadReports();
         selectedReportId = reports[0]?.id || null;
         setSyncStatus("Supabase unavailable; showing local fallback");
-        renderAll();
+        renderAllSafely("load fallback reports");
         return;
       }
 
@@ -5419,7 +5419,7 @@
       }
 
       preserveSelection();
-      renderAll();
+      renderAllSafely("load reports");
     }
 
     async function createReport(report) {
@@ -5427,7 +5427,7 @@
         reports = [report, ...reports];
         selectedReportId = report.id;
         saveReports();
-        renderAll();
+        renderAllSafely("create local report");
         return;
       }
 
@@ -5729,7 +5729,7 @@
         reportHistoryOpen = true;
         reportAuditLogsById.delete(reportWithHistory.id);
         saveReports();
-        renderAll();
+        renderAllSafely("update local report");
         renderDetail();
         return;
       }
@@ -9828,6 +9828,7 @@
       const activeTab = id === "intake" ? "reports" : id;
       document.querySelectorAll(".tab").forEach(tab => tab.classList.toggle("active", tab.dataset.view === activeTab));
       logUserAction("view_opened", { view: id }, { target_type: "view", target_id: id });
+      renderAllSafely(`switch to ${id}`);
     }
 
     function getActiveView() {
@@ -12209,7 +12210,7 @@
       });
     }
 
-    function renderAll() {
+    function renderDashboardView() {
       const weeks = reports.map(r => r.week).filter(Boolean).sort();
       const latest = weeks[weeks.length - 1];
       const filteredCount = getDashboardReports().length;
@@ -12219,26 +12220,38 @@
         ? `Showing ${filteredCount} of ${reports.length} updates for ${selectedPeriod}. Latest available reporting period: ${latestPeriod}.`
         : "No updates are available yet. Add a status report to start building the portfolio view.";
       renderMetrics();
-      renderHome();
-      renderMyDashboard();
-      renderExecutiveDashboard();
       renderHealth();
       renderRiskMatrix();
       renderTimeline("winsList", "win", "No wins captured yet.");
       renderTimeline("blockerList", "blocker", "No blockers captured yet.");
       renderTimeline("nextList", "next", "No next actions captured yet.");
-      renderReports();
-      renderIncidentReport();
-      renderDeliveryTimeline();
-      renderSourceProjects();
-      renderManagementReview();
-      renderWeeklyProjectBrief();
-      renderReportAnalysis();
-      renderOwnerFeedbackPage();
-      renderActionItems();
-      renderWeeklyReview();
-      renderWorkBalance();
-      renderWorkflowGuide();
+    }
+
+    function renderAll() {
+      const activeView = getActiveView();
+      const renderers = {
+        home: renderHome,
+        dashboard: renderDashboardView,
+        myDashboard: renderMyDashboard,
+        executive: renderExecutiveDashboard,
+        reports: renderReports,
+        intake: () => {},
+        incidents: renderIncidentReport,
+        timeline: renderDeliveryTimeline,
+        sourceProjects: renderSourceProjects,
+        managementReview: renderManagementReview,
+        weeklyProjectBrief: renderWeeklyProjectBrief,
+        reportAnalysis: renderReportAnalysis,
+        ownerFeedback: renderOwnerFeedbackPage,
+        actionItems: renderActionItems,
+        weeklyReview: renderWeeklyReview,
+        workload: renderWorkBalance,
+        workflow: renderWorkflowGuide,
+        users: renderUserManagement,
+        userLog: renderUserLog
+      };
+      const renderer = renderers[activeView] || renderHome;
+      renderer();
     }
 
     function renderAllSafely(context = "render") {
@@ -12741,32 +12754,32 @@
     document.getElementById("dashboardTypeFilter").addEventListener("change", event => {
       dashboardFilters.productType = event.target.value;
       logFilterChange("dashboard", "product_type", event.target.value);
-      renderAll();
+      renderAllSafely("dashboard type filter");
     });
 
     document.getElementById("dashboardPeriodFilter").addEventListener("change", event => {
       dashboardFilters.period = event.target.value;
       refreshDateFilterControls("dashboard", dashboardFilters);
       logFilterChange("dashboard", "date_filter", event.target.value);
-      renderAll();
+      renderAllSafely("dashboard period filter");
     });
 
     document.getElementById("dashboardStartFilter").addEventListener("change", event => {
       dashboardFilters.start = event.target.value;
       logFilterChange("dashboard", "start_date", event.target.value);
-      renderAll();
+      renderAllSafely("dashboard start filter");
     });
 
     document.getElementById("dashboardEndFilter").addEventListener("change", event => {
       dashboardFilters.end = event.target.value;
       logFilterChange("dashboard", "end_date", event.target.value);
-      renderAll();
+      renderAllSafely("dashboard end filter");
     });
 
     document.getElementById("dashboardOwnerFilter").addEventListener("change", event => {
       dashboardFilters.owner = event.target.value;
       logFilterChange("dashboard", "owner", event.target.value);
-      renderAll();
+      renderAllSafely("dashboard owner filter");
     });
 
     document.getElementById("myDashboardPeriodFilter").addEventListener("change", event => {
@@ -12895,13 +12908,13 @@
     document.getElementById("dashboardRoleFilter").addEventListener("change", event => {
       dashboardFilters.role = event.target.value;
       logFilterChange("dashboard", "role", event.target.value);
-      renderAll();
+      renderAllSafely("dashboard role filter");
     });
 
     document.getElementById("dashboardHealthFilter").addEventListener("change", event => {
       dashboardFilters.health = event.target.value;
       logFilterChange("dashboard", "health", event.target.value);
-      renderAll();
+      renderAllSafely("dashboard health filter");
     });
 
     document.getElementById("metrics").addEventListener("click", event => {
@@ -13497,7 +13510,7 @@
       dashboardFilters.week = value;
       refreshDateFilterControls("dashboard", dashboardFilters);
       logFilterChange("dashboard", "reporting_date", dateFilterLabel(dashboardFilters));
-      renderAll();
+      renderAllSafely("dashboard week filter");
     }, defaultReportingMonday);
     dashboardFilters.week = document.getElementById("dashboardWeekFilter").value;
     initWeekPicker(document.getElementById("myDashboardWeekFilter"), document.getElementById("myDashboardWeekPicker"), value => {
