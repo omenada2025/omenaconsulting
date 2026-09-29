@@ -1604,11 +1604,13 @@
     }
 
     .people-menu {
-      position: static;
-      z-index: 25;
+      position: absolute;
+      z-index: 50;
+      top: calc(100% + 6px);
+      left: 0;
       width: 100%;
       min-width: 0;
-      margin-top: 6px;
+      margin-top: 0;
       border: 1px solid var(--line);
       border-radius: 14px;
       background: #fff;
@@ -1634,14 +1636,16 @@
     }
 
     .edit-form-section .people-picker:has(.people-menu:not([hidden])) .people-menu {
-      position: static;
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
       width: 100%;
-      margin-top: 6px;
+      margin-top: 0;
       box-shadow: 0 14px 28px rgba(19, 32, 46, .12);
     }
 
     .edit-form-section .people-picker:has(.people-menu:not([hidden])) {
-      z-index: 2;
+      z-index: 50;
     }
 
     .people-options {
