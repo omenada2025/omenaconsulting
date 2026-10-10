@@ -2690,6 +2690,21 @@
     .governance-item:hover { border-color:var(--accent); background:var(--surface-soft); }
     .governance-item.selected { border-color:var(--accent); box-shadow:0 0 0 2px rgba(20, 93, 122, .12); }
     .governance-item-signals { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:6px; }
+    .governance-board { display:grid; grid-template-columns:repeat(5, minmax(210px, 1fr)); gap:12px; overflow-x:auto; padding:2px 2px 10px; scroll-snap-type:x proximity; }
+    .governance-board-column { min-width:210px; border:1px solid var(--line); border-radius:16px; background:var(--surface-soft); padding:12px; scroll-snap-align:start; }
+    .governance-board-column header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+    .governance-board-column h4 { margin:0; font-size:14px; }
+    .governance-board-count { display:inline-grid; place-items:center; min-width:26px; height:26px; border-radius:999px; background:var(--surface); border:1px solid var(--line); font-size:12px; font-weight:900; color:var(--muted); }
+    .governance-board-stack { display:grid; gap:9px; }
+    .governance-board-card { width:100%; border:1px solid var(--line); border-left:4px solid var(--accent); border-radius:12px; background:var(--surface); padding:11px; text-align:left; cursor:pointer; display:grid; gap:7px; color:var(--ink); }
+    .governance-board-card:hover, .governance-board-card:focus { border-color:var(--accent); box-shadow:0 6px 18px rgba(19, 32, 46, .10); outline:none; }
+    .governance-board-card.selected { box-shadow:0 0 0 2px rgba(20, 93, 122, .15); }
+    .governance-board-card[data-priority="High"] { border-left-color:#d38a18; }
+    .governance-board-card[data-priority="Critical"] { border-left-color:#c2355c; }
+    .governance-board-card strong { font-size:13px; line-height:1.35; }
+    .governance-board-card small { color:var(--muted); line-height:1.4; }
+    .governance-board-signals { display:flex; flex-wrap:wrap; gap:5px; }
+    .governance-board-empty { border:1px dashed var(--line); border-radius:11px; padding:14px 10px; text-align:center; color:var(--muted); font-size:12px; }
     .artifact-checklist { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; margin-top:14px; }
     .artifact-check { display:flex; gap:8px; align-items:flex-start; border:1px solid var(--line); border-radius:12px; padding:10px; background:var(--surface-soft); }
     .artifact-check input { width:auto; margin-top:3px; }
@@ -2748,6 +2763,7 @@
         <button class="tab" data-view="actionItems" data-role-manager-only>Action Items</button>
         <button class="tab" data-view="weeklyReview" data-role-manager-only>Send Weekly Feedback</button>
         <button class="tab" data-view="workload" data-role-manager-only>Capacity &amp; Support</button>
+        <button class="tab" data-view="governanceBoard" data-governance-access>Governance Board</button>
         <button class="tab" data-view="governance" data-mobile-primary data-governance-access>Product Governance</button>
         <div class="nav-section" data-role-manager-only>Admin</div>
         <button class="tab" data-view="sourceProjects" data-role-manager-only>Product Source List</button>
@@ -3412,6 +3428,25 @@
           </div>
           <div class="artifact-checklist" id="governanceArtifactChecklist"></div>
           <div class="form-actions"><button class="btn primary" type="button" id="saveGovernanceArtifacts">Save evidence checklist</button></div>
+        </div>
+      </section>
+
+      <section class="view" id="governanceBoard" data-governance-view>
+        <div class="header">
+          <div>
+            <span class="page-kicker">Decision flow</span>
+            <h2>Governance Board</h2>
+            <p class="muted">A focused Kanban view of governance decisions from intake through review, approval, delivery, and archive.</p>
+          </div>
+          <div class="top-actions">
+            <button class="btn primary" type="button" data-jump="governance">Create governance item</button>
+            <button class="btn" type="button" data-logout>Logout</button>
+          </div>
+        </div>
+        <div class="grid summary-grid" id="governanceBoardMetrics"></div>
+        <div class="panel">
+          <div class="panel-title"><div><h3>Decision pipeline</h3><p class="muted small">Select a card to open its complete record in Product Governance.</p></div></div>
+          <div class="governance-board" id="governanceBoardColumns" aria-label="Governance status board"></div>
         </div>
       </section>
 
@@ -7636,9 +7671,9 @@
     }
 
     function canAccessView(id) {
-      if (canManageRoles()) return ["home", "dashboard", "executive", "myDashboard", "workflow", "incidents", "timeline", "intake", "reports", "sourceProjects", "governance", "managementReview", "projectTalkTrack", "weeklyProjectBrief", "reportAnalysis", "ownerFeedback", "actionItems", "weeklyReview", "workload", "users", "userLog"].includes(id);
-      if (isMasterAdmin()) return ["home", "dashboard", "executive", "myDashboard", "incidents", "timeline", "intake", "reports", "governance"].includes(id);
-      return ["home", "dashboard", "executive", "incidents", "governance"].includes(id);
+      if (canManageRoles()) return ["home", "dashboard", "executive", "myDashboard", "workflow", "incidents", "timeline", "intake", "reports", "sourceProjects", "governanceBoard", "governance", "managementReview", "projectTalkTrack", "weeklyProjectBrief", "reportAnalysis", "ownerFeedback", "actionItems", "weeklyReview", "workload", "users", "userLog"].includes(id);
+      if (isMasterAdmin()) return ["home", "dashboard", "executive", "myDashboard", "incidents", "timeline", "intake", "reports", "governanceBoard", "governance"].includes(id);
+      return ["home", "dashboard", "executive", "incidents", "governanceBoard", "governance"].includes(id);
     }
 
     function syncSidebarSections() {
@@ -8312,6 +8347,44 @@
       renderGovernanceTraceability(governanceItems.find(item => item.id === selectedGovernanceItemId));
     }
 
+    function renderGovernanceBoard() {
+      const metrics = document.getElementById("governanceBoardMetrics");
+      const board = document.getElementById("governanceBoardColumns");
+      if (!metrics || !board) return;
+      const active = governanceItems.filter(item => !["Delivered", "Archived"].includes(item.status));
+      const critical = active.filter(item => item.priority === "Critical").length;
+      const blocked = active.filter(item => ["Missing", "Partial"].includes(item.evidence_status) || item.gate_status === "Rejected").length;
+      const ready = active.filter(item => ["Ready for Review", "Approved", "Approved with Conditions"].includes(item.gate_status)).length;
+      metrics.innerHTML = [
+        ["Active decisions", active.length, "blue", `${governanceItems.length} total items`],
+        ["Critical", critical, critical ? "red" : "green", "Priority requiring attention"],
+        ["Blocked", blocked, blocked ? "amber" : "green", "Evidence gaps or rejected gates"],
+        ["Gate ready", ready, "green", "Ready, approved, or conditional"]
+      ].map(([label, value, tone, note]) => `<div class="panel metric"><span class="chip ${tone}">${escapeHtml(label)}</span><strong>${value}</strong><span class="muted small">${escapeHtml(note)}</span></div>`).join("");
+      board.innerHTML = GOVERNANCE_STATUS_OPTIONS.map(status => {
+        const statusItems = governanceItems.filter(item => item.status === status);
+        return `
+          <section class="governance-board-column" aria-label="${escapeHtml(status)} governance items">
+            <header><h4>${escapeHtml(status)}</h4><span class="governance-board-count">${statusItems.length}</span></header>
+            <div class="governance-board-stack">
+              ${statusItems.length ? statusItems.map(item => `
+                <button class="governance-board-card ${item.id === selectedGovernanceItemId ? "selected" : ""}" type="button" data-governance-board-id="${escapeHtml(item.id)}" data-priority="${escapeHtml(item.priority)}">
+                  <span class="product-label">${escapeHtml(item.product)} · ${escapeHtml(shortEntityRef("GOV", item.id))}</span>
+                  <strong>${escapeHtml(item.title)}</strong>
+                  <small>${escapeHtml(item.workstream || "No workstream")}<br>${escapeHtml(item.owner || "Unassigned")} · ${escapeHtml(item.functional_role)}</small>
+                  <span class="governance-board-signals">
+                    <span class="chip ${item.priority === "Critical" ? "red" : item.priority === "High" ? "amber" : "blue"}">${escapeHtml(item.priority)}</span>
+                    <span class="chip ${item.evidence_status === "Validated" ? "green" : "amber"}">${escapeHtml(item.evidence_status)}</span>
+                    <span class="chip ${item.gate_status === "Approved" ? "green" : item.gate_status === "Rejected" ? "red" : "gray"}">${escapeHtml(item.gate_status)}</span>
+                  </span>
+                </button>
+              `).join("") : `<div class="governance-board-empty">No items</div>`}
+            </div>
+          </section>
+        `;
+      }).join("");
+    }
+
     async function loadGovernanceData() {
       governanceItems = loadLocalGovernanceArray(GOVERNANCE_ITEMS_KEY).map(normalizeGovernanceItem);
       const localById = new Map(governanceItems.map(item => [item.id, item]));
@@ -8345,6 +8418,7 @@
         console.warn("Governance cloud tables are unavailable; local data will be used.", error);
       }
       if (getActiveView() === "governance") renderProductGovernance();
+      if (getActiveView() === "governanceBoard") renderGovernanceBoard();
     }
 
     function reportFilterMatch(report, filters = {}) {
@@ -15489,6 +15563,7 @@
         incidents: renderIncidentReport,
         timeline: renderDeliveryTimeline,
         sourceProjects: renderSourceProjects,
+        governanceBoard: renderGovernanceBoard,
         governance: renderProductGovernance,
         managementReview: renderManagementReview,
         projectTalkTrack: renderProjectTalkTrack,
@@ -17080,6 +17155,13 @@
     document.getElementById("governanceItemList")?.addEventListener("click", event => {
       const item = event.target.closest("[data-governance-id]");
       if (item) selectGovernanceItem(item.dataset.governanceId);
+    });
+    document.getElementById("governanceBoardColumns")?.addEventListener("click", event => {
+      const item = event.target.closest("[data-governance-board-id]");
+      if (!item) return;
+      switchView("governance");
+      selectGovernanceItem(item.dataset.governanceBoardId);
+      document.getElementById("governanceForm")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
     document.getElementById("governanceArtifactProduct")?.addEventListener("change", event => {
       renderArtifactChecklist(event.target.value);
