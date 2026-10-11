@@ -5,10 +5,15 @@ param(
   [switch]$AllProductManagers,
   [switch]$AllOwners,
   [string]$Week = "",
-  [string]$Owner = ""
+  [string]$StartDate = "",
+  [string]$EndDate = "",
+  [string]$SenderEmail = "daniela@zenatech.com",
+  [string]$Owner = "",
+  [string]$PreviewDirectory = ""
 )
 
 $ErrorActionPreference = "Stop"
+if ($PreviewDirectory -and -not $DryRun) { throw "PreviewDirectory requires -DryRun." }
 
 function Get-ConfigValue {
   param([string]$Config, [string]$Name)
@@ -140,6 +145,35 @@ function Build-OwnerEmailMap {
   }
 
   return $map
+}
+
+function Build-PortfolioHtml {
+  param([string[]]$Lines)
+  $builder = New-Object System.Text.StringBuilder
+  [void]$builder.Append('<div style="margin:26px 30px;color:#334155;font-size:14px;line-height:1.65;">')
+  $cardOpen = $false
+  foreach ($line in $Lines) {
+    if ([string]::IsNullOrWhiteSpace($line)) { continue }
+    if ($line -match '^(.*) \(latest reported week: ([0-9-]+)\)$') {
+      if ($cardOpen) { [void]$builder.Append('</td></tr></table>') }
+      $projectTitle = Html $Matches[1]
+      $dateLabel = Html $Matches[2]
+      [void]$builder.Append("<table role=`"presentation`" width=`"100%`" cellpadding=`"0`" cellspacing=`"0`" style=`"margin:0 0 20px;border:1px solid #dbe3ec;border-collapse:collapse;`"><tr><td style=`"padding:16px 18px;background:#edf3f8;border-left:4px solid #17324d;`"><h3 style=`"margin:0 0 6px;font-size:21px;line-height:1.3;color:#17324d;`">$projectTitle</h3><span style=`"display:inline-block;padding:3px 9px;background:#ffffff;border:1px solid #cbd5e1;color:#475569;font-size:12px;`">(latest reported week: $dateLabel)</span></td></tr><tr><td style=`"padding:14px 18px;`">")
+      $cardOpen = $true
+    } elseif ($line -eq 'Feedback on all your projects:') {
+      [void]$builder.Append("<h2 style=`"margin:0 0 18px;font-size:21px;color:#17324d;`">$(Html $line)</h2>")
+    } else {
+      $background = '#ffffff'
+      $accent = '#e2e8f0'
+      if ($line -match '^Positive (result|feedback):') { $background = '#f0fdf4'; $accent = '#22c55e' }
+      elseif ($line -match '^(No update|Blocker/risk:|The delivery date|Please define|Please confirm)') { $background = '#fff7ed'; $accent = '#f59e0b' }
+      elseif ($line -match '^Next action:') { $background = '#eff6ff'; $accent = '#3b82f6' }
+      [void]$builder.Append("<p style=`"margin:0 0 10px;padding:9px 12px;background:$background;border-left:3px solid $accent;`">$(Html $line)</p>")
+    }
+  }
+  if ($cardOpen) { [void]$builder.Append('</td></tr></table>') }
+  [void]$builder.Append('</div>')
+  return $builder.ToString()
 }
 
 function Summarize-Owner {
@@ -353,16 +387,27 @@ if ($reports.Count -eq 0) {
 }
 
 $targetWeek = $Week
-if (-not $targetWeek) {
+$periodLabel = $targetWeek
+if ($StartDate -and $EndDate) {
+  $periodLabel = "$StartDate to $EndDate"
+} elseif (-not $targetWeek) {
   $targetWeek = @($reports | ForEach-Object { Get-Field $_ @("week") } | Where-Object { $_ } | Sort-Object -Descending | Select-Object -First 1)
+  $periodLabel = $targetWeek
 }
 
-if (-not $targetWeek) {
+if (-not $targetWeek -and -not ($StartDate -and $EndDate)) {
   Write-Output "No reporting week found in status reports."
   exit 0
 }
 
-$weekRows = @($reports | Where-Object { (Get-Field $_ @("week")) -eq $targetWeek })
+if ($StartDate -and $EndDate) {
+  $weekRows = @($reports | Where-Object {
+    $reportDate = Get-Field $_ @("week")
+    $reportDate -ge $StartDate -and $reportDate -le $EndDate
+  })
+} else {
+  $weekRows = @($reports | Where-Object { (Get-Field $_ @("week")) -eq $targetWeek })
+}
 if ($Owner) {
   $weekRows = @($weekRows | Where-Object { (Canonical (Get-Field $_ @("owner"))) -eq (Canonical $Owner) })
 }
@@ -444,7 +489,7 @@ if ($AllOwners) {
   }
 } else {
   $groups = @($weekRows | Group-Object { Get-Field $_ @("owner") } | Sort-Object Name | ForEach-Object {
-    [pscustomobject]@{ Name = [string]$_.Name; Rows = @($_.Group); ReportingWeek = $targetWeek }
+    [pscustomobject]@{ Name = [string]$_.Name; Rows = @($_.Group); ReportingWeek = $periodLabel }
   })
 }
 $batchId = [guid]::NewGuid().ToString()
@@ -455,6 +500,7 @@ $failed = 0
 foreach ($group in $groups) {
   $ownerName = [string]$group.Name
   if (-not $ownerName) { continue }
+  if ($Owner -and (Canonical $ownerName) -ne (Canonical $Owner)) { continue }
   $ownerKey = Canonical $ownerName
   $rows = @($group.Rows)
   $reportingWeek = [string]$group.ReportingWeek
@@ -472,13 +518,95 @@ foreach ($group in $groups) {
     continue
   }
 
-  $message = Summarize-Owner $ownerName $rows
+  $recipientReports = @($reports | Where-Object {
+    $reportOwner = Canonical (Get-Field $_ @("owner"))
+    ($reportOwner -eq $ownerKey -or ($emailMap[$reportOwner] -and (Canonical $emailMap[$reportOwner]) -eq (Canonical $email))) -and
+    (Get-Field $_ @("week")) -le $reportingWeek
+  })
+  $portfolioLines = @("Feedback on all your projects:")
+  foreach ($projectGroup in ($recipientReports | Where-Object { Get-Field $_ @("product") } | Group-Object { Canonical (Get-Field $_ @("product")) } | Sort-Object Name)) {
+    $latestWeek = @($projectGroup.Group | ForEach-Object { Get-Field $_ @("week") } | Sort-Object -Descending)[0]
+    $latestRows = @($projectGroup.Group | Where-Object { (Get-Field $_ @("week")) -eq $latestWeek })
+    $projectName = Get-Field $latestRows[0] @("product")
+    $portfolioLines += ""
+    $portfolioLines += "$projectName (latest reported week: $latestWeek)"
+    if ($latestWeek -ne $reportingWeek) { $portfolioLines += "No update for the feedback week. The following assessment uses the last known report; please confirm the current status." }
+    foreach ($projectRow in $latestRows) {
+      $health = Get-Field $projectRow @("health")
+      $progress = Get-Field $projectRow @("progress")
+      $stage = Get-Field $projectRow @("stage")
+      $blocker = Get-Field $projectRow @("blocker", "blocker_risk", "blocker_or_risk", "risk")
+      $nextAction = Get-Field $projectRow @("next", "next_action", "nextAction", "next action")
+      $win = Get-Field $projectRow @("win")
+      $dueValue = Get-Field $projectRow @("due_date", "end_date", "endDate")
+      $due = [datetime]::MinValue
+      $reportDate = [datetime]::MinValue
+      $issues = @()
+      $completed = $stage -match 'completed|closed' -or $progress -eq '100'
+      if ($health -match 'red|amber|yellow|risk|blocked|critical') { $issues += "Reported health is $health. Please provide a recovery plan." }
+      if (Has-MeaningfulBlocker $blocker) { $issues += "Blocker/risk: $blocker. Confirm the resolution owner and target date." }
+      if (-not $completed -and [datetime]::TryParse($dueValue, [ref]$due) -and [datetime]::TryParse($reportingWeek, [ref]$reportDate) -and $due.Date -lt $reportDate.Date.AddDays(7)) { $issues += "The delivery date ($dueValue) has passed by the end of the reporting week. Confirm delivery or explain the delay and provide a revised date." }
+      if (-not $completed -and [string]::IsNullOrWhiteSpace($nextAction)) { $issues += "Please define the next action and its target date." }
+      $workstream = Get-Field $projectRow @("feature_workstream", "feature", "workstream")
+      $portfolioLines += "${workstream}: Health: $health; progress: $progress%; stage: $stage; delivery date: $dueValue."
+      if ($win) { $portfolioLines += "Positive result: $win. Thank you for this progress." }
+      if ($completed) { $portfolioLines += "Positive feedback: this work is reported as completed. Thank you for delivering it." }
+      elseif ($issues.Count -eq 0 -and $health -match 'green|good|on.track') { $portfolioLines += "Positive feedback: this work is reported on track with no recorded blocker. Keep the momentum and follow through on the next milestone." }
+      elseif ($issues.Count -eq 0) { $portfolioLines += "Please confirm project health so delivery can be assessed." }
+      $portfolioLines += $issues
+      if ($nextAction) { $portfolioLines += "Next action: $nextAction" }
+    }
+  }
+  $portfolioText = $portfolioLines -join "`n"
+  $message = (Summarize-Owner $ownerName $rows) + "`n`n" + $portfolioText
+  $message += "`n`nRegards,`nDaniela`n$SenderEmail"
   $htmlMessage = Build-OwnerHtml $ownerName $rows $reportingWeek
+  $portfolioHtml = Build-PortfolioHtml $portfolioLines
+  $htmlMessage = $htmlMessage -replace '</div>$', "$portfolioHtml</div>"
+  # Check each project separately; reporting another project does not fill its gaps.
+  $missingProjects = @()
+  $weekDate = [datetime]::MinValue
+  if ([datetime]::TryParseExact($reportingWeek, "yyyy-MM-dd", [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::None, [ref]$weekDate)) {
+    $recipientReports = @($reports | Where-Object {
+      $reportOwner = Canonical (Get-Field $_ @("owner"))
+      $reportOwner -eq $ownerKey -or ($emailMap[$reportOwner] -and (Canonical $emailMap[$reportOwner]) -eq (Canonical $email))
+    })
+    foreach ($projectGroup in ($recipientReports | Where-Object { (Get-Field $_ @("product")) -and (Get-Field $_ @("week")) -le $reportingWeek } | Group-Object { Canonical (Get-Field $_ @("product")) })) {
+      $projectRows = @($projectGroup.Group | Sort-Object week)
+      $projectName = Get-Field $projectRows[-1] @("product")
+      $firstWeek = Get-Field $projectRows[0] @("week")
+      $submittedWeeks = @($projectRows | ForEach-Object { Get-Field $_ @("week") })
+      $missingWeeks = @()
+      for ($offset = 0; $offset -le 4; $offset++) {
+        $expectedWeek = $weekDate.AddDays(-7 * $offset).ToString("yyyy-MM-dd")
+        if ($expectedWeek -lt $firstWeek -or $submittedWeeks -contains $expectedWeek) { continue }
+        $priorRows = @($projectRows | Where-Object { (Get-Field $_ @("week")) -le $expectedWeek })
+        if ($priorRows.Count -gt 0 -and (Get-Field $priorRows[-1] @("stage")) -match '^(completed|closed|cancelled|canceled)$') { continue }
+        $missingWeeks += $expectedWeek
+      }
+      if ($missingWeeks.Count -gt 0) { $missingProjects += "$projectName — weeks starting $($missingWeeks -join ', ')" }
+    }
+  }
+  if ($missingProjects.Count -gt 0) {
+    $reminder = "Project updates required: $($missingProjects -join '; '). No updates were found for these projects in the listed weeks. Please update each project's current status, progress, blockers or risks, next action, and expected delivery date, and submit the missing updates or explain each gap. Updates submitted for other projects do not resolve these pending items."
+    $message = $message.Replace("`n`nRegards,", "`n`n$reminder`n`nRegards,")
+    $reminderHtml = "<div style=`"margin:22px 30px;padding:16px;background:#fff7ed;border-left:4px solid #ea580c;color:#9a3412;`"><strong>Missing project updates — action required</strong><p>$(Html $reminder)</p></div>"
+    $htmlMessage = $htmlMessage -replace '</div>$', "$reminderHtml</div>"
+  }
+  $signature = "<p style=`"margin:22px 30px;color:#334155;`">Regards,<br><strong>Daniela</strong><br>$(Html $SenderEmail)</p>"
+  $htmlMessage = $htmlMessage -replace '</div>$', "$signature</div>"
   $subject = "Omena Consulting weekly feedback - $ownerName - $reportingWeek"
   $status = "sent"
   $errorMessage = ""
 
   if ($DryRun) {
+    if ($PreviewDirectory) {
+      [void](New-Item -ItemType Directory -Path $PreviewDirectory -Force)
+      $previewName = ($ownerName -replace '[^a-zA-Z0-9_-]', '_') + '-' + ($reportingWeek -replace '[^a-zA-Z0-9_-]', '_')
+      Set-Content -LiteralPath (Join-Path $PreviewDirectory "$previewName.html") -Value $htmlMessage -Encoding utf8
+      Set-Content -LiteralPath (Join-Path $PreviewDirectory "$previewName.txt") -Value ("Subject: $subject`nTo: $email`n`n$message") -Encoding utf8
+      Write-Output "PREVIEW: $(Join-Path $PreviewDirectory "$previewName.html")"
+    }
     Write-Output "DRY RUN would send: $ownerName <$email> ($($rows.Count) reports)"
   } else {
     if ($RecordOnly) {
@@ -546,4 +674,4 @@ foreach ($group in $groups) {
   }
 }
 
-Write-Output "Weekly feedback complete. week=$targetWeek allOwners=$AllOwners allProductManagers=$AllProductManagers sent=$sent skipped=$skipped failed=$failed dryRun=$DryRun recordOnly=$RecordOnly"
+Write-Output "Weekly feedback complete. period=$periodLabel allOwners=$AllOwners allProductManagers=$AllProductManagers sent=$sent skipped=$skipped failed=$failed dryRun=$DryRun recordOnly=$RecordOnly"
