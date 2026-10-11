@@ -1,0 +1,76 @@
+name: Weekly PM and UIUX Report
+
+on:
+  workflow_dispatch:
+    inputs:
+      week:
+        description: "Optional reporting week (Monday, YYYY-MM-DD)"
+        required: false
+        type: string
+  schedule:
+    # GitHub cron uses UTC. Both entries are needed to keep 7 PM Toronto
+    # through daylight-saving changes; the timezone guard skips the extra run.
+    - cron: "0 23 * * 2"
+    - cron: "0 0 * * 3"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: weekly-pm-uiux-report
+  cancel-in-progress: false
+
+jobs:
+  send-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check Toronto schedule
+        id: schedule
+        shell: pwsh
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REQUESTED_WEEK: ${{ inputs.week }}
+        run: |
+          $timezone = [TimeZoneInfo]::FindSystemTimeZoneById("America/Toronto")
+          $torontoNow = [TimeZoneInfo]::ConvertTimeFromUtc([DateTime]::UtcNow, $timezone)
+          $isManual = $env:EVENT_NAME -eq "workflow_dispatch"
+          $isScheduledTime = $torontoNow.DayOfWeek -eq [DayOfWeek]::Tuesday -and $torontoNow.Hour -eq 19
+
+          if (-not $isManual -and -not $isScheduledTime) {
+            "should_run=false" >> $env:GITHUB_OUTPUT
+            Write-Output "Skipping duplicate UTC schedule. Toronto time is $($torontoNow.ToString('yyyy-MM-dd HH:mm'))."
+            exit 0
+          }
+
+          if ($env:REQUESTED_WEEK) {
+            $reportingWeek = [datetime]::ParseExact(
+              $env:REQUESTED_WEEK,
+              "yyyy-MM-dd",
+              [Globalization.CultureInfo]::InvariantCulture
+            )
+            if ($reportingWeek.DayOfWeek -ne [DayOfWeek]::Monday) {
+              throw "The requested reporting week must be a Monday."
+            }
+          } else {
+            $daysSinceMonday = (([int]$torontoNow.DayOfWeek + 6) % 7)
+            $currentMonday = $torontoNow.Date.AddDays(-$daysSinceMonday)
+            $reportingWeek = $currentMonday.AddDays(-7)
+          }
+
+          "should_run=true" >> $env:GITHUB_OUTPUT
+          "reporting_week=$($reportingWeek.ToString('yyyy-MM-dd'))" >> $env:GITHUB_OUTPUT
+          Write-Output "Report week: $($reportingWeek.ToString('yyyy-MM-dd'))"
+
+      - name: Check out repository
+        if: steps.schedule.outputs.should_run == 'true'
+        uses: actions/checkout@v4
+
+      - name: Send consolidated PM and UIUX report
+        if: steps.schedule.outputs.should_run == 'true'
+        shell: pwsh
+        run: |
+          ./scripts/send-weekly-consolidated-report.ps1 `
+            -Week "${{ steps.schedule.outputs.reporting_week }}" `
+            -To "daniela@zenatech.com"
