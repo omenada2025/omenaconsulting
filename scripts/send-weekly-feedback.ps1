@@ -4,16 +4,20 @@ param(
   [switch]$Force,
   [switch]$AllProductManagers,
   [switch]$AllOwners,
+  [switch]$UseLegacyEmailProvider,
   [string]$Week = "",
   [string]$StartDate = "",
   [string]$EndDate = "",
-  [string]$SenderEmail = "daniela@zenatech.com",
+  [string]$SenderEmail = "rdaniglad@gmail.com",
   [string]$Owner = "",
   [string]$PreviewDirectory = ""
 )
 
 $ErrorActionPreference = "Stop"
 if ($PreviewDirectory -and -not $DryRun) { throw "PreviewDirectory requires -DryRun." }
+if (-not $DryRun -and -not $RecordOnly -and -not $UseLegacyEmailProvider) {
+  throw "Feedback delivery uses the connected Gmail account. Generate -DryRun -PreviewDirectory files and send their HTML with Gmail; legacy delivery requires -UseLegacyEmailProvider."
+}
 
 function Get-ConfigValue {
   param([string]$Config, [string]$Name)
@@ -419,7 +423,7 @@ $existing = @()
 try {
   $existing = As-Array (Invoke-RestMethod -Uri "$url/rest/v1/${sendTable}?select=owner,email,filter_week,status,created_at&status=eq.sent&limit=5000" -Headers $headers -Method Get)
 } catch {
-  Write-Output "Warning: could not read existing weekly send history. Continuing without skip list."
+  throw "Cannot read weekly send history; stopped to prevent duplicate emails."
 }
 
 $alreadySent = @{}
@@ -605,6 +609,18 @@ foreach ($group in $groups) {
       $previewName = ($ownerName -replace '[^a-zA-Z0-9_-]', '_') + '-' + ($reportingWeek -replace '[^a-zA-Z0-9_-]', '_')
       Set-Content -LiteralPath (Join-Path $PreviewDirectory "$previewName.html") -Value $htmlMessage -Encoding utf8
       Set-Content -LiteralPath (Join-Path $PreviewDirectory "$previewName.txt") -Value ("Subject: $subject`nTo: $email`n`n$message") -Encoding utf8
+      @{
+        owner = $ownerName
+        email = $email
+        subject = $subject
+        message = $message
+        htmlMessage = $htmlMessage
+        reportingWeek = $reportingWeek
+        batchId = $batchId
+        reportCount = $rows.Count
+        actionCount = @($rows | Where-Object { Get-Field $_ @("next", "next_action", "nextAction", "next action") }).Count
+        senderEmail = $SenderEmail
+      } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $PreviewDirectory "$previewName.json") -Encoding utf8
       Write-Output "PREVIEW: $(Join-Path $PreviewDirectory "$previewName.html")"
     }
     Write-Output "DRY RUN would send: $ownerName <$email> ($($rows.Count) reports)"
