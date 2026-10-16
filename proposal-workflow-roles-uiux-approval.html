@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Omena Consulting · Approval pack — Workflow, Roles &amp; UI/UX</title>
+  <style>
+    :root {
+      --ink: #13202e;
+      --muted: #657386;
+      --line: #d8e0e8;
+      --soft: #f0f4f7;
+      --canvas: #edf3f8;
+      --panel: #ffffff;
+      --accent: #1f5874;
+      --green: #287a55;
+      --green-soft: #e6f4ed;
+      --amber: #b7791f;
+      --amber-soft: #fff4d8;
+      --red: #a21b3f;
+      --red-soft: #fae8ee;
+      --blue-soft: #e7f1f6;
+      --shadow: 0 18px 45px rgba(15, 27, 42, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--canvas);
+      line-height: 1.5;
+    }
+    .shell { max-width: 980px; margin: 0 auto; padding: 28px 16px 80px; }
+    .hero, .card, .approve-box {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+    .hero { padding: 28px 30px; margin-bottom: 18px; }
+    .eyebrow {
+      display: inline-flex; padding: 6px 11px; border-radius: 999px;
+      background: var(--blue-soft); color: var(--accent);
+      font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    }
+    h1 { font-size: clamp(26px, 4vw, 36px); margin: 14px 0 8px; line-height: 1.1; }
+    h2 { font-size: 20px; margin: 0 0 10px; }
+    h3 { font-size: 15px; margin: 0 0 8px; }
+    p { color: var(--muted); margin: 0 0 10px; }
+    .lede { font-size: 16px; color: var(--ink); }
+    .banner {
+      margin-top: 12px; padding: 12px 14px; border-radius: 12px;
+      background: var(--amber-soft); border: 1px solid #e6c985; color: #8a5a0a;
+      font-size: 13px; font-weight: 700;
+    }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .btn {
+      display: inline-flex; align-items: center; padding: 9px 13px; border-radius: 11px;
+      border: 1px solid var(--line); background: white; color: var(--ink);
+      text-decoration: none; font-weight: 700; font-size: 13px;
+    }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+    .toc {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px;
+    }
+    .toc a {
+      text-decoration: none; font-size: 12px; font-weight: 800;
+      padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line);
+      background: white; color: var(--accent);
+    }
+    .card { padding: 20px 22px; margin-bottom: 16px; }
+    .card.p0 { border-top: 4px solid var(--red); }
+    .card.p1 { border-top: 4px solid var(--amber); }
+    .card.p2 { border-top: 4px solid var(--line); }
+    .card.process { border-left: 4px solid #2f6f8f; }
+    .card.roles { border-left: 4px solid var(--green); }
+    .card.uiux { border-left: 4px solid var(--amber); }
+    .pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .pill {
+      display: inline-flex; padding: 4px 9px; border-radius: 999px;
+      font-size: 11px; font-weight: 800; background: var(--soft); color: var(--muted);
+    }
+    .pill.p0 { background: var(--red-soft); color: var(--red); }
+    .pill.p1 { background: var(--amber-soft); color: #8a5a0a; }
+    .pill.p2 { background: var(--soft); color: var(--muted); }
+    .pill.process { background: var(--blue-soft); color: var(--accent); }
+    .pill.roles { background: var(--green-soft); color: var(--green); }
+    .pill.uiux { background: var(--amber-soft); color: #8a5a0a; }
+    .pill.out { background: var(--red-soft); color: var(--red); }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 4px;
+    }
+    th, td {
+      text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    th { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .box {
+      background: var(--soft); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px;
+    }
+    .box strong { display: block; margin-bottom: 6px; font-size: 13px; }
+    .box ul, .card ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+    .box li, .card li { margin: 4px 0; }
+    .flow {
+      display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 12px 0;
+    }
+    .flow-step {
+      background: var(--soft); border: 1px solid var(--line); border-radius: 10px;
+      padding: 10px 8px; text-align: center; font-size: 11px; font-weight: 700;
+    }
+    .flow-step span { display: block; font-size: 10px; font-weight: 600; color: var(--muted); margin-top: 4px; }
+    .mock-link {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+      margin: 12px 0; padding: 12px; border-radius: 12px;
+      background: var(--blue-soft); border: 1px solid #b7d3e2;
+      font-size: 13px;
+    }
+    .mock-link a { color: var(--accent); font-weight: 800; }
+    .item-head {
+      display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px;
+      align-items: flex-start; margin-bottom: 8px;
+    }
+    .decide {
+      display: grid; grid-template-columns: auto 1fr; gap: 8px 10px; align-items: start;
+      margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line);
+      font-size: 13px;
+    }
+    .decide label { display: flex; gap: 8px; align-items: center; font-weight: 700; }
+    .decide .note { color: var(--muted); font-size: 12px; grid-column: 2; }
+    .approve-box { padding: 20px 22px; margin-top: 8px; }
+    .sign { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 14px; }
+    .sign .field {
+      border: 1px solid var(--line); border-radius: 10px; padding: 12px; min-height: 72px;
+      background: var(--soft); font-size: 12px; color: var(--muted);
+    }
+    .sign .field strong { display: block; color: var(--ink); margin-bottom: 18px; font-size: 12px; }
+    .callout {
+      padding: 12px 14px; border-radius: 12px; margin: 10px 0;
+      background: var(--soft); border: 1px solid var(--line); font-size: 13px; color: var(--ink);
+    }
+    .callout.warn { background: var(--amber-soft); border-color: #e6c985; }
+    .callout.danger { background: var(--red-soft); border-color: #efb8c8; }
+    .callout.ok { background: var(--green-soft); border-color: #9dceb5; }
+    .section-label {
+      margin: 22px 0 10px; font-size: 12px; font-weight: 800;
+      letter-spacing: .06em; text-transform: uppercase; color: var(--muted);
+    }
+    .checklist-master td:first-child { width: 42px; }
+    .footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 20px; }
+    @media (max-width: 800px) {
+      .grid2, .grid3, .flow, .sign { grid-template-columns: 1fr; }
+    }
+    @media print {
+      body { background: white; }
+      .hero, .card, .approve-box { box-shadow: none; break-inside: avoid; }
+      .actions, .toc { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="hero">
+      <span class="eyebrow">Omena Consulting · Decision pack</span>
+      <h1>Workflow, Roles &amp; UI/UX — full proposal for approval</h1>
+      <p class="lede">Single document from current state to target operating model. Use the decision boxes to Approve / Defer / Reject each change before implementation.</p>
+      <div class="banner">Status: Proposal for decision · Mockups are concepts (not live) · Version 2026-10-16</div>
+      <div class="actions">
+        <a class="btn primary" href="preview-workflow-uiux-revision.html" target="_blank" rel="noopener">Open visual mockups</a>
+        <a class="btn" href="index.html">Open live dashboard</a>
+        <a class="btn" href="preview-proximas-melhorias.html">Shipped features preview</a>
+      </div>
+      <nav class="toc" aria-label="Document sections">
+        <a href="#how">How to approve</a>
+        <a href="#current">1. Current state</a>
+        <a href="#target">2. Target process</a>
+        <a href="#roles">3. Roles &amp; RACI</a>
+        <a href="#glossary">4. Glossary</a>
+        <a href="#mockups">5. Mockups</a>
+        <a href="#backlog">6. Full backlog</a>
+        <a href="#sprints">7. Delivery sequence</a>
+        <a href="#out">8. Out of scope</a>
+        <a href="#ops">9. Prerequisites</a>
+        <a href="#signoff">10. Sign-off</a>
+      </nav>
+    </header>
+
+    <section class="card" id="how">
+      <h2>How to use this pack</h2>
+      <div class="grid3">
+        <div class="box">
+          <strong>1. Read process end-to-end</strong>
+          Sections 1–2 define what “a good week” means from Prepare to Follow-up.
+        </div>
+        <div class="box">
+          <strong>2. Approve roles model</strong>
+          Section 3 freezes Access profiles vs Functional responsibilities and RACI.
+        </div>
+        <div class="box">
+          <strong>3. Approve UI/UX + backlog</strong>
+          Sections 5–7 show mockups and the ordered work list. Mark each item Approve / Defer / Reject.
+        </div>
+      </div>
+      <div class="callout">Decision rule: Approve = implement in the named sprint. Defer = keep idea, no build this cycle. Reject = do not build; document why in notes.</div>
+    </section>
+
+    <p class="section-label">Part A — Where we are</p>
+
+    <section class="card" id="current">
+      <h2>1. Current state (already shipped)</h2>
+      <p>These capabilities exist in the live dashboard today. The proposal builds on them; it does not restart from zero.</p>
+      <table>
+        <thead>
+          <tr><th>Capability</th><th>What it does today</th><th>Limitation this proposal fixes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Weekly cockpit (Home)</td><td>Action cards + journey Prepare → Communicate</td><td>No Week Close definition of done; journey not always bound to Global Week</td></tr>
+          <tr><td>Progressive intake</td><td>4 steps + draft autosave + conditional risk fields</td><td>Field set still mostly PM-shaped for UI/UX and Training</td></tr>
+          <tr><td>Global scope</td><td>Week / Product / Owner persist across pages</td><td>Local filters can diverge; Home can look empty</td></tr>
+          <tr><td>Functional roles</td><td>PM, UI/UX, Training + role lifecycles</td><td>Training may need DB migration; 0 Training reports live yet</td></tr>
+          <tr><td>Product Governance</td><td>Items, evidence checklist by role, decision trail</td><td>Approve not blocked by missing required evidence; no readiness bar</td></tr>
+          <tr><td>Meeting strip</td><td>5 shortcuts on Manager Meeting</td><td>Navigation only — not a facilitated session</td></tr>
+          <tr><td>Portfolio indicators</td><td>PM/UI/UX/Training, blockers vs schedule, evidence gaps</td><td>Executive vs Portfolio hierarchy still dense</td></tr>
+          <tr><td>Sync banner</td><td>Home shows sync status + clear scope</td><td>Operational — keep as-is</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <p class="section-label">Part B — Target operating model</p>
+
+    <section class="card" id="target">
+      <h2>2. Target weekly process (beginning → end)</h2>
+      <p>One reporting week (Monday–Friday). Global Week selects the operating week. Home is the control tower until Week Close is complete.</p>
+
+      <div class="flow" aria-label="Weekly stages">
+        <div class="flow-step">01 Prepare<span>Owners submit</span></div>
+        <div class="flow-step">02 Validate<span>Quality check</span></div>
+        <div class="flow-step">03 Review<span>Meeting</span></div>
+        <div class="flow-step">04 Decide<span>Gates</span></div>
+        <div class="flow-step">05 Communicate<span>Feedback</span></div>
+        <div class="flow-step">06 Follow-up<span>Actions</span></div>
+      </div>
+
+      <h3>Stage-by-stage specification</h3>
+      <table>
+        <thead>
+          <tr><th>Stage</th><th>Input</th><th>Work</th><th>Exit criteria (done when…)</th><th>Primary screen</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>01 Prepare</strong></td>
+            <td>Assigned products / workstreams for the week</td>
+            <td>Owners create or update weekly reports with role-correct fields, summary, next action, health</td>
+            <td>All expected owners have a report for Global Week (or explicit “no update” waiver)</td>
+            <td>Weekly Updates / Intake</td>
+          </tr>
+          <tr>
+            <td><strong>02 Validate</strong></td>
+            <td>Submitted reports</td>
+            <td>Quality review: missing summary/next, weak evidence, bad dates; fix or waive with reason</td>
+            <td>Quality gaps = 0 or all remaining gaps waived</td>
+            <td>Report Quality Review</td>
+          </tr>
+          <tr>
+            <td><strong>03 Review</strong></td>
+            <td>Validated portfolio for the week</td>
+            <td>Manager meeting session: agenda → health scan → capture decisions</td>
+            <td>Agenda items reviewed; open risks acknowledged</td>
+            <td>Management Review (session)</td>
+          </tr>
+          <tr>
+            <td><strong>04 Decide</strong></td>
+            <td>Gate-ready items + evidence packs</td>
+            <td>Approvals / conditions / rejects with rationale; block Approve if role-minimum evidence missing</td>
+            <td>No Critical open decisions without owner + due — or explicitly deferred</td>
+            <td>Product Governance</td>
+          </tr>
+          <tr>
+            <td><strong>05 Communicate</strong></td>
+            <td>Meeting outcomes + owner metrics</td>
+            <td>Send weekly feedback (or defer with reason); record send history</td>
+            <td>Feedback sent to selected owners OR deferred logged</td>
+            <td>Weekly Review</td>
+          </tr>
+          <tr>
+            <td><strong>06 Follow-up</strong></td>
+            <td>Decisions and next actions</td>
+            <td>Every action has owner + due + status; track until closed</td>
+            <td>All new actions assigned; overdue visible on Home</td>
+            <td>Action Items</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Week Close checklist (definition of done)</h3>
+      <p>Home shows this checklist for the selected Global Week. Week is Closed only when all five are true (or waived with reason).</p>
+      <table>
+        <thead><tr><th>#</th><th>Check</th><th>Pass rule</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Reports submitted</td><td>Expected owners in scope have updates for the week</td></tr>
+          <tr><td>2</td><td>Quality clear</td><td>Open quality gaps = 0 or waived</td></tr>
+          <tr><td>3</td><td>Critical decisions closed</td><td>No Critical gate/decision without resolution or deferral</td></tr>
+          <tr><td>4</td><td>Actions assigned</td><td>New actions have owner + due date</td></tr>
+          <tr><td>5</td><td>Feedback handled</td><td>Sent OR deferred with reason recorded</td></tr>
+        </tbody>
+      </table>
+
+      <div class="decide">
+        <label><input type="radio" name="d-process" value="approve"> Approve process</label>
+        <span></span>
+        <label><input type="radio" name="d-process" value="defer"> Defer</label>
+        <span></span>
+        <label><input type="radio" name="d-process" value="reject"> Reject</label>
+        <span class="note">Notes: _______________________________________________</span>
+      </div>
+    </section>
+
+    <section class="card" id="roles">
+      <h2>3. Roles model (must approve separately from UI)</h2>
+
+      <h3>3.1 Two layers — do not mix</h3>
+      <div class="grid2">
+        <div class="box">
+          <strong>Access profile</strong>
+          Who can use which system capabilities (view / create / edit / administer).
+          <ul>
+            <li>Portfolio Viewer</li>
+            <li>Reporting Editor</li>
+            <li>Operations &amp; Access Manager</li>
+          </ul>
+        </div>
+        <div class="box">
+          <strong>Functional responsibility</strong>
+          What delivery work a person owns on a report or governance item.
+          <ul>
+            <li>Product Manager</li>
+            <li>UI/UX</li>
+            <li>Training</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>3.2 Access capability matrix</h3>
+      <table>
+        <thead>
+          <tr><th>Access profile</th><th>Can do</th><th>Cannot do</th><th>Typical functional role</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Portfolio Viewer</strong></td>
+            <td>View Home, Portfolio, Executive, Incidents, Timeline, Governance (read)</td>
+            <td>Create/edit reports; administer users</td>
+            <td>Leadership / stakeholders (C/I)</td>
+          </tr>
+          <tr>
+            <td><strong>Reporting Editor</strong></td>
+            <td>Create/edit weekly updates, timeline, governance items; My Dashboard</td>
+            <td>User admin; weekly feedback blast; full quality ops</td>
+            <td>PM / UI/UX / Training owners (A for own work)</td>
+          </tr>
+          <tr>
+            <td><strong>Ops &amp; Access Manager</strong></td>
+            <td>All editor rights + quality review, meeting run, users, feedback send, logs</td>
+            <td>—</td>
+            <td>Process owner for Week Close (A for cadence)</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="callout">Copy cleanup required: remove remaining “Master admin” / “Role Manager” strings from alerts and journey labels. Public labels above become the only vocabulary.</div>
+
+      <h3>3.3 Functional responsibility → lifecycle</h3>
+      <table>
+        <thead><tr><th>Functional role</th><th>Lifecycle path</th><th>Intake field pack (proposed)</th><th>Evidence pack focus</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Product Manager</strong></td>
+            <td>Discover → … → Release / Learn</td>
+            <td>Dates, MSP/backlog language, delivery health (current core)</td>
+            <td>Baseline / gap / readiness / TO-BE artifacts</td>
+          </tr>
+          <tr>
+            <td><strong>UI/UX</strong></td>
+            <td>Discover/Research → … → Handoff → Release / Learn</td>
+            <td>Artifact link, design review status, handoff readiness</td>
+            <td>Research, Figma, prototype, review sign-off, handoff package</td>
+          </tr>
+          <tr>
+            <td><strong>Training</strong></td>
+            <td>Prepare → Deliver → Adopt → Handoff / Support</td>
+            <td>Audience, session date, completion %, support handoff</td>
+            <td>Needs assessment, plan, materials, sessions, adoption metrics</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>3.4 Weekly RACI (proposed)</h3>
+      <table>
+        <thead><tr><th>Stage</th><th>Accountable</th><th>Responsible</th><th>Consulted</th><th>Informed</th></tr></thead>
+        <tbody>
+          <tr><td>Prepare</td><td>Report owner</td><td>Reporting Editor</td><td>Ops Manager</td><td>Portfolio Viewer</td></tr>
+          <tr><td>Validate</td><td>Ops Manager</td><td>Report owner (fixes)</td><td>Approver</td><td>Viewer</td></tr>
+          <tr><td>Review (meeting)</td><td>Ops Manager</td><td>Editors + Approver</td><td>CEO/CTO viewer</td><td>—</td></tr>
+          <tr><td>Decide (gate)</td><td>Approver</td><td>Functional owner</td><td>Ops Manager</td><td>Viewer</td></tr>
+          <tr><td>Communicate</td><td>Ops Manager</td><td>Editors</td><td>Approver</td><td>Owners</td></tr>
+          <tr><td>Follow-up</td><td>Action owner</td><td>Report owner</td><td>Ops Manager</td><td>Viewer</td></tr>
+        </tbody>
+      </table>
+
+      <div class="decide">
+        <label><input type="radio" name="d-roles" value="approve"> Approve roles + RACI</label>
+        <span></span>
+        <label><input type="radio" name="d-roles" value="defer"> Defer</label>
+        <span></span>
+        <label><input type="radio" name="d-roles" value="reject"> Reject</label>
+        <span class="note">Notes: _______________________________________________</span>
+      </div>
+    </section>
+
+    <section class="card" id="glossary">
+      <h2>4. Frozen glossary (language consistency)</h2>
+      <p>Approve these terms for UI, manuals, and training. One sweep of strings after approval.</p>
+      <table>
+        <thead><tr><th>Term</th><th>Meaning</th><th>Do not say</th></tr></thead>
+        <tbody>
+          <tr><td>Product</td><td>Named product in the portfolio</td><td>Project (unless true project entity)</td></tr>
+          <tr><td>Workstream / Feature</td><td>Unit of weekly status under a product</td><td>Mixed “item / ticket” without context</td></tr>
+          <tr><td>Owner</td><td>Accountable person on the report</td><td>Assignee only (use Action owner for tasks)</td></tr>
+          <tr><td>Access profile</td><td>System permission set</td><td>Master / Role Manager</td></tr>
+          <tr><td>Functional responsibility</td><td>PM / UI/UX / Training on the work</td><td>“Role” alone when ambiguous</td></tr>
+          <tr><td>Lifecycle phase</td><td>Stage on the role-specific path</td><td>Stage alone when meaning lifecycle</td></tr>
+          <tr><td>Gate</td><td>Governance approval state</td><td>Status (overloaded)</td></tr>
+          <tr><td>Evidence</td><td>Proof artifact + reference</td><td>Attachment without validation status</td></tr>
+          <tr><td>Week Close</td><td>Definition of done for the reporting week</td><td>“Done” without checklist</td></tr>
+        </tbody>
+      </table>
+      <div class="decide">
+        <label><input type="radio" name="d-glossary" value="approve"> Approve glossary</label>
+        <span></span>
+        <label><input type="radio" name="d-glossary" value="defer"> Defer</label>
+        <span></span>
+        <label><input type="radio" name="d-glossary" value="reject"> Reject</label>
+        <span class="note">Notes: _______________________________________________</span>
+      </div>
+    </section>
+
+    <p class="section-label">Part C — Visuals</p>
+
+    <section class="card" id="mockups">
+      <h2>5. Mockups (visual approval)</h2>
+      <div class="mock-link">
+        Full interactive mock:
+        <a href="preview-workflow-uiux-revision.html" target="_blank" rel="noopener">preview-workflow-uiux-revision.html</a>
+        — open beside this pack while deciding UI/UX items.
+      </div>
+
+      <div class="grid2">
+        <div class="box">
+          <strong>Mock A — Home + Week Close</strong>
+          Global Week chips, sync status, 5-item Week Close checklist, journey rows Done / Blocked / Next.
+          <ul>
+            <li>Maps to backlog P0-01, P0-03</li>
+            <li>Sprint A</li>
+          </ul>
+        </div>
+        <div class="box">
+          <strong>Mock B — Role-specific intake</strong>
+          Same 4-step wizard; after functional role, UI/UX or Training field pack appears.
+          <ul>
+            <li>Maps to backlog P0-04</li>
+            <li>Sprint A</li>
+          </ul>
+        </div>
+        <div class="box">
+          <strong>Mock C — Meeting session</strong>
+          Strip with step completion; agenda list with inline decision owner + due.
+          <ul>
+            <li>Maps to backlog P1-03</li>
+            <li>Sprint B</li>
+          </ul>
+        </div>
+        <div class="box">
+          <strong>Mock D — Evidence readiness + gated Approve</strong>
+          Readiness bar, required artifacts, Approve disabled until minimum evidence met.
+          <ul>
+            <li>Maps to backlog P0-05, P1-01</li>
+            <li>Sprint A + B</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="decide">
+        <label><input type="radio" name="d-mockups" value="approve"> Approve mockups as design intent</label>
+        <span></span>
+        <label><input type="radio" name="d-mockups" value="defer"> Defer (request redesign)</label>
+        <span></span>
+        <label><input type="radio" name="d-mockups" value="reject"> Reject mockups</label>
+        <span class="note">Notes: _______________________________________________</span>
+      </div>
+    </section>
+
+    <p class="section-label">Part D — Everything that must be done</p>
+
+    <section class="card" id="backlog">
+      <h2>6. Full backlog (beginning → end)</h2>
+      <p>Master list for implementation after approval. Each row is a discrete change. Mark decision per row.</p>
+
+      <h3>P0 — Foundation (must for operating model)</h3>
+      <table class="checklist-master">
+        <thead>
+          <tr><th>ID</th><th>Domain</th><th>Change</th><th>Acceptance criteria</th><th>Mock</th><th>Decision</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>P0-01</td>
+            <td>Process</td>
+            <td>Week Close checklist on Home; persist week_status per Monday</td>
+            <td>5 checks visible; week can be Closed only when all pass or waived with reason</td>
+            <td>A</td>
+            <td>☐ Approve ☐ Defer ☐ Reject</td>
+          </tr>
+          <tr>
+            <td>P0-02</td>
+            <td>Roles</td>
+            <td>Access vs functional matrix published; purge Master/Role Manager copy</td>
+            <td>No Master/Role Manager in user-facing strings; help text matches matrix</td>
+            <td>—</td>
+            <td>☐ Approve ☐ Defer ☐ Reject</td>
+          </tr>
+          <tr>
+            <td>P0-03</td>
+            <td>UI/UX</td>
+            <td>Bind Home journey + focus to Global Week; “latest week with data” when All</td>
+            <td>Changing Global Week updates journey metrics; All shows chip + week switcher</td>
+            <td>A</td>
+            <td>☐ Approve ☐ Defer ☐ Reject</td>
+          </tr>
+          <tr>
+            <td>P0-04</td>
+            <td>UI/UX</td>
+            <td>Role-specific intake field packs after role select</td>
+            <td>UI/UX pack and Training pack render; shared core fields remain; validation role-aware</td>
+            <td>B</td>
+            <td>☐ Approve ☐ Defer ☐ Reject</td>
+          </tr>
+          <tr>
+            <td>P0-05</td>
+            <td>Process</td>
+            <td>Evidence gate: cannot set Gate = Approved without role-minimum evidence</td>
+            <td>UI blocks Approve; clear message lists missing required artifacts; Home Decide shows gaps</td>
+            <td>D</td>
+            <td>☐ Approve ☐ Defer ☐ Reject</td>
+          </tr>
+          <tr>
+            <td>P0-06</td>
+            <td>Ops</td>
+            <td>Apply Training + artifact-type Supabase migrations</td>
+            <td>Can save Training report + UI/UX/Training checklist items to cloud without constraint errors</td>
+            <td>—</td>
+            <td>☐ Approve ☐ Defer ☐ Reject</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>P1 — Operating UX</h3>
+      <table class="checklist-master">
+        <thead>
+          <tr><th>ID</th><th>Domain</th><th>Change</th><th>Acceptance criteria</th><th>Mock</th><th>Decision</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>P1-01</td>
+            <td>UI/UX</td>
+            <td>Governance readiness bar + required/optional + optional link per artifact</td>
+            <td>Shows X/Y required for role; links saveable; deep-link from item → product/role</td>
+            <td>D</td>
+            <td>☐ Approve ☐ Defer ☐ Reject</td>
+          </tr>
+          <tr>
+            <td>P1-02</td>
+            <td>UI/UX</td>
+            <td>Global “scope applied” chips; local filters only for page-specific attrs</td>
+            <td>Chips visible under global bar; local Role/Product no longer fight global scope</td>
+            <td>—</td>
+            <td>☐ Approve ☐ Defer ☐ Reject</td>
+          </tr>
+          <tr>
+            <td>P1-03</td>
+            <td>UI/UX</td>
+            <td>Meeting session: agenda → decisions → actions → send with session progress</td>
+            <td>Strip shows completion; decisions create owner+due without leaving session</td>
+            <td>C</td>
+            <td>☐ Approve ☐ Defer ☐ Reject</td>
+          </tr>
+          <tr>
+            <td>P1-04</td>
+            <td>UI/UX</td>
+            <td>Portfolio vs Executive vs Incidents information hierarchy</td>
+            <td>Executive = top 5 + decision queue; Incidents = Schedule | Blockers columns</td>
+            <td>—</td>
+            <td>☐ Approve ☐ Defer ☐ Reject</td>
+          </tr>
+          <tr>
+            <td>P1-05</td>
+            <td>UI/UX</td>
+            <td>Collapse Admin destinations into Administration hub</td>
+            <td>Ops Manager sidebar shorter; all admin tools reachable from one hub</td>
+            <td>—</td>
+            <td>☐ Approve ☐ Defer ☐ Reject</td>
+          </tr>
+          <tr>
+            <td>P1-06</td>
+            <td>Roles</td>
+            <td>Reflect RACI labels on Home journey stages</td>
+            <td>Responsible/Accountable labels match approved RACI (no Role Manager wording)</td>
+            <td>A</td>
+            <td>☐ Approve ☐ Defer ☐ Reject</td>
+          </tr>
+          <tr>
+            <td>P1-07</td>
+            <td>Process</td>
+            <td>Stable person_id for owners / participants / action_owner</td>
+            <td>Directory-only new owners; unresolved identity count on Report Quality</td>
+            <td>—</td>
+            <td>☐ Approve ☐ Defer ☐ Reject</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>P2 — Polish</h3>
+      <table class="checklist-master">
+        <thead>
+          <tr><th>ID</th><th>Domain</th><th>Change</th><th>Acceptance criteria</th><th>Mock</th><th>Decision</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>P2-01</td>
+            <td>UI/UX</td>
+            <td>Mobile primary nav Home · My work · Portfolio · More; replace alert() with banners</td>
+            <td>Core flows usable on phone; permission denials are inline</td>
+            <td>—</td>
+            <td>☐ Approve ☐ Defer ☐ Reject</td>
+          </tr>
+          <tr>
+            <td>P2-02</td>
+            <td>Process</td>
+            <td>Optional Validation signals (test status / environment) — no QA role</td>
+            <td>Blocked test status surfaces on Incidents/Executive only when Blocked</td>
+            <td>—</td>
+            <td>☐ Approve ☐ Defer ☐ Reject</td>
+          </tr>
+          <tr>
+            <td>P2-03</td>
+            <td>UI/UX</td>
+            <td>Glossary string sweep across UI + manuals</td>
+            <td>Approved glossary terms used consistently</td>
+            <td>—</td>
+            <td>☐ Approve ☐ Defer ☐ Reject</td>
+          </tr>
+          <tr>
+            <td>P2-04</td>
+            <td>Roles</td>
+            <td>Legacy System Analyst → analytics map to PM + legacy chip</td>
+            <td>No new SA intake; old rows readable with legacy chip</td>
+            <td>—</td>
+            <td>☐ Approve ☐ Defer ☐ Reject</td>
+          </tr>
+          <tr>
+            <td>P2-05</td>
+            <td>Ops</td>
+            <td>Direct weekly feedback email delivery (Resend/SendGrid)</td>
+            <td>Owner emails succeed or clear actionable error; manager workaround documented</td>
+            <td>—</td>
+            <td>☐ Approve ☐ Defer ☐ Reject</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="decide">
+        <label><input type="radio" name="d-backlog-bulk" value="approve-p0"> Approve all P0</label>
+        <span></span>
+        <label><input type="radio" name="d-backlog-bulk" value="approve-p0p1"> Approve P0 + P1</label>
+        <span></span>
+        <label><input type="radio" name="d-backlog-bulk" value="custom"> Custom (use row marks)</label>
+        <span class="note">Bulk shortcut only — row marks remain source of truth if Custom.</span>
+      </div>
+    </section>
+
+    <section class="card" id="sprints">
+      <h2>7. Delivery sequence (recommended)</h2>
+      <div class="grid3">
+        <div class="box">
+          <strong>Sprint A — P0 foundation</strong>
+          <ul>
+            <li>P0-01 Week Close</li>
+            <li>P0-02 Access/functional copy</li>
+            <li>P0-03 Home ↔ Global Week</li>
+            <li>P0-04 Role intake packs</li>
+            <li>P0-05 Evidence gate</li>
+            <li>P0-06 DB migrations</li>
+          </ul>
+        </div>
+        <div class="box">
+          <strong>Sprint B — P1 operating UX</strong>
+          <ul>
+            <li>P1-01 Readiness bar + links</li>
+            <li>P1-02 Scope chips</li>
+            <li>P1-03 Meeting session</li>
+            <li>P1-04 View hierarchy</li>
+            <li>P1-05 Admin hub</li>
+            <li>P1-06 RACI labels</li>
+            <li>P1-07 Person IDs (start)</li>
+          </ul>
+        </div>
+        <div class="box">
+          <strong>Sprint C — P2 polish</strong>
+          <ul>
+            <li>P2-01 Mobile + banners</li>
+            <li>P2-02 Validation signals</li>
+            <li>P2-03 Glossary sweep</li>
+            <li>P2-04 SA legacy mapping</li>
+            <li>P2-05 Email delivery</li>
+            <li>P1-07 Person IDs (finish)</li>
+          </ul>
+        </div>
+      </div>
+      <div class="decide">
+        <label><input type="radio" name="d-sprints" value="abc"> Approve sequence A → B → C</label>
+        <span></span>
+        <label><input type="radio" name="d-sprints" value="a-only"> Approve Sprint A only for now</label>
+        <span></span>
+        <label><input type="radio" name="d-sprints" value="custom"> Custom sequence</label>
+        <span class="note">Notes: _______________________________________________</span>
+      </div>
+    </section>
+
+    <section class="card" id="out">
+      <h2>8. Explicitly out of scope (recommend Reject)</h2>
+      <div class="callout danger">
+        Do <strong>not</strong> approve these unless leadership reopens the taxonomy discussion.
+      </div>
+      <table>
+        <thead><tr><th>Item</th><th>Why excluded</th><th>Decision</th></tr></thead>
+        <tbody>
+          <tr><td>New QA functional role</td><td>Previously declined; use Validation signals (P2-02) instead</td><td>☐ Reject ☐ Reopen later</td></tr>
+          <tr><td>Fourth access profile</td><td>Three profiles cover view / edit / administer</td><td>☐ Reject ☐ Reopen later</td></tr>
+          <tr><td>New System Analyst intake</td><td>Legacy-only; map analytics to PM (P2-04)</td><td>☐ Reject ☐ Reopen later</td></tr>
+          <tr><td>Greenfield rebuild of dashboard</td><td>Skeleton is correct; improve operating model instead</td><td>☐ Reject ☐ Reopen later</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card" id="ops">
+      <h2>9. Prerequisites &amp; dependencies</h2>
+      <table>
+        <thead><tr><th>Dependency</th><th>Needed for</th><th>Owner</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Run <code>20260821150000_training_lifecycle.sql</code></td><td>P0-04 / P0-06 Training saves</td><td>Ops / Daniela</td><td>☐ Done ☐ Pending</td></tr>
+          <tr><td>Run <code>20260824150000_governance_artifact_types.sql</code></td><td>P0-05 / P1-01 artifact saves</td><td>Ops / Daniela</td><td>☐ Done ☐ Pending</td></tr>
+          <tr><td>Script <code>scripts/apply-pending-migrations.ps1</code></td><td>Clipboard + SQL Editor helper</td><td>Implementer</td><td>Ready in repo</td></tr>
+          <tr><td>Resend domain or SendGrid credits</td><td>P2-05 direct owner email</td><td>Ops</td><td>☐ Ready ☐ Blocked</td></tr>
+          <tr><td>Mockups approved (section 5)</td><td>UI build for A/B</td><td>Approver</td><td>☐ Approved</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="approve-box" id="signoff">
+      <h2>10. Overall sign-off</h2>
+      <p>Complete after sections 2–8. This authorizes implementation of approved items only.</p>
+      <div class="callout ok">
+        <strong>Recommended decision for first build:</strong> Approve Process + Roles + Glossary + Mockups + all P0 (Sprint A). Defer P1/P2 row-by-row after Sprint A demo.
+      </div>
+      <table>
+        <thead><tr><th>Area</th><th>Outcome</th></tr></thead>
+        <tbody>
+          <tr><td>Process (Week Close + stages)</td><td>☐ Approved ☐ Deferred ☐ Rejected</td></tr>
+          <tr><td>Roles + RACI</td><td>☐ Approved ☐ Deferred ☐ Rejected</td></tr>
+          <tr><td>Glossary</td><td>☐ Approved ☐ Deferred ☐ Rejected</td></tr>
+          <tr><td>Mockups as design intent</td><td>☐ Approved ☐ Deferred ☐ Rejected</td></tr>
+          <tr><td>Backlog P0 (Sprint A)</td><td>☐ Approved ☐ Deferred ☐ Rejected</td></tr>
+          <tr><td>Backlog P1 (Sprint B)</td><td>☐ Approved ☐ Deferred ☐ Rejected</td></tr>
+          <tr><td>Backlog P2 (Sprint C)</td><td>☐ Approved ☐ Deferred ☐ Rejected</td></tr>
+        </tbody>
+      </table>
+      <div class="sign">
+        <div class="field"><strong>Prepared by</strong>Name / date</div>
+        <div class="field"><strong>Process / Roles approved by</strong>Name / date</div>
+        <div class="field"><strong>UI/UX approved by</strong>Name / date</div>
+      </div>
+      <p style="margin-top:14px;font-size:13px;color:var(--muted)">After sign-off: implement only Approved IDs; keep this HTML as the decision record; update Status line at top to “Approved — Sprint A in progress”.</p>
+    </section>
+
+    <p class="footer">Omena Consulting · Portfolio status dashboard · Proposal pack 2026-10-16 · Companion mockups: preview-workflow-uiux-revision.html</p>
+  </div>
+</body>
+</html>

@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Omena Consulting · After implementation (Factory-aligned)</title>
+  <style>
+    :root {
+      --ink: #13202e; --muted: #657386; --line: #d8e0e8; --line-strong: #c4ced9;
+      --canvas: #f4f6f8; --soft: #f0f4f7; --sidebar: #0f1b2a; --sidebar-soft: #16263a;
+      --accent: #2f6f8f; --accent-strong: #1f5874; --green: #287a55; --green-soft: #e6f4ed;
+      --amber: #b7791f; --amber-soft: #fff4d8; --red: #a21b3f; --red-soft: #fae8ee;
+      --blue-soft: #e7f1f6; --shadow: 0 18px 45px rgba(15,27,42,.10); --shadow-soft: 0 10px 26px rgba(15,27,42,.07);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Segoe UI", Arial, sans-serif; color: var(--ink);
+      background: linear-gradient(rgba(214,225,235,.45) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(214,225,235,.45) 1px, transparent 1px), #edf3f8;
+      background-size: 24px 24px;
+    }
+    .shell { max-width: 1180px; margin: 0 auto; padding: 28px 16px 72px; }
+    .hero, .section-card {
+      background: rgba(255,255,255,.96); border: 1px solid var(--line);
+      border-radius: 22px; box-shadow: var(--shadow);
+    }
+    .hero { padding: 28px 30px; margin-bottom: 18px; }
+    .eyebrow {
+      display: inline-flex; padding: 7px 12px; border-radius: 999px; background: #e8f4fa;
+      color: var(--accent-strong); font-weight: 800; font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+    }
+    h1 { font-size: clamp(26px, 4vw, 38px); line-height: 1.08; margin: 16px 0 10px; }
+    h2 { font-size: 20px; margin: 0 0 8px; }
+    p { color: var(--muted); line-height: 1.55; margin: 0 0 10px; }
+    .lede { font-size: 17px; color: var(--ink); }
+    .preview-banner {
+      margin-top: 14px; padding: 12px 14px; border-radius: 14px; background: var(--green-soft);
+      border: 1px solid #9dceb5; color: #1f5c3a; font-size: 13px; font-weight: 700;
+    }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    .btn {
+      display: inline-flex; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line);
+      background: white; color: var(--ink); text-decoration: none; font-weight: 700; font-size: 13px;
+    }
+    .btn.primary { background: var(--accent-strong); border-color: var(--accent-strong); color: white; }
+    .toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
+    .toc a {
+      text-decoration: none; font-size: 12px; font-weight: 800; padding: 7px 11px; border-radius: 999px;
+      border: 1px solid var(--line); background: white; color: var(--accent-strong);
+    }
+    .section-card { padding: 22px; margin-bottom: 18px; }
+    .section-card.blue { border-top: 5px solid var(--accent-strong); }
+    .section-card.green { border-top: 5px solid var(--green); }
+    .section-card.amber { border-top: 5px solid var(--amber); }
+    .section-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+    .pill {
+      display: inline-flex; padding: 5px 10px; border-radius: 999px; font-weight: 800; font-size: 11px;
+      background: #dff0f8; color: var(--accent-strong); margin: 0 4px 4px 0;
+    }
+    .pill.green { background: var(--green-soft); color: var(--green); }
+    .note-inline { font-size: 13px; color: var(--muted); margin: 0; }
+    .ui-frame {
+      border: 1px solid var(--line-strong); border-radius: 16px; overflow: hidden;
+      background: var(--canvas); box-shadow: var(--shadow-soft);
+    }
+    .ui-chrome {
+      display: flex; align-items: center; gap: 6px; padding: 8px 12px;
+      background: #e8eef3; border-bottom: 1px solid var(--line);
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #c4ced9; }
+    .ui-chrome span { font-size: 11px; color: var(--muted); font-weight: 600; margin-left: 6px; }
+    .ui-app { display: grid; grid-template-columns: 128px 1fr; min-height: 360px; }
+    .ui-side {
+      background: linear-gradient(180deg, var(--sidebar), var(--sidebar-soft));
+      color: #e8eef5; padding: 14px 10px; font-size: 11px;
+    }
+    .ui-brand { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-weight: 800; font-size: 12px; }
+    .ui-mark {
+      width: 22px; height: 22px; border-radius: 6px; background: linear-gradient(135deg, #0b1220, #2f6f8f);
+      display: grid; place-items: center; font-size: 9px; color: white;
+    }
+    .ui-nav { display: grid; gap: 4px; }
+    .ui-nav div { padding: 6px 8px; border-radius: 8px; color: rgba(255,255,255,.62); font-weight: 600; }
+    .ui-nav .active { background: rgba(255,255,255,.12); color: white; }
+    .ui-nav .group { margin-top: 8px; padding: 4px 8px; font-size: 9px; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.4); }
+    .ui-main { padding: 14px; background: var(--canvas); }
+    .ui-kicker { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--accent-strong); margin-bottom: 4px; }
+    .ui-main h4 { margin: 0 0 4px; font-size: 16px; }
+    .ui-sub { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
+    .scope-bar {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 10px;
+      background: white; border: 1px solid var(--line); margin-bottom: 10px; font-size: 11px; font-weight: 700;
+    }
+    .chip {
+      display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 999px;
+      font-size: 11px; font-weight: 700; background: var(--blue-soft); color: var(--accent-strong);
+    }
+    .chip.green { background: var(--green-soft); color: var(--green); }
+    .chip.amber { background: var(--amber-soft); color: #8a5a0a; }
+    .chip.red { background: var(--red-soft); color: var(--red); }
+    .chip.gray { background: var(--soft); color: var(--muted); }
+    .two { display: grid; grid-template-columns: 1.1fr .9fr; gap: 10px; }
+    .panel { background: white; border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+    .panel h5 { margin: 0 0 8px; font-size: 13px; }
+    .weeks { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin-bottom: 10px; }
+    .week {
+      background: var(--soft); border: 1px solid var(--line); border-radius: 8px; padding: 7px 5px;
+      text-align: center; font-size: 10px; font-weight: 700;
+    }
+    .week strong { display: block; font-size: 11px; margin-bottom: 2px; }
+    .week.done { background: var(--green-soft); border-color: #9dceb5; color: var(--green); }
+    .week.gate { outline: 2px solid rgba(47,111,143,.35); background: var(--blue-soft); color: var(--accent-strong); }
+    .week.now { background: var(--amber-soft); border-color: #e6c985; color: #8a5a0a; }
+    .check-row {
+      display: grid; grid-template-columns: 16px 1fr auto; gap: 8px; align-items: start;
+      padding: 6px 0; border-top: 1px solid var(--soft); font-size: 12px;
+    }
+    .check-row:first-of-type { border-top: 0; }
+    .check-box {
+      width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid var(--line-strong);
+      margin-top: 2px; background: white;
+    }
+    .check-box.on { background: var(--green); border-color: var(--green); }
+    .check-box.warn { background: var(--amber); border-color: var(--amber); }
+    .owners {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;
+    }
+    .owner-card {
+      border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--soft); font-size: 12px;
+    }
+    .owner-card.active { background: var(--blue-soft); border-color: #b7d3e2; }
+    .owner-card strong { display: block; font-size: 12px; margin-bottom: 4px; }
+    .owner-card small { color: var(--muted); }
+    .kit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .kit {
+      border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: white; font-size: 11px;
+    }
+    .kit strong { display: block; margin-bottom: 4px; font-size: 12px; }
+    .kit.ok { background: var(--green-soft); border-color: #9dceb5; }
+    .kit.warn { background: var(--amber-soft); border-color: #e6c985; }
+    .journey { display: grid; gap: 6px; }
+    .journey-row {
+      display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; align-items: center;
+      background: white; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: 12px;
+    }
+    .journey-row .num {
+      width: 24px; height: 24px; border-radius: 8px; display: grid; place-items: center;
+      background: var(--soft); font-weight: 800; font-size: 11px;
+    }
+    .journey-row.done .num { background: var(--green-soft); color: var(--green); }
+    .callout {
+      margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--soft);
+      border: 1px solid var(--line); font-size: 13px; line-height: 1.5; color: var(--ink);
+    }
+    .frames { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field label {
+      display: block; font-size: 10px; font-weight: 800; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px;
+    }
+    .control {
+      display: flex; align-items: center; justify-content: space-between; padding: 8px 10px;
+      border-radius: 10px; border: 1px solid var(--line); background: #f8fafc; font-size: 12px; font-weight: 700;
+    }
+    .control.open { border-color: var(--accent); background: white; box-shadow: 0 0 0 3px rgba(47,111,143,.12); }
+    .footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 8px; }
+    @media (max-width: 900px) {
+      .ui-app, .two, .owners, .kit-grid, .weeks, .form-grid { grid-template-columns: 1fr; }
+      .ui-side { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="hero">
+      <span class="eyebrow">Same app · after factory alignment</span>
+      <h1>How it looks after implementation</h1>
+      <p class="lede">One dashboard, two layers: weekly operating rhythm (already there) + AI Product Factory cycle (Live PM → 6 weeks → Support PM handover).</p>
+      <div class="preview-banner">Concept of the finished state · not live yet · illustrative sample data</div>
+      <div class="actions">
+        <a class="btn primary" href="proposal-workflow-roles-uiux-approval.html">Open approval pack</a>
+        <a class="btn" href="preview-workflow-uiux-revision.html">Earlier Sprint A–B mock</a>
+        <a class="btn" href="index.html">Live dashboard today</a>
+      </div>
+      <nav class="toc">
+        <a href="#home">1. Home</a>
+        <a href="#factory">2. Factory cycle</a>
+        <a href="#handover">3. Handover</a>
+        <a href="#roles">4. Roles in forms</a>
+      </nav>
+    </header>
+
+    <section class="section-card blue" id="home">
+      <div class="section-head">
+        <div>
+          <h2>1. Home — weekly close + factory status in one place</h2>
+          <p class="note-inline">Reporting week stays the operating rhythm. Factory products in flight show cycle week and owner (Live vs Support).</p>
+        </div>
+        <span class="pill">After build</span>
+      </div>
+      <div class="ui-frame">
+        <div class="ui-chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span>This Week · Weekly operating cockpit</span></div>
+        <div class="ui-app">
+          <aside class="ui-side">
+            <div class="ui-brand"><div class="ui-mark">OC</div>Omena</div>
+            <div class="ui-nav">
+              <div class="active">This Week</div>
+              <div>My Dashboard</div>
+              <div class="group">Portfolio</div>
+              <div>Portfolio</div>
+              <div>Factory cycles</div>
+              <div>Governance</div>
+              <div class="group">Admin</div>
+              <div>Administration</div>
+            </div>
+          </aside>
+          <div class="ui-main">
+            <div class="scope-bar">
+              <span class="chip">Reporting week: 17 Aug</span>
+              <span class="chip gray">All products</span>
+              <span class="chip green">Synced · 189 reports</span>
+            </div>
+            <div class="two">
+              <div class="panel">
+                <h5>Week Close · reporting week</h5>
+                <div class="check-row"><span class="check-box on"></span><span>Reports submitted</span><span class="chip green">42/42</span></div>
+                <div class="check-row"><span class="check-box on"></span><span>Quality clear</span><span class="chip green">0 gaps</span></div>
+                <div class="check-row"><span class="check-box warn"></span><span>Critical decisions</span><span class="chip amber">1 open</span></div>
+                <div class="check-row"><span class="check-box"></span><span>Actions assigned</span><span class="chip gray">Pending</span></div>
+                <div class="check-row"><span class="check-box"></span><span>Feedback sent / deferred</span><span class="chip gray">Not sent</span></div>
+              </div>
+              <div class="panel">
+                <h5>Factory in flight</h5>
+                <div class="check-row"><span class="check-box"></span><span><strong>Checkout Hub</strong><br><small>Live PM · Week 5 · Gate due</small></span><span class="chip amber">Validate</span></div>
+                <div class="check-row"><span class="check-box on"></span><span><strong>SPLM</strong><br><small>Support PM · Live ops</small></span><span class="chip green">Released</span></div>
+                <div class="check-row"><span class="check-box"></span><span><strong>LMS LearnForge</strong><br><small>Live PM · Week 2 · MSP</small></span><span class="chip">Assess</span></div>
+              </div>
+            </div>
+            <div class="journey" style="margin-top:10px">
+              <div class="journey-row done"><span class="num">01</span><span><strong>Prepare</strong><small> Report owners · Done</small></span><span class="chip green">Done</span></div>
+              <div class="journey-row done"><span class="num">05</span><span><strong>Factory gate</strong><small> Checkout Hub Week 5 evidence</small></span><span class="chip amber">Due</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="callout"><strong>After:</strong> Opening Home answers both “is this reporting week closed?” and “which factory products need a gate or handover?”</div>
+    </section>
+
+    <section class="section-card green" id="factory">
+      <div class="section-head">
+        <div>
+          <h2>2. Factory cycle — six weeks after V0</h2>
+          <p class="note-inline">Matches the Quick Handbook: clock starts at formal V0 handover; gates at end of Weeks 1, 3, 5, 6.</p>
+        </div>
+        <span class="pill green">Aligned to handbook</span>
+      </div>
+      <div class="ui-frame">
+        <div class="ui-chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span>Factory cycles · Checkout Hub</span></div>
+        <div class="ui-main">
+          <div class="owners">
+            <div class="owner-card active">
+              <strong>Live PM (Builder) · Reza</strong>
+              <small>Accountable through release + handover. Owns Weeks 1–6 delivery.</small>
+            </div>
+            <div class="owner-card">
+              <strong>Support PM · Daniela</strong>
+              <small>Receiving owner. Accepts handover; then owns portfolio, support, training, sustaining.</small>
+            </div>
+          </div>
+          <div class="weeks">
+            <div class="week done"><strong>W1</strong>Discover / baseline<span class="chip green" style="margin-top:4px">Gate</span></div>
+            <div class="week done"><strong>W2</strong>Assess / MSP</div>
+            <div class="week done"><strong>W3</strong>TO-BE / backlog<span class="chip green" style="margin-top:4px">Gate</span></div>
+            <div class="week done"><strong>W4</strong>Implement</div>
+            <div class="week now gate"><strong>W5</strong>Validate / enablement<span class="chip amber" style="margin-top:4px">Gate now</span></div>
+            <div class="week"><strong>W6</strong>Release / handover<span class="chip gray" style="margin-top:4px">Gate</span></div>
+          </div>
+          <div class="panel">
+            <h5>Week 5 gate evidence (required)</h5>
+            <div class="check-row"><span class="check-box on"></span><span>QA / regression evidence</span><span class="chip green">Validated</span></div>
+            <div class="check-row"><span class="check-box warn"></span><span>Support PM rehearsal / reverse demo ready</span><span class="chip amber">Partial</span></div>
+            <div class="check-row"><span class="check-box"></span><span>Limitations &amp; release decisions documented</span><span class="chip gray">Missing</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="callout"><strong>After:</strong> Product page shows factory progress like a delivery runway — not only weekly status cards.</div>
+    </section>
+
+    <section class="section-card amber" id="handover">
+      <div class="section-head">
+        <div>
+          <h2>3. Release handover — Support PM acceptance</h2>
+          <p class="note-inline">Ownership transfers only after acceptance. Live PM then moves to the next project.</p>
+        </div>
+        <span class="pill">Handbook kits</span>
+      </div>
+      <div class="ui-frame">
+        <div class="ui-chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span>Handover · Checkout Hub · Week 6</span></div>
+        <div class="ui-main">
+          <div class="kit-grid">
+            <div class="kit ok">
+              <strong>Launch Kit</strong>
+              Use cases · approved demo · FAQ · limitations
+              <div style="margin-top:6px"><span class="chip green">Complete</span></div>
+            </div>
+            <div class="kit warn">
+              <strong>Run Kit</strong>
+              Ops instructions · rollback · monitoring · escalation
+              <div style="margin-top:6px"><span class="chip amber">1 missing</span></div>
+            </div>
+            <div class="kit">
+              <strong>Live Product Kit</strong>
+              Guides · release notes · known issues · backlog
+              <div style="margin-top:6px"><span class="chip gray">In progress</span></div>
+            </div>
+          </div>
+          <div class="panel" style="margin-top:10px">
+            <h5>Acceptance checklist (Support PM)</h5>
+            <div class="check-row"><span class="check-box on"></span><span>QA and regression meet release criteria</span><span class="chip green">OK</span></div>
+            <div class="check-row"><span class="check-box on"></span><span>Support PM ran reverse demo independently</span><span class="chip green">OK</span></div>
+            <div class="check-row"><span class="check-box warn"></span><span>All three kits transferred + access works</span><span class="chip amber">Blocked</span></div>
+            <div class="check-row"><span class="check-box"></span><span>Accepting Support PM + effective date recorded</span><span class="chip gray">Waiting</span></div>
+            <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+              <span class="btn" style="opacity:.45">Accept handover (disabled)</span>
+              <span class="btn primary">Open Run Kit gaps</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="callout"><strong>After:</strong> “Approve release” is not a free click — Support PM acceptance + kits gate the ownership transfer (as in the PPT).</div>
+    </section>
+
+    <section class="section-card blue" id="roles">
+      <div class="section-head">
+        <div>
+          <h2>4. Forms — roles match the handbook</h2>
+          <p class="note-inline">Access profiles stay Viewer / Editor / Ops Manager. Functional ownership uses Live PM and Support PM.</p>
+        </div>
+        <span class="pill green">Roles fixed</span>
+      </div>
+      <div class="frames">
+        <div class="ui-frame">
+          <div class="ui-chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span>Weekly update · Functional ownership</span></div>
+          <div class="ui-main">
+            <div class="form-grid">
+              <div class="field">
+                <label>Access profile (you)</label>
+                <div class="control">Reporting Editor</div>
+              </div>
+              <div class="field">
+                <label>Functional responsibility</label>
+                <div class="control open">Live PM (Builder) <span>▾</span></div>
+              </div>
+              <div class="field">
+                <label>Product ownership stage</label>
+                <div class="control">In delivery (pre-handover)</div>
+              </div>
+              <div class="field">
+                <label>Contributing discipline (optional)</label>
+                <div class="control">UI/UX <span>▾</span></div>
+              </div>
+            </div>
+            <div class="panel" style="margin-top:12px">
+              <h5>Dropdown options after implementation</h5>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+                <span class="chip">Live PM (Builder)</span>
+                <span class="chip green">Support PM</span>
+                <span class="chip gray">UI/UX (contributor)</span>
+                <span class="chip gray">Training work → Support PM owned</span>
+              </div>
+              <p class="ui-sub" style="margin-top:10px;margin-bottom:0">Training is no longer a peer owner role. Enablement sits under Support PM after release, matching the handbook.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="callout"><strong>Bottom line:</strong> Same application shell, clearer ownership. Weekly status continues; factory cycle + handover become first-class screens — not a second product.</div>
+    </section>
+
+    <p class="footer">Post-implementation concept · aligned to AI Product Factory Quick Handbook v1.1 + Operating Model deck · 9 Oct 2026</p>
+  </div>
+</body>
+</html>

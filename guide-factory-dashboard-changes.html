@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Omena Consulting · Team guide — upcoming dashboard changes</title>
+  <style>
+    :root {
+      --ink: #12202f;
+      --muted: #617187;
+      --line: #d7e1eb;
+      --soft: #f4f8fb;
+      --blue: #0f5574;
+      --green: #16845f;
+      --amber: #9a6b12;
+      --amber-soft: #fff4d8;
+      --green-soft: #e6f4ed;
+      --blue-soft: #e8f4fa;
+      --shadow: 0 18px 45px rgba(18, 32, 47, 0.10);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background:
+        linear-gradient(rgba(214, 225, 235, 0.55) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(214, 225, 235, 0.55) 1px, transparent 1px),
+        #edf3f8;
+      background-size: 24px 24px;
+      line-height: 1.55;
+    }
+    .shell { max-width: 820px; margin: 0 auto; padding: 32px 18px 72px; }
+    .hero, .card {
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+    }
+    .hero { padding: 32px; margin-bottom: 18px; }
+    .eyebrow {
+      display: inline-flex; padding: 7px 12px; border-radius: 999px;
+      background: var(--blue-soft); color: var(--blue);
+      font-weight: 800; font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+    }
+    h1 { font-size: clamp(26px, 4.5vw, 38px); line-height: 1.1; margin: 16px 0 12px; }
+    h2 { font-size: 18px; margin: 0 0 8px; }
+    h3 { font-size: 15px; margin: 16px 0 8px; }
+    p { color: var(--muted); margin: 0 0 12px; }
+    .lede { font-size: 17px; color: var(--ink); }
+    .banner {
+      margin-top: 14px; padding: 12px 14px; border-radius: 12px;
+      background: var(--amber-soft); border: 1px solid #e6c985; color: var(--amber);
+      font-size: 13px; font-weight: 700;
+    }
+    .banner.ok {
+      background: var(--green-soft); border-color: #9dceb5; color: #10734f;
+    }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line);
+      background: white; color: var(--ink); text-decoration: none; font-weight: 700; font-size: 14px;
+    }
+    .btn.primary { background: var(--blue); border-color: var(--blue); color: white; }
+    .toc { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .toc a {
+      text-decoration: none; font-size: 12px; font-weight: 800;
+      padding: 7px 11px; border-radius: 999px; border: 1px solid var(--line);
+      background: white; color: var(--blue);
+    }
+    .card { padding: 22px 24px; margin-bottom: 14px; }
+    .share-note {
+      margin-top: 14px; padding: 12px 14px; border-radius: 12px;
+      background: var(--soft); border: 1px solid var(--line);
+      color: var(--muted); font-size: 13px;
+    }
+    .share-note a { color: var(--blue); overflow-wrap: anywhere; font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 10px 0 4px; }
+    th, td {
+      text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    th { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+    ul { margin: 8px 0 0; padding-left: 20px; color: var(--muted); }
+    li { margin: 6px 0; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .box {
+      background: var(--soft); border: 1px solid var(--line); border-radius: 14px; padding: 14px;
+    }
+    .box strong { display: block; margin-bottom: 6px; color: var(--ink); }
+    .pill {
+      display: inline-flex; padding: 4px 9px; border-radius: 999px;
+      font-size: 11px; font-weight: 800; background: var(--blue-soft); color: var(--blue);
+      margin-bottom: 8px;
+    }
+    .pill.green { background: var(--green-soft); color: var(--green); }
+    .pill.amber { background: var(--amber-soft); color: var(--amber); }
+    .flow {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0;
+    }
+    .flow div {
+      background: var(--soft); border: 1px solid var(--line); border-radius: 12px;
+      padding: 12px; text-align: center; font-size: 13px; font-weight: 700;
+    }
+    .flow span { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-top: 4px; }
+    .footer { text-align: center; color: var(--muted); font-size: 13px; margin-top: 24px; }
+    @media (max-width: 700px) {
+      .grid2, .flow { grid-template-columns: 1fr; }
+    }
+    @media print {
+      body { background: white; }
+      .hero, .card { box-shadow: none; }
+      .actions { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="hero">
+      <span class="eyebrow">Team explanation guide · before implementation</span>
+      <h1>Upcoming dashboard changes — what, why, and what stays the same</h1>
+      <p class="lede">This guide explains the planned updates to the Portfolio Status Dashboard so everyone understands the direction before we build. Nothing below is live yet.</p>
+      <div class="banner">Status: For team review · Not implemented · Based on AI Product Factory Quick Handbook v1.1 and Operating Model deck (9 Oct 2026)</div>
+      <div class="share-note">
+        Share this page:
+        <a href="guide-factory-dashboard-changes.html">guide-factory-dashboard-changes.html</a>
+        <br>GitHub Pages:
+        <a href="https://omenada2025.github.io/omenaconsulting/guide-factory-dashboard-changes.html">https://omenada2025.github.io/omenaconsulting/guide-factory-dashboard-changes.html</a>
+        <br>Cloudflare Pages (after connect — see <a href="CLOUDFLARE_PAGES.md">CLOUDFLARE_PAGES.md</a>):
+        <a href="https://omenaconsulting.pages.dev/guide-factory-dashboard-changes.html">https://omenaconsulting.pages.dev/guide-factory-dashboard-changes.html</a>
+      </div>
+      <div class="actions">
+        <a class="btn primary" href="preview-after-factory-alignment.html">See how it will look</a>
+        <a class="btn" href="proposal-workflow-roles-uiux-approval.html">Full approval pack</a>
+        <a class="btn" href="index.html">Current live dashboard</a>
+      </div>
+      <nav class="toc" aria-label="Guide sections">
+        <a href="#why">Why</a>
+        <a href="#same">What stays</a>
+        <a href="#layers">Two layers</a>
+        <a href="#roles">Roles</a>
+        <a href="#cycle">6-week cycle</a>
+        <a href="#handover">Handover</a>
+        <a href="#you">What it means for you</a>
+        <a href="#timeline">Timeline</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+    </header>
+
+    <section class="card" id="why">
+      <span class="pill">Context</span>
+      <h2>1. Why are we changing anything?</h2>
+      <p>Leadership formalized how product ownership works in the <strong>AI Product Factory</strong>:</p>
+      <ul>
+        <li><strong>Live PM (Builder)</strong> owns delivery through the six-week cycle and handover.</li>
+        <li>After release and <strong>accepted handover</strong>, the Live PM moves to the next project.</li>
+        <li><strong>Support PM</strong> accepts the product and owns portfolio, support, training/demos, and sustaining work.</li>
+      </ul>
+      <p>Our dashboard already supports weekly status, portfolio health, and governance. It does <strong>not</strong> yet show Live vs Support ownership, the six-week factory runway, or handover kits. We will <strong>extend this app</strong> — we are not building a second system.</p>
+      <div class="banner ok">Decision already recommended: improve the current dashboard. Do not create a new application.</div>
+    </section>
+
+    <section class="card" id="same">
+      <span class="pill green">Reassurance</span>
+      <h2>2. What stays the same</h2>
+      <div class="grid2">
+        <div class="box">
+          <strong>You keep using</strong>
+          <ul>
+            <li>Same login and roles (Viewer / Editor / Ops Manager)</li>
+            <li>Weekly status updates</li>
+            <li>Portfolio, Executive, Incidents</li>
+            <li>Product Governance and evidence</li>
+            <li>Same GitHub Pages site</li>
+          </ul>
+        </div>
+        <div class="box">
+          <strong>What improves</strong>
+          <ul>
+            <li>Clearer ownership (Live PM vs Support PM)</li>
+            <li>Visible 6-week factory progress</li>
+            <li>Handover acceptance before ownership moves</li>
+            <li>Clearer Home “what’s left this week”</li>
+            <li>Better alignment with the handbook</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" id="layers">
+      <span class="pill">Model</span>
+      <h2>3. Two layers in one dashboard</h2>
+      <div class="flow">
+        <div>Weekly rhythm<span>Status · quality · meeting · feedback</span></div>
+        <div>Factory cycle<span>V0 → 6 weeks → gates → handover</span></div>
+        <div>Live ops<span>Support PM owns released product</span></div>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Layer</th><th>Question it answers</th><th>Where you work</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Weekly reporting</strong></td>
+            <td>What changed this reporting week? What is blocked? What is next?</td>
+            <td>This Week · Weekly Updates · Portfolio</td>
+          </tr>
+          <tr>
+            <td><strong>Factory delivery</strong></td>
+            <td>Which factory week are we in? Is the gate evidence ready? Who owns delivery?</td>
+            <td>Factory cycles (new)</td>
+          </tr>
+          <tr>
+            <td><strong>After handover</strong></td>
+            <td>Who owns the live product? Are kits complete? Can Support PM accept?</td>
+            <td>Handover + Governance</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>These are complementary. A product can be in <strong>Factory Week 5</strong> and still need a <strong>weekly status update</strong> for the same Monday–Friday reporting week.</p>
+    </section>
+
+    <section class="card" id="roles">
+      <span class="pill amber">Important</span>
+      <h2>4. Roles — please read carefully</h2>
+      <h3>Access profile (system permission) — unchanged idea</h3>
+      <table>
+        <thead><tr><th>Access profile</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td>Portfolio Viewer</td><td>See dashboards; no report editing</td></tr>
+          <tr><td>Reporting Editor</td><td>Create and edit weekly updates and related work</td></tr>
+          <tr><td>Operations &amp; Access Manager</td><td>Quality, meetings, users, feedback, process ownership</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Functional ownership (delivery) — what changes</h3>
+      <table>
+        <thead><tr><th>Functional role</th><th>Owns</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Live PM (Builder)</strong></td>
+            <td>Six-week delivery through release and handover</td>
+            <td>After accepted handover → moves to next project</td>
+          </tr>
+          <tr>
+            <td><strong>Support PM</strong></td>
+            <td>Released product: portfolio, support, training/demos, sustaining</td>
+            <td>Accepts handover; keeps ownership for live changes</td>
+          </tr>
+          <tr>
+            <td><strong>UI/UX</strong></td>
+            <td>Design contribution on a workstream</td>
+            <td>Contributor — not the product owner</td>
+          </tr>
+          <tr>
+            <td>Training (as separate owner)</td>
+            <td>—</td>
+            <td><strong>Will not stay as a peer owner role.</strong> Enablement sits under Support PM after release (per handbook).</td>
+          </tr>
+        </tbody>
+      </table>
+      <p><strong>Tip:</strong> “Access profile” = what the system lets you do. “Live / Support PM” = who owns the product at this stage.</p>
+    </section>
+
+    <section class="card" id="cycle">
+      <span class="pill">Factory</span>
+      <h2>5. Six-week delivery cycle (reminder)</h2>
+      <p>Clock starts at <strong>formal V0 handover</strong> to the Live PM (engineering supplies V0 before this). Gates use evidence at the end of Weeks <strong>1, 3, 5, and 6</strong>.</p>
+      <table>
+        <thead><tr><th>Week</th><th>Focus</th><th>Key evidence / output</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Discover and baseline</td><td>Observed features and workflows · Gate</td></tr>
+          <tr><td>2</td><td>Assess and define MSP</td><td>Findings and Minimum Sellable Product scope</td></tr>
+          <tr><td>3</td><td>Prioritize and define TO-BE</td><td>Backlog and acceptance criteria · Gate</td></tr>
+          <tr><td>4</td><td>Coordinate implementation</td><td>Approved changes and resolved questions</td></tr>
+          <tr><td>5</td><td>Validate and prepare enablement</td><td>QA evidence · Support PM rehearsal · Gate</td></tr>
+          <tr><td>6</td><td>Release and handover</td><td>Support PM acceptance · ownership transfer · Gate</td></tr>
+        </tbody>
+      </table>
+      <p>Essential blockers require a no-go and escalation. Optional scope can move to a future backlog.</p>
+    </section>
+
+    <section class="card" id="handover">
+      <span class="pill">Release</span>
+      <h2>6. Handover — when ownership moves</h2>
+      <p>Ownership does <strong>not</strong> move on release day alone. The Support PM must <strong>accept</strong> handover. Until then, Live PM closes gaps.</p>
+      <p>Three kits (from the handbook) will be tracked in the dashboard:</p>
+      <ul>
+        <li><strong>Launch Kit</strong> — use cases, approved demo, FAQ, limitations</li>
+        <li><strong>Run Kit</strong> — operational instructions, rollback, monitoring, escalation</li>
+        <li><strong>Live Product Kit</strong> — guides, release notes, known issues, backlog</li>
+      </ul>
+      <p>Also required: QA/regression evidence, reverse demo by Support PM, working access, recorded accepting Support PM + effective date.</p>
+    </section>
+
+    <section class="card" id="you">
+      <span class="pill green">For the team</span>
+      <h2>7. What this means for you day to day</h2>
+      <table>
+        <thead><tr><th>If you are…</th><th>What to expect</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Report owner / Editor</strong></td>
+            <td>Keep submitting weekly updates. You will choose Live PM or Support PM (and optional UI/UX contribution) more clearly. Some fields may become role-specific.</td>
+          </tr>
+          <tr>
+            <td><strong>Live PM on a factory product</strong></td>
+            <td>You will see your product on a 6-week runway with gate evidence. You stay accountable until Support PM accepts handover.</td>
+          </tr>
+          <tr>
+            <td><strong>Support PM</strong></td>
+            <td>You will accept handovers, own live products, and cover support / training / sustaining priorities in one ownership model.</td>
+          </tr>
+          <tr>
+            <td><strong>UI/UX</strong></td>
+            <td>You remain a contributing discipline. Design evidence still matters; product ownership stays with Live or Support PM.</td>
+          </tr>
+          <tr>
+            <td><strong>Manager / Ops</strong></td>
+            <td>Home will show Week Close for the reporting week plus factory products needing gates or handover. Meeting flow will get clearer over time.</td>
+          </tr>
+          <tr>
+            <td><strong>Viewer / leadership</strong></td>
+            <td>Clearer who owns what after release; less ambiguity between “in delivery” and “live ops.”</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card" id="timeline">
+      <span class="pill">Plan</span>
+      <h2>8. Proposed rollout (after approval)</h2>
+      <table>
+        <thead><tr><th>Phase</th><th>Focus</th><th>Team impact</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Now</strong></td>
+            <td>Review this guide + visuals; leadership signs approval pack</td>
+            <td>No change to daily work</td>
+          </tr>
+          <tr>
+            <td><strong>Sprint A</strong></td>
+            <td>Live/Support PM labels, factory cycle + gates, handover kits gate, Week Close basics</td>
+            <td>New fields and screens; short walkthrough</td>
+          </tr>
+          <tr>
+            <td><strong>Sprint B</strong></td>
+            <td>Meeting session UX, readiness bars, clearer Portfolio/Executive views</td>
+            <td>Smoother meetings and approvals</td>
+          </tr>
+          <tr>
+            <td><strong>Sprint C</strong></td>
+            <td>Polish, mobile, glossary sweep, email delivery fixes</td>
+            <td>Fewer friction points</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>We will not turn features on without a short demo and this guide updated to “live.”</p>
+    </section>
+
+    <section class="card" id="faq">
+      <span class="pill">FAQ</span>
+      <h2>9. Common questions</h2>
+      <h3>Are we replacing the dashboard?</h3>
+      <p>No. Same application, extended to match the factory operating model.</p>
+      <h3>Do I stop writing weekly updates?</h3>
+      <p>No. Weekly reporting remains the operating rhythm. Factory cycle is an extra layer for products in the six-week path.</p>
+      <h3>What happens to the Training role we added?</h3>
+      <p>Training/enablement work continues, but ownership after release follows the handbook: it sits with the <strong>Support PM</strong>, not as a separate peer product-owner role.</p>
+      <h3>Will my old reports break?</h3>
+      <p>No. Historical reports stay. We may show clearer labels (e.g. Live vs Support) going forward and map legacy values carefully.</p>
+      <h3>Where can I see the future UI?</h3>
+      <p>Open <a href="preview-after-factory-alignment.html"><strong>How it looks after implementation</strong></a>. For decision detail, use the <a href="proposal-workflow-roles-uiux-approval.html">approval pack</a>.</p>
+      <h3>Who do I ask if something is unclear?</h3>
+      <p>Process / ownership: Daniela (or named Ops Manager). Tool questions: same channel you use for dashboard support today.</p>
+    </section>
+
+    <section class="card">
+      <h2>10. Links for the team</h2>
+      <ul>
+        <li><a href="guide-factory-dashboard-changes.html">This explanation guide</a> (share before implementation)</li>
+        <li><a href="preview-after-factory-alignment.html">Visual: after implementation</a></li>
+        <li><a href="preview-workflow-uiux-revision.html">Visual: Week Close / intake / meeting concepts</a></li>
+        <li><a href="proposal-workflow-roles-uiux-approval.html">Full approval pack (decision record)</a></li>
+        <li><a href="index.html">Current live dashboard</a></li>
+        <li><a href="manuals.html">Existing manuals index</a></li>
+      </ul>
+      <div class="banner">Please review this guide and the “after implementation” preview. Send questions before we start Sprint A. Implementation begins only after leadership approval.</div>
+    </section>
+
+    <p class="footer">Omena Consulting · Portfolio Status Dashboard · Team guide · Prepared for pre-implementation sharing · Oct 2026</p>
+  </div>
+</body>
+</html>

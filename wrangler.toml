@@ -1,0 +1,6 @@
+# Cloudflare Pages — static dashboard site
+# Deploy: connect this GitHub repo in Cloudflare Pages, or use:
+#   npx wrangler pages deploy . --project-name=omenaconsulting
+name = "omenaconsulting"
+compatibility_date = "2026-10-16"
+pages_build_output_dir = "."
