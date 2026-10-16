@@ -51,10 +51,15 @@ Then open https://github.com/omenada2025/omenaconsulting/actions and wait for **
 
 Team-doc password is set in `access-gate.js` (see file header).
 
-## Cloudflare (optional)
+## Cloudflare (second live host)
 
-GitHub Pages is the primary live host. For Cloudflare as well, see `CLOUDFLARE_PAGES.md`.  
-The Cloudflare workflow only runs when you trigger it manually and secrets are configured.
+GitHub Pages is primary. To also deploy to Cloudflare Pages on every push to `main`:
+
+```powershell
+.\scripts\setup-cloudflare-secrets.ps1
+```
+
+That script opens Cloudflare + GitHub, asks for **Account ID** and **API Token**, saves them as Actions secrets, and triggers a deploy. Details: `CLOUDFLARE_PAGES.md`.
 
 ## Database changes
 

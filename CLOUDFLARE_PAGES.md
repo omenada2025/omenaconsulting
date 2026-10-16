@@ -21,13 +21,22 @@ After the first deploy, team guide URL will look like:
 
 ## Option B — GitHub Action (API token)
 
-1. Cloudflare → **My Profile** → **API Tokens** → create token with **Cloudflare Pages — Edit**.
-2. In GitHub repo **Settings → Secrets → Actions**, add:
+Fastest from this machine:
+
+```powershell
+.\scripts\setup-cloudflare-secrets.ps1
+```
+
+Or manually:
+
+1. Cloudflare → **My Profile** → **API Tokens** → create token with **Cloudflare Pages — Edit** (or Workers Edit template).
+2. Copy **Account ID** from Workers & Pages overview.
+3. In GitHub → **Settings → Secrets → Actions**, add:
    - `CLOUDFLARE_API_TOKEN`
    - `CLOUDFLARE_ACCOUNT_ID`
-3. Push to `main` (or run **Deploy to Cloudflare Pages** workflow manually).
+4. Push to `main` (or **Actions → Deploy to Cloudflare Pages → Run workflow**).
 
-Workflow file: `.github/workflows/cloudflare-pages.yml`
+Workflow file: `.github/workflows/cloudflare-pages.yml` (skips cleanly if secrets are missing).
 
 ## Key pages to share
 
