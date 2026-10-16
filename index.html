@@ -2699,6 +2699,15 @@
     .governance-board-card { width:100%; border:1px solid var(--line); border-left:4px solid var(--accent); border-radius:12px; background:var(--surface); padding:11px; text-align:left; cursor:pointer; display:grid; gap:7px; color:var(--ink); }
     .governance-board-card:hover, .governance-board-card:focus { border-color:var(--accent); box-shadow:0 6px 18px rgba(19, 32, 46, .10); outline:none; }
     .governance-board-card.selected { box-shadow:0 0 0 2px rgba(20, 93, 122, .15); }
+    .governance-board-card[draggable="true"] { cursor:grab; }
+    .governance-board-card.dragging { opacity:.48; cursor:grabbing; }
+    .governance-board-column.drag-over { border-color:var(--accent); background:rgba(20, 93, 122, .08); box-shadow:inset 0 0 0 2px rgba(20, 93, 122, .14); }
+    .governance-board-open { appearance:none; border:0; background:transparent; color:inherit; padding:0; text-align:left; display:grid; gap:7px; width:100%; cursor:pointer; }
+    .governance-board-open:focus-visible { outline:2px solid var(--accent); outline-offset:4px; border-radius:6px; }
+    .governance-board-move { display:grid; gap:4px; margin-top:2px; }
+    .governance-board-move label { color:var(--muted); font-size:11px; font-weight:800; }
+    .governance-board-move select { width:100%; min-height:34px; padding:6px 28px 6px 8px; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--ink); font-size:12px; }
+    .governance-board-permission { color:var(--muted); font-size:11px; }
     .governance-board-card[data-priority="High"] { border-left-color:#d38a18; }
     .governance-board-card[data-priority="Critical"] { border-left-color:#c2355c; }
     .governance-board-card strong { font-size:13px; line-height:1.35; }
@@ -2744,31 +2753,37 @@
         </div>
       </div>
       <nav class="tabs" aria-label="Primary">
-        <div class="nav-section">Start</div>
+        <div class="nav-section">Overview</div>
         <button class="tab active" data-view="home" data-mobile-primary title="See this week's work and next actions">This Week</button>
-        <div class="nav-section" data-hide-executive-admin>My Work</div>
         <button class="tab" data-view="myDashboard" data-hide-executive-admin title="Personal dashboard for your workstreams, dates, risks, and next actions">My Dashboard</button>
-        <button class="tab" data-view="reports" data-master-only>Weekly Updates</button>
-        <div class="nav-section">Portfolio</div>
         <button class="tab" data-view="dashboard" data-mobile-primary title="Portfolio health, workstreams, dates, risks, wins, blockers, and next actions">Portfolio Dashboard</button>
         <button class="tab" data-view="executive" data-mobile-primary title="Leadership summary focused on attention items and decisions">Executive View</button>
+
+        <div class="nav-section">Reporting &amp; Delivery</div>
+        <button class="tab" data-view="reports" data-master-only>Weekly Updates</button>
         <button class="tab" data-view="timeline" data-master-only title="Delivery timeline, dependencies, milestones, and schedule progress">Delivery Timeline</button>
         <button class="tab" data-view="incidents" title="Major delays, minor delays, blockers, at-risk, and critical workstreams">Incidents & Delays</button>
-        <div class="nav-section">Governance &amp; Reviews</div>
+
+        <div class="nav-section" data-role-manager-only>Reviews &amp; Follow-up</div>
         <button class="tab" data-view="managementReview" data-role-manager-only>Manager Meeting</button>
-        <button class="tab" data-view="projectTalkTrack" data-role-manager-only>Product Talk Track</button>
         <button class="tab" data-view="weeklyProjectBrief" data-role-manager-only>Weekly Product Review</button>
+        <button class="tab" data-view="projectTalkTrack" data-role-manager-only>Product Talk Track</button>
         <button class="tab" data-view="reportAnalysis" data-role-manager-only>Report Quality Review</button>
-        <button class="tab" data-view="ownerFeedback" data-role-manager-only>Coaching Feedback</button>
         <button class="tab" data-view="actionItems" data-role-manager-only>Action Items</button>
+        <button class="tab" data-view="ownerFeedback" data-role-manager-only>Coaching Feedback</button>
         <button class="tab" data-view="weeklyReview" data-role-manager-only>Send Weekly Feedback</button>
         <button class="tab" data-view="workload" data-role-manager-only>Capacity &amp; Support</button>
-        <button class="tab" data-view="governanceBoard" data-governance-access>Governance Board</button>
-        <button class="tab" data-view="governance" data-mobile-primary data-governance-access>Product Governance</button>
-        <div class="nav-section" data-role-manager-only>Admin</div>
+
+        <div class="nav-section">Governance</div>
+        <button class="tab" data-view="governanceBoard" data-mobile-primary data-governance-access>Governance Board</button>
+        <button class="tab" data-view="governance" data-governance-access>Product Governance</button>
+
+        <div class="nav-section" data-role-manager-only>Administration</div>
         <button class="tab" data-view="sourceProjects" data-role-manager-only>Product Source List</button>
         <button class="tab" data-view="users" data-role-manager-only>User Access</button>
         <button class="tab" data-view="userLog" data-role-manager-only>User Log</button>
+
+        <div class="nav-section" data-role-manager-only>Help</div>
         <button class="tab" data-view="workflow" data-role-manager-only title="End-to-end workflow guide for using the dashboard">Workflow Guide</button>
         <label class="mobile-more-control" aria-label="More destinations">
           <select id="mobileMoreNav"><option value="">More...</option></select>
@@ -6294,6 +6309,17 @@
       return Boolean(report?.id && isCurrentUserReportOwner(report));
     }
 
+    function isCurrentUserGovernanceOwner(item) {
+      const userKeys = currentUserOwnerKeys();
+      return Boolean(item?.id && splitPeople(item.owner || "").some(owner =>
+        personMatchKeys(owner).some(key => userKeys.has(key))
+      ));
+    }
+
+    function canMoveGovernanceItem(item) {
+      return Boolean(item?.id && (canManageRoles() || isMasterAdmin() || isCurrentUserGovernanceOwner(item)));
+    }
+
     function deletePermissionMessage(report) {
       const signedInAs = currentUser?.displayName || currentUser?.username || "Unknown user";
       const owner = cleanText(report?.owner || "") || "Unassigned";
@@ -8347,6 +8373,48 @@
       renderGovernanceTraceability(governanceItems.find(item => item.id === selectedGovernanceItemId));
     }
 
+    async function moveGovernanceItem(itemId, nextStatus) {
+      const item = governanceItems.find(entry => entry.id === cleanText(itemId));
+      const status = cleanText(nextStatus);
+      if (!item || !GOVERNANCE_STATUS_OPTIONS.includes(status) || item.status === status) return;
+      if (!canMoveGovernanceItem(item)) {
+        alert(`Only ${item.owner || "the assigned owner"} or a governance manager can move this decision.`);
+        renderGovernanceBoard();
+        return;
+      }
+      const candidate = normalizeGovernanceItem({ ...item, status, updated_at: new Date().toISOString() });
+      const errors = governanceValidation(candidate);
+      if (errors.length) {
+        alert(`This decision cannot move to ${status}. ${errors.join(" ")}`);
+        renderGovernanceBoard();
+        return;
+      }
+      try {
+        let saved = candidate;
+        if (governanceCloudAvailable) {
+          const result = await supabaseTableRequest("governance_items", `?id=eq.${encodeURIComponent(item.id)}`, {
+            method: "PATCH",
+            body: { status, updated_at: candidate.updated_at }
+          });
+          if (Array.isArray(result) && result[0]) saved = normalizeGovernanceItem({ ...item, ...result[0], status });
+        }
+        const index = governanceItems.findIndex(entry => entry.id === item.id);
+        governanceItems[index] = saved;
+        saveGovernanceLocally();
+        logUserAction("move_governance_item", {
+          from_status: item.status,
+          to_status: status,
+          owner: item.owner
+        }, { target_type: "governance_item", target_id: item.id });
+        renderGovernanceBoard();
+        if (getActiveView() === "governance") renderProductGovernance();
+      } catch (error) {
+        console.error("Governance move failed", error);
+        alert(`Could not move this decision: ${error.message || error}`);
+        renderGovernanceBoard();
+      }
+    }
+
     function renderGovernanceBoard() {
       const metrics = document.getElementById("governanceBoardMetrics");
       const board = document.getElementById("governanceBoardColumns");
@@ -8364,20 +8432,23 @@
       board.innerHTML = GOVERNANCE_STATUS_OPTIONS.map(status => {
         const statusItems = governanceItems.filter(item => item.status === status);
         return `
-          <section class="governance-board-column" aria-label="${escapeHtml(status)} governance items">
+          <section class="governance-board-column" data-governance-status="${escapeHtml(status)}" aria-label="${escapeHtml(status)} governance items">
             <header><h4>${escapeHtml(status)}</h4><span class="governance-board-count">${statusItems.length}</span></header>
             <div class="governance-board-stack">
               ${statusItems.length ? statusItems.map(item => `
-                <button class="governance-board-card ${item.id === selectedGovernanceItemId ? "selected" : ""}" type="button" data-governance-board-id="${escapeHtml(item.id)}" data-priority="${escapeHtml(item.priority)}">
-                  <span class="product-label">${escapeHtml(item.product)} · ${escapeHtml(shortEntityRef("GOV", item.id))}</span>
-                  <strong>${escapeHtml(item.title)}</strong>
-                  <small>${escapeHtml(item.workstream || "No workstream")}<br>${escapeHtml(item.owner || "Unassigned")} · ${escapeHtml(item.functional_role)}</small>
-                  <span class="governance-board-signals">
-                    <span class="chip ${item.priority === "Critical" ? "red" : item.priority === "High" ? "amber" : "blue"}">${escapeHtml(item.priority)}</span>
-                    <span class="chip ${item.evidence_status === "Validated" ? "green" : "amber"}">${escapeHtml(item.evidence_status)}</span>
-                    <span class="chip ${item.gate_status === "Approved" ? "green" : item.gate_status === "Rejected" ? "red" : "gray"}">${escapeHtml(item.gate_status)}</span>
-                  </span>
-                </button>
+                <article class="governance-board-card ${item.id === selectedGovernanceItemId ? "selected" : ""}" data-governance-board-id="${escapeHtml(item.id)}" data-priority="${escapeHtml(item.priority)}" draggable="${canMoveGovernanceItem(item) ? "true" : "false"}">
+                  <button class="governance-board-open" type="button" aria-label="Open ${escapeHtml(item.title)}">
+                    <span class="product-label">${escapeHtml(item.product)} · ${escapeHtml(shortEntityRef("GOV", item.id))}</span>
+                    <strong>${escapeHtml(item.title)}</strong>
+                    <small>${escapeHtml(item.workstream || "No workstream")}<br>${escapeHtml(item.owner || "Unassigned")} · ${escapeHtml(item.functional_role)}</small>
+                    <span class="governance-board-signals">
+                      <span class="chip ${item.priority === "Critical" ? "red" : item.priority === "High" ? "amber" : "blue"}">${escapeHtml(item.priority)}</span>
+                      <span class="chip ${item.evidence_status === "Validated" ? "green" : "amber"}">${escapeHtml(item.evidence_status)}</span>
+                      <span class="chip ${item.gate_status === "Approved" ? "green" : item.gate_status === "Rejected" ? "red" : "gray"}">${escapeHtml(item.gate_status)}</span>
+                    </span>
+                  </button>
+                  ${canMoveGovernanceItem(item) ? `<div class="governance-board-move"><label for="move-${escapeHtml(item.id)}">Move to</label><select id="move-${escapeHtml(item.id)}" data-governance-move-id="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.title)} to another status">${GOVERNANCE_STATUS_OPTIONS.map(option => `<option value="${escapeHtml(option)}" ${option === item.status ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select></div>` : `<span class="governance-board-permission">Only the owner or a governance manager can move this item.</span>`}
+                </article>
               `).join("") : `<div class="governance-board-empty">No items</div>`}
             </div>
           </section>
@@ -17156,12 +17227,50 @@
       const item = event.target.closest("[data-governance-id]");
       if (item) selectGovernanceItem(item.dataset.governanceId);
     });
-    document.getElementById("governanceBoardColumns")?.addEventListener("click", event => {
+    const governanceBoardColumns = document.getElementById("governanceBoardColumns");
+    governanceBoardColumns?.addEventListener("click", event => {
+      if (event.target.closest("[data-governance-move-id]")) return;
       const item = event.target.closest("[data-governance-board-id]");
       if (!item) return;
       switchView("governance");
       selectGovernanceItem(item.dataset.governanceBoardId);
       document.getElementById("governanceForm")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    governanceBoardColumns?.addEventListener("change", event => {
+      const control = event.target.closest("[data-governance-move-id]");
+      if (control) moveGovernanceItem(control.dataset.governanceMoveId, control.value);
+    });
+    governanceBoardColumns?.addEventListener("dragstart", event => {
+      const card = event.target.closest('[data-governance-board-id][draggable="true"]');
+      if (!card || event.target.closest("select")) {
+        event.preventDefault();
+        return;
+      }
+      card.classList.add("dragging");
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", card.dataset.governanceBoardId);
+    });
+    governanceBoardColumns?.addEventListener("dragover", event => {
+      const column = event.target.closest("[data-governance-status]");
+      if (!column) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      governanceBoardColumns.querySelectorAll(".drag-over").forEach(item => item.classList.remove("drag-over"));
+      column.classList.add("drag-over");
+    });
+    governanceBoardColumns?.addEventListener("dragleave", event => {
+      const column = event.target.closest("[data-governance-status]");
+      if (column && !column.contains(event.relatedTarget)) column.classList.remove("drag-over");
+    });
+    governanceBoardColumns?.addEventListener("drop", event => {
+      const column = event.target.closest("[data-governance-status]");
+      if (!column) return;
+      event.preventDefault();
+      governanceBoardColumns.querySelectorAll(".drag-over").forEach(item => item.classList.remove("drag-over"));
+      moveGovernanceItem(event.dataTransfer.getData("text/plain"), column.dataset.governanceStatus);
+    });
+    governanceBoardColumns?.addEventListener("dragend", () => {
+      governanceBoardColumns.querySelectorAll(".dragging, .drag-over").forEach(item => item.classList.remove("dragging", "drag-over"));
     });
     document.getElementById("governanceArtifactProduct")?.addEventListener("change", event => {
       renderArtifactChecklist(event.target.value);
