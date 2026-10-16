@@ -37,3 +37,25 @@ Workflow file: `.github/workflows/cloudflare-pages.yml`
 | After-implementation mock | `/preview-after-factory-alignment.html` |
 | Approval pack | `/proposal-workflow-roles-uiux-approval.html` |
 | Live dashboard | `/` or `/index.html` |
+
+## Protecting team docs (password / SSO)
+
+GitHub Pages on a **public** repo cannot natively password-protect a URL.
+
+### Already in place (light gate)
+
+Sensitive HTML pages load `access-gate.js` (team share password). This stops casual visitors; it is **not** strong security (the page files remain in a public repo).
+
+Default password: `OmenaTeam2026!`  
+Change it by updating `EXPECTED_HASH` in `access-gate.js` (SHA-256 hex of the new password).
+
+### Strong protection — Cloudflare Access (recommended)
+
+1. Put the site on **Cloudflare Pages** (Option A above).
+2. Cloudflare Dashboard → **Zero Trust** → **Access** → **Applications** → **Add an application**.
+3. Type: **Self-hosted**.
+4. Application domain: your `*.pages.dev` host (or custom domain).
+5. Policy: allow only `@zenatech.com` (or specific emails) via One-time PIN / Google / Microsoft.
+6. Optional path policy: protect only `/guide-factory-*`, `/proposal-*`, `/preview-*`.
+
+Then the public cannot open the guide without Cloudflare login — even if they have the URL.
