@@ -5,7 +5,8 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 $migrations = @(
   "supabase\migrations\20260821150000_training_lifecycle.sql",
-  "supabase\migrations\20260824150000_governance_artifact_types.sql"
+  "supabase\migrations\20260824150000_governance_artifact_types.sql",
+  "supabase\migrations\20261019120000_live_support_pm_roles.sql"
 )
 $projectRef = "vwvmfuktrkpzrzlklbkr"
 $sqlEditorUrl = "https://supabase.com/dashboard/project/$projectRef/sql/new"
