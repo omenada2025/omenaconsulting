@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <meta name="dashboard-build" content="2026-10-19-live-support-pm-factory" />
+  <meta name="dashboard-build" content="2026-10-20-factory-sprint-a" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231f5874'/%3E%3Ctext x='32' y='41' text-anchor='middle' font-family='Arial,sans-serif' font-size='28' font-weight='700' fill='white'%3EPU%3C/text%3E%3C/svg%3E" />
   <title>Omena Consulting Dashboard</title>
   <style>
@@ -536,6 +536,53 @@
       justify-items: end;
       gap: 7px;
       min-width: 108px;
+    }
+
+    .factory-panel {
+      margin: 14px 0 18px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(232, 244, 250, 0.55);
+    }
+    .factory-panel h4 { margin: 0 0 6px; font-size: 15px; }
+    .factory-runway {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 6px;
+      margin: 12px 0;
+    }
+    .factory-week {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 8px 6px;
+      background: #fff;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .factory-week strong { display: block; font-size: 13px; margin-bottom: 2px; }
+    .factory-week.done { background: var(--green-soft, #e6f4ed); border-color: #9dceb5; }
+    .factory-week.now { outline: 2px solid rgba(47, 111, 143, 0.45); background: #e8f4fa; }
+    .factory-week.gate::after {
+      content: "Gate";
+      display: inline-block;
+      margin-top: 4px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 10px;
+      background: #dff0f8;
+      color: #0f5574;
+    }
+    .factory-kit-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 8px 0 12px;
+    }
+    .factory-kit-row .chip { font-size: 11px; }
+    @media (max-width: 720px) {
+      .factory-runway { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
 
     .home-flow-number {
@@ -4628,7 +4675,32 @@
                     <option>UI/UX</option>
                   </select>
                 </label>
+                <label>
+                  Ownership stage
+                  <select name="ownership_stage" required>
+                    <option>In delivery (pre-handover)</option>
+                    <option>Handover in progress</option>
+                    <option>Live ops (Support PM)</option>
+                  </select>
+                </label>
+                <label>
+                  Version / cycle label
+                  <input name="version_label" type="text" placeholder="e.g. v1.2 · Factory Oct" />
+                </label>
+                <label>
+                  V0 received date
+                  <input name="v0_received_date" type="date" />
+                </label>
+                <label>
+                  Factory week
+                  <select name="factory_week">
+                    <option value="">Auto from V0 date</option>
+                    <option>1</option><option>2</option><option>3</option>
+                    <option>4</option><option>5</option><option>6</option>
+                  </select>
+                </label>
               </div>
+              <p class="muted small">Ownership stage is required every week. Leave V0 empty if this update is not on a factory runway.</p>
             </div>
             <div class="form-section form-step" data-status-step="2" hidden>
               <div class="form-section-title">
@@ -5060,6 +5132,146 @@
       if (value === "Training" || value === "Portfolio, Support & Sustaining" || value === "Support") return "Support PM";
       if (FUNCTIONAL_ROLE_OPTIONS.includes(value) || LEGACY_FUNCTIONAL_ROLE_OPTIONS.includes(value)) return value;
       return value;
+    }
+
+    const FACTORY_GATE_WEEKS = new Set(["1", "3", "5", "6"]);
+    const FACTORY_WEEK_FOCUS = {
+      "1": "Discover / baseline",
+      "2": "Assess / MSP",
+      "3": "TO-BE / backlog",
+      "4": "Implement",
+      "5": "Validate / enablement",
+      "6": "Release / handover"
+    };
+    const FACTORY_DB_FIELDS = [
+      "ownership_stage",
+      "v0_received_date",
+      "version_label",
+      "factory_week",
+      "handover_accepted_at",
+      "handover_accepted_by"
+    ];
+
+    function normalizeOwnershipStage(value = "", role = "") {
+      const cleanValue = cleanText(value);
+      if (OWNERSHIP_STAGE_OPTIONS.includes(cleanValue)) return cleanValue;
+      const normalizedRole = normalizeFunctionalRole(role);
+      if (normalizedRole === "Support PM") return "Live ops (Support PM)";
+      return "In delivery (pre-handover)";
+    }
+
+    function normalizeFactoryWeek(value = "") {
+      const cleanValue = cleanText(value);
+      return FACTORY_WEEK_OPTIONS.includes(cleanValue) ? cleanValue : "";
+    }
+
+    function defaultOwnershipStageForRole(role = "") {
+      return normalizeFunctionalRole(role) === "Support PM"
+        ? "Live ops (Support PM)"
+        : "In delivery (pre-handover)";
+    }
+
+    function factoryWeekFromV0(v0Date = "", asOf = new Date()) {
+      const start = parseDate(v0Date);
+      if (!start) return "";
+      const today = asOf instanceof Date ? new Date(asOf) : new Date();
+      const startDay = new Date(start);
+      startDay.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
+      const diffDays = Math.floor((today - startDay) / 86400000);
+      if (diffDays < 0) return "1";
+      const week = Math.min(6, Math.floor(diffDays / 7) + 1);
+      return String(week);
+    }
+
+    function resolveFactoryWeek(report = {}) {
+      const explicit = normalizeFactoryWeek(report.factory_week);
+      if (explicit) return explicit;
+      if (cleanText(report.v0_received_date)) return factoryWeekFromV0(report.v0_received_date);
+      return "";
+    }
+
+    function isFactoryTrackReport(report = {}) {
+      return Boolean(cleanText(report.v0_received_date) || normalizeFactoryWeek(report.factory_week));
+    }
+
+    function supportKitStatus(product = "") {
+      const required = ["Launch Kit", "Run Kit", "Live Product Kit"];
+      const byType = new Map(
+        productArtifacts
+          .filter(item => canonicalText(item.product) === canonicalText(product))
+          .map(item => [item.artifact_type, item])
+      );
+      return required.map(type => {
+        const row = byType.get(type);
+        const status = cleanText(row?.validation_status || row?.status || row?.evidence_status || (row ? "Partial" : "Missing"));
+        const ok = Boolean(row) && status !== "Missing" && !/^missing$/i.test(status);
+        return { type, status: row ? status : "Missing", ok };
+      });
+    }
+
+    function supportKitsComplete(product = "") {
+      return missingRequiredArtifacts(product, "Support PM").length === 0;
+    }
+
+    function canAcceptHandover(report = {}) {
+      if (!report || !canEditReport(report)) return false;
+      if (normalizeFunctionalRole(report.role) !== "Support PM") return false;
+      const stage = normalizeOwnershipStage(report.ownership_stage, report.role);
+      const week = resolveFactoryWeek(report);
+      if (stage !== "Handover in progress" && week !== "6") return false;
+      return supportKitsComplete(report.product);
+    }
+
+    function factoryGateEvidence(week = "") {
+      const w = normalizeFactoryWeek(week);
+      if (w === "1") return ["Observed features / workflows documented", "Baseline notes captured"];
+      if (w === "3") return ["Prioritized backlog", "TO-BE / acceptance criteria agreed"];
+      if (w === "5") return ["QA / regression evidence", "Support PM reverse demo rehearsal", "Limitations documented"];
+      if (w === "6") return ["Launch Kit", "Run Kit", "Live Product Kit", "Support PM acceptance recorded"];
+      return [];
+    }
+
+    function factoryRunwayMarkup(report = {}) {
+      if (!isFactoryTrackReport(report)) {
+        return `<div class="factory-panel"><h4>Factory cycle</h4><p class="muted small">Set <strong>V0 received date</strong> to place this version on the 6-week runway. Empty date = weekly status only (not on factory track).</p></div>`;
+      }
+      const week = resolveFactoryWeek(report) || "1";
+      const stage = normalizeOwnershipStage(report.ownership_stage, report.role);
+      const kits = supportKitStatus(report.product);
+      const weeks = FACTORY_WEEK_OPTIONS.map(w => {
+        const classes = [
+          "factory-week",
+          Number(w) < Number(week) ? "done" : "",
+          w === week ? "now" : "",
+          FACTORY_GATE_WEEKS.has(w) ? "gate" : ""
+        ].filter(Boolean).join(" ");
+        return `<div class="${classes}"><strong>W${escapeHtml(w)}</strong>${escapeHtml(FACTORY_WEEK_FOCUS[w] || "")}</div>`;
+      }).join("");
+      const kitChips = kits.map(item =>
+        `<span class="chip ${item.ok ? "green" : item.status === "Missing" ? "gray" : "amber"}">${escapeHtml(item.type)} · ${escapeHtml(item.status)}</span>`
+      ).join("");
+      const gateItems = factoryGateEvidence(week)
+        .map(item => `<li>${escapeHtml(item)}</li>`)
+        .join("");
+      const acceptEnabled = canAcceptHandover(report) && supportKitsComplete(report.product)
+        && (normalizeFunctionalRole(report.role) === "Support PM" || stage === "Handover in progress");
+      // Locked: only Support PM accepts. Require Support PM role on the report.
+      const supportOnly = normalizeFunctionalRole(report.role) === "Support PM";
+      const acceptBtn = supportOnly
+        ? `<button class="btn primary" type="button" id="acceptHandoverBtn" ${acceptEnabled && supportKitsComplete(report.product) ? "" : "disabled"} title="${supportKitsComplete(report.product) ? "Record Support PM acceptance" : "Complete Launch / Run / Live Product kits first"}">Accept handover</button>`
+        : `<button class="btn" type="button" disabled title="Only Support PM can accept handover">Accept handover (Support PM only)</button>`;
+      return `
+        <div class="factory-panel" id="factoryCyclePanel">
+          <h4>Factory cycle${report.version_label ? ` · ${escapeHtml(report.version_label)}` : ""}</h4>
+          <p class="muted small">V0 received: <strong>${escapeHtml(report.v0_received_date || "—")}</strong> · Current week: <strong>W${escapeHtml(week)}</strong> · Ownership: <strong>${escapeHtml(stage)}</strong></p>
+          <div class="factory-runway">${weeks}</div>
+          ${FACTORY_GATE_WEEKS.has(week) ? `<p class="muted small"><strong>Week ${escapeHtml(week)} gate evidence</strong></p><ul class="muted small">${gateItems}</ul>` : ""}
+          <div class="factory-kit-row">${kitChips}</div>
+          <div class="form-actions" style="margin:0">${acceptBtn}</div>
+          ${report.handover_accepted_at ? `<p class="muted small">Accepted ${escapeHtml(report.handover_accepted_at)} by ${escapeHtml(report.handover_accepted_by || "Support PM")}</p>` : ""}
+        </div>
+      `;
     }
 
     function normalizeActionStatus(value = "Open") {
@@ -5794,6 +6006,12 @@
         evidence_status: report.evidence_status || "Missing",
         evidence_reference: report.evidence_reference || "",
         gate_status: report.gate_status || "Not Ready",
+        ownership_stage: normalizeOwnershipStage(report.ownership_stage, report.role),
+        v0_received_date: report.v0_received_date || "",
+        version_label: report.version_label || "",
+        factory_week: normalizeFactoryWeek(report.factory_week) || "",
+        handover_accepted_at: report.handover_accepted_at || "",
+        handover_accepted_by: report.handover_accepted_by || "",
         history: Array.isArray(report.history) ? report.history.slice(-50) : []
       };
       return btoa(unescape(encodeURIComponent(JSON.stringify(meta))));
@@ -5860,6 +6078,15 @@
         evidence_status: row.evidence_status || row.evidenceStatus || legacyMeta.evidence_status || "Missing",
         evidence_reference: row.evidence_reference || row.evidenceReference || legacyMeta.evidence_reference || "",
         gate_status: row.gate_status || row.gateStatus || legacyMeta.gate_status || "Not Ready",
+        ownership_stage: normalizeOwnershipStage(
+          firstValue(row.ownership_stage, row.ownershipStage, legacyMeta.ownership_stage),
+          normalized.role || legacyMeta.role
+        ),
+        v0_received_date: firstValue(row.v0_received_date, row.v0ReceivedDate, legacyMeta.v0_received_date),
+        version_label: firstValue(row.version_label, row.versionLabel, legacyMeta.version_label),
+        factory_week: normalizeFactoryWeek(firstValue(row.factory_week, row.factoryWeek, legacyMeta.factory_week)),
+        handover_accepted_at: firstValue(row.handover_accepted_at, row.handoverAcceptedAt, legacyMeta.handover_accepted_at),
+        handover_accepted_by: firstValue(row.handover_accepted_by, row.handoverAcceptedBy, legacyMeta.handover_accepted_by),
         health: row.health || "amber",
         progress: Number(row.progress || 0),
         stage: normalized.stage,
@@ -5916,6 +6143,12 @@
         evidence_status: report.evidence_status || "Missing",
         evidence_reference: report.evidence_reference || null,
         gate_status: report.gate_status || "Not Ready",
+        ownership_stage: normalizeOwnershipStage(report.ownership_stage, report.role),
+        v0_received_date: report.v0_received_date || null,
+        version_label: report.version_label || null,
+        factory_week: normalizeFactoryWeek(report.factory_week) || null,
+        handover_accepted_at: report.handover_accepted_at || null,
+        handover_accepted_by: report.handover_accepted_by || null,
         history: Array.isArray(report.history) ? report.history.slice(-50) : [],
       };
     }
@@ -6037,6 +6270,25 @@
         }
         if (!isMissingColumnError(error) || useLegacySupabasePayload || options.legacyRetry === false) {
           throw error;
+        }
+        const missingFactoryColumn = FACTORY_DB_FIELDS.some(field =>
+          new RegExp(field, "i").test(error?.message || "")
+        );
+        if (missingFactoryColumn && options.factoryFieldsRetry !== false) {
+          const stripFactory = body => {
+            if (!body || typeof body !== "object") return body;
+            const next = { ...body };
+            FACTORY_DB_FIELDS.forEach(field => { delete next[field]; });
+            return next;
+          };
+          setSyncStatus("Saved without factory DB columns — run factory cycle migration");
+          return supabaseRequest(path, {
+            ...options,
+            factoryFieldsRetry: false,
+            body: options.body !== undefined
+              ? (Array.isArray(options.body) ? options.body.map(stripFactory) : stripFactory(options.body))
+              : undefined
+          });
         }
         useLegacySupabasePayload = true;
         setSyncStatus("Synced with Supabase legacy schema");
@@ -12025,11 +12277,23 @@
           ["Blockers / risks", `${blockers}`, blockers ? "red" : "green", blockers ? "Open Incidents & Delays for details." : "No blockers captured in the current view."]
         ];
       }
+      const factoryRows = source.filter(isFactoryTrackReport);
+      const gateDue = factoryRows.filter(report => {
+        const week = resolveFactoryWeek(report);
+        return FACTORY_GATE_WEEKS.has(week) && normalizeOwnershipStage(report.ownership_stage, report.role) !== "Live ops (Support PM)";
+      }).length;
+      const handoverReady = factoryRows.filter(report =>
+        normalizeOwnershipStage(report.ownership_stage, report.role) === "Handover in progress"
+        || resolveFactoryWeek(report) === "6"
+      ).length;
+      const weekCloseGaps = source.filter(report =>
+        !cleanText(report.owner) || !cleanText(report.summary) || !cleanText(report.next) || !cleanText(report.ownership_stage)
+      ).length;
       return [
-        ["Portfolio in view", `${dashboardCount} updates`, dashboardCount ? "blue" : "gray", dashboardCount ? "Use Portfolio Dashboard for the operational view." : reports.length ? "Reports are loaded, but none match the current dashboard filters. Clear Global scope." : "No reports loaded yet. Refresh to sync from Supabase."],
-        ["Delivery risk", `${incidentCount} signals`, incidentCount ? "red" : "green", incidentCount ? "Open Incidents & Delays before the meeting." : "No incident signals in the current view."],
-        ["Schedule delay", `${dateCounts.majorDelay} major / ${dateCounts.minorDelay} minor`, dateCounts.majorDelay ? "red" : dateCounts.minorDelay ? "amber" : "green", "Based on current dashboard filters."],
-        ["Missing next actions", `${missingNext}`, missingNext ? "amber" : "green", missingNext ? "Ask owners to clarify the next step." : "Next actions look complete in the current view."]
+        ["Week Close", weekCloseGaps ? `${weekCloseGaps} gaps` : "Ready", weekCloseGaps ? "amber" : "green", weekCloseGaps ? "Fill owner, summary, next action, and ownership stage." : "Core week-close fields look complete in this view."],
+        ["Factory gates", `${gateDue} due`, gateDue ? "amber" : "green", gateDue ? "Products on weeks 1/3/5/6 need gate evidence." : "No factory gate due in the current view."],
+        ["Handover", `${handoverReady} waiting`, handoverReady ? "amber" : "green", handoverReady ? "Support PM reviews kits and Accepts when ready." : "No handovers waiting."],
+        ["Portfolio / risk", `${dashboardCount} updates · ${incidentCount} signals`, incidentCount ? "red" : dashboardCount ? "blue" : "gray", incidentCount ? "Open Incidents & Delays before the meeting." : "Use Portfolio Dashboard for the operational view."]
       ];
     }
 
@@ -12096,8 +12360,32 @@
         cleanText(report.next) &&
         !["Completed", "Closed", "Done"].includes(cleanText(report.action_status))
       ).length;
+      const weekCloseGaps = weekRows.filter(report =>
+        !cleanText(report.owner) ||
+        !cleanText(report.summary) ||
+        !cleanText(report.next) ||
+        !cleanText(report.ownership_stage)
+      ).length;
+      const factoryGateDue = weekRows.filter(report => {
+        if (!isFactoryTrackReport(report)) return false;
+        const week = resolveFactoryWeek(report);
+        return FACTORY_GATE_WEEKS.has(week) && normalizeOwnershipStage(report.ownership_stage, report.role) !== "Live ops (Support PM)";
+      }).length;
       const period = weekStart ? workweekLabel(weekStart) : "Current reporting period";
       return [
+        {
+          number: "00",
+          title: "Week Close",
+          view: chooseView(["reports", "myDashboard", "dashboard"]),
+          owner: "Report owners",
+          due: "End of reporting week",
+          metric: weekRows.length ? `${weekCloseGaps} open of ${weekRows.length}` : "No updates yet",
+          tone: weekCloseGaps || !weekRows.length ? "amber" : "green",
+          next: weekCloseGaps
+            ? "Close the week: owner, summary, next action, and ownership stage on every update."
+            : "Week Close basics look complete for the reporting period.",
+          action: canManageReports() ? "Close the week" : "Review my updates"
+        },
         {
           number: "01",
           title: "Prepare",
@@ -12108,6 +12396,19 @@
           tone: incomplete || !weekRows.length ? "amber" : "green",
           next: incomplete ? "Complete Owner, summary, and next action on the weekly updates." : "Weekly updates have the core handoff fields.",
           action: canManageReports() ? "Update status" : "Review assigned work"
+        },
+        {
+          number: "01b",
+          title: "Factory gate",
+          view: chooseView(["reports", "governance", "dashboard"]),
+          owner: "Live PM / Support PM",
+          due: "Gate weeks 1 · 3 · 5 · 6",
+          metric: `${factoryGateDue} due`,
+          tone: factoryGateDue ? "amber" : "green",
+          next: factoryGateDue
+            ? "Open the report Factory cycle panel and complete gate evidence / handover kits."
+            : "No factory gates due in this reporting week.",
+          action: "Review factory"
         },
         {
           number: "02",
@@ -15332,8 +15633,14 @@
                 <label>Participants (optional)${peoplePickerMarkup("participants", report.participants || "", { multiple: true, label: "Participants", placeholder: "Select participants" })}</label>
                 <label>Type of product<select name="product_type"><option ${report.product_type === "Legacy" ? "selected" : ""}>Legacy</option><option ${report.product_type === "New product" ? "selected" : ""}>New product</option></select></label>
                 <label>Role<select name="role">${optionListMarkup(FUNCTIONAL_ROLE_OPTIONS, normalizeFunctionalRole(report.role) || "Live PM (Builder)")}</select></label>
+                <label>Ownership stage<select name="ownership_stage" required>${optionListMarkup(OWNERSHIP_STAGE_OPTIONS, normalizeOwnershipStage(report.ownership_stage, report.role))}</select></label>
+                <label>Version / cycle label<input name="version_label" type="text" value="${escapeHtml(report.version_label || "")}" placeholder="e.g. v1.2 · Factory Oct" /></label>
+                <label>V0 received date<input name="v0_received_date" type="date" value="${escapeHtml(report.v0_received_date || "")}" /></label>
+                <label>Factory week<select name="factory_week"><option value="">Auto from V0 date</option>${optionListMarkup(FACTORY_WEEK_OPTIONS, normalizeFactoryWeek(report.factory_week))}</select></label>
               </div>
+              <p class="muted small">Ownership stage is required on every update. V0 received date starts the 6-week clock. Use version labels when live and next factory cycle run in parallel.</p>
             </section>
+            ${factoryRunwayMarkup(report)}
             <section class="edit-form-section">
               <div>
                 <h4>2. Governance control</h4>
@@ -15483,6 +15790,46 @@
           showReportMessage(reportSaveErrorMessage(error, "update"), "danger");
         } finally {
           btn.disabled = false;
+        }
+      });
+      document.getElementById("acceptHandoverBtn")?.addEventListener("click", async () => {
+        hideReportMessage();
+        if (normalizeFunctionalRole(report.role) !== "Support PM") {
+          showReportMessage("Only Support PM can accept handover. Set Functional responsibility to Support PM first.", "danger");
+          return;
+        }
+        if (!supportKitsComplete(report.product)) {
+          showReportMessage("Complete Launch Kit, Run Kit, and Live Product Kit evidence before accepting.", "danger");
+          return;
+        }
+        if (!confirm("Accept handover for this version? Ownership moves to Support PM Live ops.")) return;
+        const accepter = currentUser?.displayName || currentUser?.username || "Support PM";
+        const acceptedAt = new Date().toISOString();
+        try {
+          const next = {
+            ...report,
+            role: "Support PM",
+            ownership_stage: "Live ops (Support PM)",
+            factory_week: "6",
+            handover_accepted_at: acceptedAt,
+            handover_accepted_by: accepter,
+            gate_status: "Approved",
+            next: cleanText(report.next) || "Live ops: monitor support, training/demos, and sustaining backlog.",
+            history: [
+              ...(Array.isArray(report.history) ? report.history : []),
+              {
+                at: acceptedAt,
+                by: accepter,
+                note: `Handover accepted by Support PM${report.version_label ? ` for ${report.version_label}` : ""}.`
+              }
+            ].slice(-50)
+          };
+          await updateReport(next);
+          showReportMessage("Handover accepted. Ownership is now Live ops (Support PM).");
+          renderDetail();
+        } catch (error) {
+          console.error(error);
+          showReportMessage(error.message || "Could not accept handover.", "danger");
         }
       });
     }
@@ -15653,16 +16000,26 @@
         throw new Error("Select a stage before saving.");
       }
       const rawProgress = Number(data.progress || 0);
+      const role = normalizeFunctionalRole(data.role || "Live PM (Builder)");
       const report = normalizeReportPeople({
         ...data,
         id,
-        role: normalizeFunctionalRole(data.role || "Live PM (Builder)"),
+        role,
+        ownership_stage: normalizeOwnershipStage(data.ownership_stage || defaultOwnershipStageForRole(role), role),
+        version_label: cleanText(data.version_label),
+        v0_received_date: cleanText(data.v0_received_date),
+        factory_week: normalizeFactoryWeek(data.factory_week),
+        handover_accepted_at: cleanText(data.handover_accepted_at),
+        handover_accepted_by: cleanText(data.handover_accepted_by),
         stage: cleanText(data.stage),
         action_status: normalizeActionStatus(data.action_status),
         progress: Number.isFinite(rawProgress) ? Math.max(0, Math.min(100, rawProgress)) : rawProgress,
         impact: Number(data.impact || 1),
         time: Number(data.time || 1)
       });
+      if (validateRequired && !cleanText(report.ownership_stage)) {
+        throw new Error("Select an ownership stage before saving.");
+      }
       if (validateQuality) {
         const readiness = assessReportReadiness(report, { existingId: id, requireProduct });
         if (readiness.blockers.length) {

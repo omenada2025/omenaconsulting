@@ -26,10 +26,11 @@
 - UI/UX contributors: stage still required; default **In delivery (pre-handover)** unless product is already live.
 - Avoid blocking save with cryptic errors — show a short helper under the field.
 
-## Pending build (not done yet)
+## Sprint A build (shipped 20 Oct 2026)
 
-- A1 Runway W1–W6  
-- A2 Gate evidence by week  
-- A3 Handover accept screen (Support PM)  
-- A4 Ownership stage in forms  
-- A5 Week Close basics on Home  
+- A1 Runway W1–W6 — report Factory cycle panel  
+- A2 Gate evidence by week — listed on gate weeks  
+- A3 Handover Accept — Support PM only; kits gate  
+- A4 Ownership stage + V0 date + version label on intake/edit forms  
+- A5 Week Close + factory gate steps on Home  
+- Migration: `20261020180000_factory_cycle_fields.sql` (run in Supabase SQL Editor)  
