@@ -10,6 +10,7 @@
 | 4 | Legacy products | **No auto-migration**. Team updates roles/stage manually when ready. |
 | 5 | Guide status | Updated to reflect partial live + pending Sprint A items. |
 | 6 | Cloudflare Worker Hello World | **Delete** — unused; Pages is the real app. |
+| 7 | Multiple versions | Track **product + version/cycle**. Support PM owns current live version; Live PM owns next factory cycle in parallel. Accept moves live pointer; kits and history are per version. |
 
 ## Suggestion recorded for #1 (V0 date)
 

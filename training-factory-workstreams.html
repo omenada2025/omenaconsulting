@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Omena Consulting · Team training — factory workstreams (final)</title>
+  <script src="access-gate.js"></script>
+  <style>
+    :root {
+      --ink: #12202f; --muted: #617187; --line: #d7e1eb; --soft: #f4f8fb;
+      --blue: #0f5574; --green: #16845f; --amber: #9a6b12;
+      --amber-soft: #fff4d8; --green-soft: #e6f4ed; --blue-soft: #e8f4fa;
+      --shadow: 0 18px 45px rgba(18, 32, 47, 0.10);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Segoe UI", Arial, sans-serif; color: var(--ink);
+      background:
+        linear-gradient(rgba(214, 225, 235, 0.55) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(214, 225, 235, 0.55) 1px, transparent 1px),
+        #edf3f8;
+      background-size: 24px 24px; line-height: 1.55;
+    }
+    .shell { max-width: 900px; margin: 0 auto; padding: 32px 18px 72px; }
+    .hero, .card {
+      background: rgba(255, 255, 255, 0.96); border: 1px solid var(--line);
+      border-radius: 22px; box-shadow: var(--shadow);
+    }
+    .hero { padding: 32px; margin-bottom: 18px; }
+    .eyebrow {
+      display: inline-flex; padding: 7px 12px; border-radius: 999px;
+      background: var(--blue-soft); color: var(--blue);
+      font-weight: 800; font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+    }
+    h1 { font-size: clamp(26px, 4.5vw, 36px); line-height: 1.1; margin: 16px 0 12px; }
+    h2 { font-size: 18px; margin: 0 0 8px; }
+    h3 { font-size: 15px; margin: 14px 0 8px; }
+    p { color: var(--muted); margin: 0 0 12px; }
+    .lede { font-size: 17px; color: var(--ink); }
+    .banner {
+      margin-top: 14px; padding: 12px 14px; border-radius: 12px;
+      background: var(--amber-soft); border: 1px solid #e6c985; color: var(--amber);
+      font-size: 13px; font-weight: 700;
+    }
+    .banner.ok { background: var(--green-soft); border-color: #9dceb5; color: #10734f; }
+    .banner.info { background: var(--blue-soft); border-color: #9fc4d8; color: var(--blue); }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line);
+      background: white; color: var(--ink); text-decoration: none; font-weight: 700; font-size: 14px;
+    }
+    .btn.primary { background: var(--blue); border-color: var(--blue); color: white; }
+    .toc { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .toc a {
+      text-decoration: none; font-size: 12px; font-weight: 800;
+      padding: 7px 11px; border-radius: 999px; border: 1px solid var(--line);
+      background: white; color: var(--blue);
+    }
+    .card { padding: 22px 24px; margin-bottom: 14px; }
+    .share-note {
+      margin-top: 14px; padding: 12px 14px; border-radius: 12px;
+      background: var(--soft); border: 1px solid var(--line);
+      color: var(--muted); font-size: 13px;
+    }
+    .share-note a { color: var(--blue); overflow-wrap: anywhere; font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 10px 0 4px; }
+    th, td {
+      text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    th { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+    ul, ol { margin: 8px 0 0; padding-left: 20px; color: var(--muted); }
+    li { margin: 6px 0; }
+    .check { list-style: none; padding-left: 0; }
+    .check li { padding-left: 0; margin-left: 0; }
+    .check li::before { content: "☐ "; color: var(--blue); font-weight: 800; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .box {
+      background: var(--soft); border: 1px solid var(--line); border-radius: 14px; padding: 14px;
+    }
+    .box strong { display: block; margin-bottom: 6px; color: var(--ink); }
+    .pill {
+      display: inline-flex; padding: 4px 9px; border-radius: 999px;
+      font-size: 11px; font-weight: 800; background: var(--blue-soft); color: var(--blue);
+      margin-bottom: 8px;
+    }
+    .pill.green { background: var(--green-soft); color: var(--green); }
+    .pill.amber { background: var(--amber-soft); color: var(--amber); }
+    .flow {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0;
+    }
+    .flow div {
+      background: var(--soft); border: 1px solid var(--line); border-radius: 12px;
+      padding: 12px; text-align: center; font-size: 12px; font-weight: 700;
+    }
+    .flow span { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin-top: 4px; }
+    .flow .accent { background: var(--blue-soft); border-color: #9fc4d8; }
+    .tree {
+      font-family: Consolas, "Courier New", monospace; font-size: 12px;
+      background: #0f1b2a; color: #d7e4ef; border-radius: 14px; padding: 14px 16px;
+      overflow-x: auto; line-height: 1.45; margin: 12px 0;
+    }
+    .tree .live { color: #7dcea0; }
+    .tree .factory { color: #7eb8d8; }
+    .tree .closed { color: #8a9aab; }
+    .callout {
+      margin-top: 12px; padding: 12px 14px; border-radius: 12px;
+      background: var(--soft); border-left: 4px solid var(--blue); font-size: 13px; color: var(--ink);
+    }
+    .decisions td:first-child { white-space: nowrap; font-weight: 700; color: var(--ink); }
+    .footer { text-align: center; color: var(--muted); font-size: 13px; margin-top: 24px; }
+    @media (max-width: 720px) {
+      .grid2, .grid3, .flow { grid-template-columns: 1fr; }
+    }
+    @media print {
+      body { background: white; }
+      .hero, .card { box-shadow: none; }
+      .actions { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="hero">
+      <span class="eyebrow">Team training · final for share</span>
+      <h1>Factory workstreams — how we work before Sprint A ships</h1>
+      <p class="lede">One dashboard. Two layers. Clear Live vs Support ownership — including <strong>multiple versions of the same product</strong> without losing tracking.</p>
+      <div class="banner ok">Status: Decisions locked (20 Oct 2026) · Roles + kits already live · Runway / Accept screen = next build · Share this before implementation</div>
+      <div class="share-note">
+        Share URL (after publish):
+        <a href="https://omenaconsulting.pages.dev/training-factory-workstreams.html">https://omenaconsulting.pages.dev/training-factory-workstreams.html</a>
+        <br>Password: <code>OmenaTeam2026!</code>
+        · Local preview: <a href="http://127.0.0.1:8765/training-factory-workstreams.html">http://127.0.0.1:8765/…</a>
+        <br>
+        <a href="guide-factory-dashboard-changes.html">Context guide</a> ·
+        <a href="preview-after-factory-alignment.html">UI preview</a> ·
+        <a href="index.html">Live dashboard</a>
+      </div>
+      <div class="actions">
+        <a class="btn primary" href="#do-now">Do this week</a>
+        <a class="btn" href="#versions">Versions &amp; tracking</a>
+        <a class="btn" href="#support">Support PM</a>
+        <a class="btn" href="#live">Live PM</a>
+      </div>
+      <nav class="toc" aria-label="Sections">
+        <a href="#locked">Decisions</a>
+        <a href="#map">Map</a>
+        <a href="#versions">Versions</a>
+        <a href="#do-now">Do now</a>
+        <a href="#by-role">By role</a>
+        <a href="#support">Support PM</a>
+        <a href="#live">Live PM</a>
+        <a href="#weekly">Weekly</a>
+        <a href="#build">What we build</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+    </header>
+
+    <section class="card" id="locked">
+      <span class="pill green">Locked</span>
+      <h2>0. Decisions already made</h2>
+      <table class="decisions">
+        <thead><tr><th>Topic</th><th>Decision</th></tr></thead>
+        <tbody>
+          <tr><td>Clock start</td><td>Live PM enters <strong>V0 received date</strong> (when the formal V0 / pack was received). Gates at end of weeks 1, 3, 5, 6 from that date.</td></tr>
+          <tr><td>Accept handover</td><td><strong>Support PM only</strong> (not Ops Manager).</td></tr>
+          <tr><td>Ownership stage</td><td>Required on <strong>every</strong> weekly update.</td></tr>
+          <tr><td>Legacy products</td><td><strong>Manual</strong> migration — no bulk auto-change.</td></tr>
+          <tr><td>Versions</td><td>Track <strong>product + version/cycle</strong>. Support PM owns current live version; Live PM owns next factory cycle in parallel.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card" id="map">
+      <span class="pill">Big picture</span>
+      <h2>1. Two layers — same dashboard</h2>
+      <div class="grid2">
+        <div class="box">
+          <strong>Weekly rhythm (live today)</strong>
+          Status updates, portfolio health, governance. Continues every week for every owner.
+        </div>
+        <div class="box">
+          <strong>Factory cycle (next build)</strong>
+          V0 received date → 6 weeks → gates → Support PM Accept → Live ops pointer moves.
+        </div>
+      </div>
+      <div class="flow">
+        <div>V0 received<span>Live PM sets date</span></div>
+        <div>Weeks 1–6<span>Gates 1 · 3 · 5 · 6</span></div>
+        <div class="accent">Accept<span>Support PM only</span></div>
+        <div>Live ops<span>Support PM owns</span></div>
+      </div>
+      <div class="callout"><strong>Already live:</strong> Live PM / Support PM / UI/UX roles + Launch / Run / Live Product kits. <strong>Not live yet:</strong> runway UI, week-gate checklists, Accept button, required ownership stage field.</div>
+    </section>
+
+    <section class="card" id="versions">
+      <span class="pill amber">Critical</span>
+      <h2>2. Multiple versions — how we do not lose tracking</h2>
+      <p>A product can have a <strong>live version</strong> (Support PM) and a <strong>next factory cycle</strong> (Live PM) at the same time. Accept moves the “live pointer”; it does not erase history.</p>
+      <div class="tree">Checkout Hub <span class="closed">(product — stable name)</span>
+├── <span class="live">v1.1 · Live ops</span>     ← Support PM · weekly status + kits
+├── <span class="factory">v1.2 · Factory W3</span>  ← Live PM · runway + gates (parallel)
+└── <span class="closed">v1.0 · Closed</span>      ← history · do not mix into this week’s update</div>
+      <div class="grid3">
+        <div class="box">
+          <strong>Product</strong>
+          Stable identity in the portfolio (name does not change each release).
+        </div>
+        <div class="box">
+          <strong>Version / cycle</strong>
+          One 6-week runway + one handover. Own V0 date, kits, and gates.
+        </div>
+        <div class="box">
+          <strong>Live pointer</strong>
+          After Accept, Support PM owns that version as Live ops. Previous live → Closed / history.
+        </div>
+      </div>
+      <h3>Rules (everyone)</h3>
+      <ul>
+        <li>Do <strong>not</strong> mix live bugs and factory gate work in the same weekly update line.</li>
+        <li>Kits (Launch / Run / Live Product) are <strong>per version</strong>.</li>
+        <li>Use a clear label: e.g. <code>Checkout Hub · v1.2</code> or a Version / cycle field when it ships.</li>
+        <li>Empty V0 date = that version is <strong>not</strong> on the factory runway (weekly status still works).</li>
+      </ul>
+      <div class="callout"><strong>One-liner for the team:</strong> Support PM owns the <em>current live version</em>. Live PM owns the <em>next factory cycle</em>. Tracking is per version; Accept moves the live pointer.</div>
+    </section>
+
+    <section class="card" id="do-now">
+      <span class="pill amber">Action this week</span>
+      <h2>3. What to do before we build</h2>
+      <p>No new screens required — reshape workstreams now.</p>
+      <ol class="check">
+        <li>List products and mark each line: <strong>Live ops</strong> (Support PM) · <strong>In delivery / factory</strong> (Live PM) · <strong>UI/UX contribution only</strong>.</li>
+        <li>If a product has (or will have) a next release: open a <strong>separate version/cycle</strong> line — do not overwrite the live stream.</li>
+        <li>Live PM: write the expected or real <strong>V0 received date</strong> for each factory cycle.</li>
+        <li>Support PM: list products you will Accept; note Launch / Run / Live Product kit gaps <strong>per version</strong>.</li>
+        <li>Move training / demos / sustaining for released products under <strong>Support PM</strong> (not a peer “Training owner”).</li>
+        <li>In weekly updates from now: pick Live PM / Support PM / UI/UX correctly.</li>
+        <li>Send blockers (wrong owner, unclear V0, missing kits) to Daniela before Sprint A build.</li>
+      </ol>
+      <div class="banner ok">Legacy products are not auto-migrated. Update ownership manually when the real owner is clear.</div>
+    </section>
+
+    <section class="card" id="by-role">
+      <span class="pill">Roles</span>
+      <h2>4. Adjust workstreams by role</h2>
+      <table>
+        <thead><tr><th>Role</th><th>Adjust now</th><th>After Sprint A</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Live PM (Builder)</strong></td>
+            <td>One workstream per <em>factory version</em>. Capture V0 date. Plan gate evidence 1/3/5/6. Stay owner until Accept.</td>
+            <td>Runway on product/version; gate checklists; accountable until Support PM Accepts.</td>
+          </tr>
+          <tr>
+            <td><strong>Support PM</strong></td>
+            <td>One live stream per <em>live version</em>. Prep kit review + reverse demo for incoming cycles. Never merge next-version factory into live update.</td>
+            <td>Only you Accept. Then weekly Live ops on the new live version; prior version → history.</td>
+          </tr>
+          <tr>
+            <td><strong>UI/UX</strong></td>
+            <td>Contribution streams attached to Live or Support product/version — not product owner.</td>
+            <td>Ownership stage still required (default In delivery unless product is live).</td>
+          </tr>
+          <tr>
+            <td><strong>Editor / report owner</strong></td>
+            <td>Correct functional role every week. Separate lines if live + factory coexist.</td>
+            <td>Ownership stage required on every update.</td>
+          </tr>
+          <tr>
+            <td><strong>Ops / manager</strong></td>
+            <td>Do not Accept. Track who owns live vs factory per product. Watch version labels.</td>
+            <td>Week Close + gate/handover alerts on Home.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card" id="support">
+      <span class="pill green">Support PM</span>
+      <h2>5. Support PM workflow (final)</h2>
+      <h3>A. Current live version (you own it)</h3>
+      <ul>
+        <li>Role = <strong>Support PM</strong> · stage = <strong>Live ops</strong>.</li>
+        <li>Weekly: status, risks, support load, training/demos, sustaining.</li>
+        <li>Keep kits current for <em>this</em> live version when something material changes.</li>
+      </ul>
+      <h3>B. Next factory version (Live PM still owns)</h3>
+      <ul>
+        <li>Do not take ownership early.</li>
+        <li><strong>Week 5:</strong> enablement / reverse demo rehearsal.</li>
+        <li><strong>Week 6:</strong> review kits + QA + access for that version.</li>
+        <li><strong>Accept:</strong> only Support PM. Incomplete kits → hold; Live PM closes gaps.</li>
+      </ul>
+      <h3>C. After Accept</h3>
+      <ul>
+        <li>Live pointer moves to the new version → you own Live ops.</li>
+        <li>Previous live version → Closed / history (still findable, not mixed into weekly live).</li>
+        <li>Live PM moves to the next factory product or cycle.</li>
+      </ul>
+      <div class="callout"><strong>Locked:</strong> Accept handover = Support PM only.</div>
+    </section>
+
+    <section class="card" id="live">
+      <span class="pill">Live PM</span>
+      <h2>6. Live PM (Builder) workflow (final)</h2>
+      <ol>
+        <li>Receive formal V0 / pack → set <strong>V0 received date</strong> on that version/cycle.</li>
+        <li>Run Weeks 1–6; gate evidence at weeks <strong>1, 3, 5, 6</strong>.</li>
+        <li>Build Launch / Run / Live Product kits for <em>this version</em> before Week 6.</li>
+        <li>Coordinate Support PM reverse demo (Week 5–6).</li>
+        <li>Wait for Support PM <strong>Accept</strong> → then start the next product or version cycle.</li>
+      </ol>
+      <p>If Support PM already owns v1.1 live, your v1.2 factory stream runs <strong>in parallel</strong> — do not overwrite their live tracking.</p>
+    </section>
+
+    <section class="card" id="weekly">
+      <span class="pill amber">Reporting</span>
+      <h2>7. Weekly reporting</h2>
+      <table>
+        <thead><tr><th>Field / habit</th><th>Now</th><th>After Sprint A</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Functional role</td>
+            <td>Live PM / Support PM / UI/UX (already live)</td>
+            <td>Same</td>
+          </tr>
+          <tr>
+            <td>Ownership stage</td>
+            <td>Plan: In delivery · Handover in progress · Live ops</td>
+            <td><strong>Required every update</strong></td>
+          </tr>
+          <tr>
+            <td>V0 received date</td>
+            <td>Note offline per factory version</td>
+            <td>Live PM enters on the version form</td>
+          </tr>
+          <tr>
+            <td>Version / cycle label</td>
+            <td>Use clear naming in product/workstream title</td>
+            <td>Dedicated field (recommended in build)</td>
+          </tr>
+          <tr>
+            <td>Handover kits</td>
+            <td>Track per version where you can</td>
+            <td>Gate Accept until kits complete</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card" id="build">
+      <span class="pill">Sprint A</span>
+      <h2>8. What we will build next (after this training)</h2>
+      <table>
+        <thead><tr><th>ID</th><th>Item</th><th>Outcome</th></tr></thead>
+        <tbody>
+          <tr><td>A1</td><td>6-week runway</td><td>W1–W6 visible per factory version</td></tr>
+          <tr><td>A2</td><td>Gate evidence</td><td>Checklists at weeks 1, 3, 5, 6</td></tr>
+          <tr><td>A3</td><td>Handover Accept</td><td>Support PM only; kits gate the button</td></tr>
+          <tr><td>A4</td><td>Ownership stage + V0 date (+ version label)</td><td>Required stage; clock start; clear multi-version tracking</td></tr>
+          <tr><td>A5</td><td>Week Close on Home</td><td>Week done? + products needing gate/handover</td></tr>
+        </tbody>
+      </table>
+      <p>Visual mock: <a href="preview-after-factory-alignment.html">preview-after-factory-alignment.html</a></p>
+    </section>
+
+    <section class="card" id="faq">
+      <span class="pill">FAQ</span>
+      <h2>9. FAQ</h2>
+      <h3>Do weekly updates stop during the 6 weeks?</h3>
+      <p>No. Weekly rhythm continues. Factory is an extra layer on the version in delivery.</p>
+      <h3>Can live and next version run in parallel?</h3>
+      <p>Yes. Support PM on live version; Live PM on next factory cycle. Separate tracking lines.</p>
+      <h3>Can Ops Manager accept handover?</h3>
+      <p>No. Support PM only.</p>
+      <h3>What about old products?</h3>
+      <p>Manual. Migrate when ownership is clear.</p>
+      <h3>When does build start?</h3>
+      <p>After this training is shared, feedback collected, and leadership confirms A1–A5.</p>
+      <div class="banner">Please reply with workstream / version adjustments or blockers. Silent = we assume your streams already match Live vs Support and version rules.</div>
+    </section>
+
+    <p class="footer">Omena Consulting · Factory workstream training · Final for share · Decisions 20 Oct 2026 · Includes multi-version tracking</p>
+  </div>
+</body>
+</html>
