@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <meta name="dashboard-build" content="2026-10-20-factory-sprint-a" />
+  <meta name="dashboard-build" content="2026-10-21-factory-sprint-b-c" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231f5874'/%3E%3Ctext x='32' y='41' text-anchor='middle' font-family='Arial,sans-serif' font-size='28' font-weight='700' fill='white'%3EPU%3C/text%3E%3C/svg%3E" />
   <title>Omena Consulting Dashboard</title>
   <style>
@@ -749,15 +749,111 @@
     .global-scope ~ .view .filter-bar { top: 118px; }
     .active-filter-summary { grid-column: 1 / -1; display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
     .active-filter-summary .chip { margin: 0; }
+    .active-filter-summary .chip.scope-chip {
+      cursor: pointer;
+      border: 0;
+      font: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .active-filter-summary .chip.scope-chip .chip-clear { opacity: .75; font-weight: 700; }
     .mobile-more-control { display: none; }
+    .mobile-bottom-nav {
+      display: none;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 40;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 4px;
+      padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+      background: rgba(15, 27, 42, .96);
+      border-top: 1px solid rgba(255, 255, 255, .08);
+      box-shadow: 0 -8px 24px rgba(15, 27, 42, .18);
+    }
+    .mobile-bottom-nav .tab {
+      display: block;
+      width: 100%;
+      min-height: 44px;
+      padding: 8px 6px;
+      font-size: 12px;
+      white-space: normal;
+      text-align: center;
+    }
+    .mobile-bottom-nav .tab.active { background: rgba(255, 255, 255, .12); }
+    .permission-banner {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      margin: 0 0 12px;
+    }
     .meeting-mode {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 8px;
       margin-bottom: 16px;
     }
     .meeting-mode .btn { min-height: 62px; text-align: left; line-height: 1.3; }
     .meeting-mode .btn small { display:block; margin-top:4px; color:var(--muted); font-weight:600; }
+    .meeting-mode .btn.session-done { border-color: var(--green); box-shadow: inset 0 0 0 1px rgba(40, 122, 85, .35); }
+    .meeting-mode .btn.session-done::after { content: " done"; color: var(--green); font-weight: 700; }
+    .readiness-bar {
+      margin: 12px 0 4px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface-soft);
+    }
+    .readiness-bar-track {
+      height: 8px;
+      border-radius: 999px;
+      background: #e7eef3;
+      overflow: hidden;
+      margin: 8px 0;
+    }
+    .readiness-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--green));
+    }
+    .artifact-check { flex-direction: column; }
+    .artifact-check .artifact-link-row {
+      display: grid;
+      gap: 4px;
+      width: 100%;
+      margin-top: 6px;
+      padding-left: 24px;
+    }
+    .artifact-check .artifact-link-row input {
+      width: 100%;
+      min-height: 34px;
+      font-size: 12px;
+    }
+    .incidents-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .admin-hub-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .admin-hub-card {
+      text-align: left;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px;
+      background: var(--panel);
+      cursor: pointer;
+    }
+    .admin-hub-card:hover { border-color: var(--accent); }
+    .admin-hub-card h3 { margin: 6px 0; }
+    .legacy-role-chip { margin-left: 6px; }
+    .global-synced-filter { opacity: .72; }
+    .global-synced-filter select { pointer-events: none; }
     .permission-matrix { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; }
     .permission-card { border:1px solid var(--line); border-radius:14px; padding:14px; background:var(--surface-soft); }
     .permission-card ul { margin:10px 0 0; padding-left:18px; color:var(--muted); font-size:12px; line-height:1.65; }
@@ -2622,9 +2718,12 @@
         white-space: normal;
         padding: 9px 12px;
       }
-      .tab[data-mobile-primary]:not([hidden]) { display:block; }
-      .mobile-more-control { display:block; min-width:0; }
-      .mobile-more-control select { height:100%; min-height:38px; padding:8px 10px; }
+      .tab[data-mobile-primary]:not([hidden]) { display:none; }
+      .mobile-more-control { display:none; }
+      .mobile-bottom-nav { display: grid; }
+      main { padding-bottom: 88px; }
+      .incidents-split { grid-template-columns: 1fr; }
+      .meeting-mode { grid-template-columns: 1fr 1fr; }
       .signed-in-card,
       body.role-manager-profile .signed-in-card {
         margin-top: 0;
@@ -2801,10 +2900,10 @@
       </div>
       <nav class="tabs" aria-label="Primary">
         <div class="nav-section">Overview</div>
-        <button class="tab active" data-view="home" data-mobile-primary title="See this week's work and next actions">This Week</button>
-        <button class="tab" data-view="myDashboard" data-hide-executive-admin title="Personal dashboard for your workstreams, dates, risks, and next actions">My Dashboard</button>
-        <button class="tab" data-view="dashboard" data-mobile-primary title="Portfolio health, workstreams, dates, risks, wins, blockers, and next actions">Portfolio Dashboard</button>
-        <button class="tab" data-view="executive" data-mobile-primary title="Leadership summary focused on attention items and decisions">Executive View</button>
+        <button class="tab active" data-view="home" data-mobile-primary title="See this week's work and next actions">Home</button>
+        <button class="tab" data-view="myDashboard" data-mobile-primary data-hide-executive-admin title="Personal dashboard for your workstreams, dates, risks, and next actions">My work</button>
+        <button class="tab" data-view="dashboard" data-mobile-primary title="Portfolio health, workstreams, dates, risks, wins, blockers, and next actions">Portfolio</button>
+        <button class="tab" data-view="executive" title="Leadership summary focused on attention items and decisions">Executive View</button>
 
         <div class="nav-section">Reporting &amp; Delivery</div>
         <button class="tab" data-view="reports" data-master-only>Weekly Updates</button>
@@ -2815,25 +2914,34 @@
         <button class="tab" data-view="managementReview" data-role-manager-only>Manager Meeting</button>
         <button class="tab" data-view="weeklyProjectBrief" data-role-manager-only>Weekly Product Review</button>
         <button class="tab" data-view="projectTalkTrack" data-role-manager-only>Product Talk Track</button>
-        <button class="tab" data-view="reportAnalysis" data-role-manager-only>Report Quality Review</button>
-        <button class="tab" data-view="actionItems" data-role-manager-only>Action Items</button>
-        <button class="tab" data-view="ownerFeedback" data-role-manager-only>Coaching Feedback</button>
         <button class="tab" data-view="weeklyReview" data-role-manager-only>Send Weekly Feedback</button>
         <button class="tab" data-view="workload" data-role-manager-only>Capacity &amp; Support</button>
 
         <div class="nav-section">Governance</div>
-        <button class="tab" data-view="governanceBoard" data-mobile-primary data-governance-access>Governance Board</button>
+        <button class="tab" data-view="governanceBoard" data-governance-access>Governance Board</button>
         <button class="tab" data-view="governance" data-governance-access>Product Governance</button>
 
         <div class="nav-section" data-role-manager-only>Administration</div>
-        <button class="tab" data-view="sourceProjects" data-role-manager-only>Product Source List</button>
-        <button class="tab" data-view="users" data-role-manager-only>User Access</button>
-        <button class="tab" data-view="userLog" data-role-manager-only>User Log</button>
+        <button class="tab" data-view="administration" data-role-manager-only data-mobile-more>Administration</button>
+        <button class="tab" data-view="sourceProjects" data-role-manager-only data-admin-hub-item hidden>Product Source List</button>
+        <button class="tab" data-view="users" data-role-manager-only data-admin-hub-item hidden>User Access</button>
+        <button class="tab" data-view="userLog" data-role-manager-only data-admin-hub-item hidden>User Log</button>
+        <button class="tab" data-view="reportAnalysis" data-role-manager-only data-admin-hub-item hidden>Report Quality Review</button>
+        <button class="tab" data-view="actionItems" data-role-manager-only data-admin-hub-item hidden>Action Items</button>
+        <button class="tab" data-view="ownerFeedback" data-role-manager-only data-admin-hub-item hidden>Coaching Feedback</button>
 
         <div class="nav-section" data-role-manager-only>Help</div>
         <button class="tab" data-view="workflow" data-role-manager-only title="End-to-end workflow guide for using the dashboard">Workflow Guide</button>
         <label class="mobile-more-control" aria-label="More destinations">
           <select id="mobileMoreNav"><option value="">More...</option></select>
+        </label>
+      </nav>
+      <nav class="mobile-bottom-nav" aria-label="Mobile primary">
+        <button class="tab" type="button" data-mobile-nav="home">Home</button>
+        <button class="tab" type="button" data-mobile-nav="myDashboard">My work</button>
+        <button class="tab" type="button" data-mobile-nav="dashboard">Portfolio</button>
+        <label class="mobile-more-control" style="display:block">
+          <select id="mobileBottomMoreNav" aria-label="More destinations"><option value="">More</option></select>
         </label>
       </nav>
       <div class="signed-in-card" id="signedInCard" hidden>
@@ -2847,6 +2955,7 @@
 
     <main>
       <div class="sr-only" id="appLiveRegion" role="status" aria-live="polite" aria-atomic="true"></div>
+      <div class="inline-message danger permission-banner" id="permissionBanner" hidden role="alert"></div>
       <section class="global-scope" id="globalScope" aria-label="Persistent dashboard scope">
         <div class="global-scope-title">
           <strong>Global scope</strong>
@@ -3329,8 +3438,8 @@
           <div class="panel">
             <div class="panel-title">
               <div>
-                <h3>Executive Attention</h3>
-                <p class="muted small">Risks, blockers, and critical-priority work.</p>
+                <h3>Decision queue</h3>
+                <p class="muted small">Top risks, blockers, and decisions that need leadership attention.</p>
               </div>
             </div>
             <div class="exec-list" id="executiveAttention"></div>
@@ -3341,8 +3450,8 @@
           <div class="panel">
             <div class="panel-title">
               <div>
-                <h3>Capacity and support signals</h3>
-                <p class="muted small">Operational workload and support indicators by owner; not an individual performance rating.</p>
+                <h3>Top products</h3>
+                <p class="muted small">Highest-attention products first (up to 5). Capacity signals remain operational, not performance ratings.</p>
               </div>
             </div>
             <div class="exec-list" id="executiveOwners"></div>
@@ -3350,8 +3459,8 @@
           <div class="panel">
             <div class="panel-title">
               <div>
-                <h3>Decisions & Next Actions</h3>
-                <p class="muted small">Short list of next moves for follow-up.</p>
+                <h3>Next actions</h3>
+                <p class="muted small">Short list of next moves for follow-up, including blocked validation when present.</p>
               </div>
             </div>
             <div class="exec-list" id="executiveActions"></div>
@@ -3447,7 +3556,7 @@
                 <label>Product<select name="product" required></select></label>
                 <label>Workstream<input name="workstream" required placeholder="Feature, workstream, or decision" /></label>
                 <label>Governance title<input name="title" required placeholder="Decision or control point" /></label>
-                <label>Owner<div class="people-picker" data-people-picker data-name="owner" data-label="Owner" data-placeholder="Select owner"></div></label>
+                <label>Owner<div class="people-picker" data-people-picker data-directory-only="true" data-name="owner" data-label="Owner" data-placeholder="Select owner"></div></label>
                 <label>Functional responsibility<select name="functional_role" required></select></label>
                 <label>Classification<select name="classification" required></select></label>
                 <label>Lifecycle phase<select name="lifecycle_phase" required></select></label>
@@ -3488,9 +3597,22 @@
               <option value="UI/UX">UI/UX</option>
             </select></label>
           </div>
+          <div id="governanceReadinessBar" class="readiness-bar" hidden></div>
           <div class="artifact-checklist" id="governanceArtifactChecklist"></div>
           <div class="form-actions"><button class="btn primary" type="button" id="saveGovernanceArtifacts">Save evidence checklist</button></div>
         </div>
+      </section>
+
+      <section class="view" id="administration" data-role-manager-view>
+        <div class="header">
+          <div>
+            <span class="page-kicker">Ops hub</span>
+            <h2>Administration</h2>
+            <p class="muted">Users, logs, source projects, report quality, feedback, and action items in one place. Deep links to each tool still work.</p>
+          </div>
+          <button class="btn" type="button" data-logout>Logout</button>
+        </div>
+        <div class="admin-hub-grid" id="administrationHubGrid"></div>
       </section>
 
       <section class="view" id="governanceBoard" data-governance-view>
@@ -3522,13 +3644,13 @@
           <button class="btn" type="button" data-logout>Logout</button>
         </div>
 
-        <div class="meeting-mode" aria-label="Meeting workflow">
-          <button class="btn soft" type="button" data-jump="weeklyProjectBrief"><strong>1. Prepare</strong><small>Agenda / brief</small></button>
-          <button class="btn soft" type="button" data-jump="executive"><strong>2. Review</strong><small>Health + blockers</small></button>
-          <button class="btn soft" type="button" data-jump="managementReview"><strong>3. Decisions</strong><small>Owner + due date</small></button>
-          <button class="btn soft" type="button" data-jump="actionItems"><strong>4. Actions</strong><small>Assign follow-up</small></button>
-          <button class="btn soft" type="button" data-jump="weeklyReview"><strong>5. Send</strong><small>Weekly review feedback</small></button>
+        <div class="meeting-mode" id="meetingSessionStrip" aria-label="Meeting session progress">
+          <button class="btn soft" type="button" data-meeting-step="agenda" data-jump="weeklyProjectBrief"><strong>1. Agenda</strong><small>Brief / talking track</small></button>
+          <button class="btn soft" type="button" data-meeting-step="decisions" data-jump="managementReview"><strong>2. Decisions</strong><small>Owner + due date</small></button>
+          <button class="btn soft" type="button" data-meeting-step="actions" data-jump="actionItems"><strong>3. Actions</strong><small>Assign follow-up</small></button>
+          <button class="btn soft" type="button" data-meeting-step="send" data-jump="weeklyReview"><strong>4. Send</strong><small>Weekly feedback</small></button>
         </div>
+        <p class="muted small" id="meetingSessionStatus">Session progress is saved in this browser until you clear it.</p>
 
         <div class="guide-grid">
           <div class="guide-card theme-blue">
@@ -4133,6 +4255,9 @@
           </div>
         </div>
         <div class="inline-message success" id="weeklyReviewMessage" hidden></div>
+        <div class="inline-message info" id="weeklyReviewEmailNote">
+          If SendGrid/Resend delivery fails, use <strong>Copy feedback</strong> and email owners from your mailbox, or open the draft via Coaching Feedback. Check Supabase function secrets and domain verification before retrying - do not paste API keys into this app.
+        </div>
 
         <div class="grid summary-grid" id="weeklyReviewCards"></div>
 
@@ -4467,12 +4592,12 @@
           <div class="report-list" id="incidentDrilldownList"></div>
         </div>
 
-        <div class="grid two-col" style="margin-top:16px">
+        <div class="incidents-split" style="margin-top:16px">
           <div class="panel">
             <div class="panel-title">
               <div>
-                <h3>Product Indicators</h3>
-                <p class="muted small">Grouped by product. Highest delayed and critical counts appear first.</p>
+                <h3>Schedule</h3>
+                <p class="muted small">Major and minor delays by product. Highest delayed counts appear first.</p>
               </div>
             </div>
             <div class="report-list" id="incidentProjectList"></div>
@@ -4480,8 +4605,8 @@
           <div class="panel">
             <div class="panel-title">
               <div>
-                <h3>Incident Details</h3>
-                <p class="muted small">Workstreams included by date alert, blocker, At Risk health, or Critical priority.</p>
+                <h3>Blockers</h3>
+                <p class="muted small">Workstreams with blocker text, At Risk health, Critical priority, or blocked validation.</p>
               </div>
             </div>
             <div class="report-list" id="incidentDetailList"></div>
@@ -4654,7 +4779,7 @@
                 </label>
                 <label>
                   Owner
-                  <div class="people-picker" data-people-picker data-name="owner" data-label="Owner" data-placeholder="Select owner"></div>
+                  <div class="people-picker" data-people-picker data-directory-only="true" data-name="owner" data-label="Owner" data-placeholder="Select owner"></div>
                 </label>
                 <label>
                   Participants (optional)
@@ -4682,6 +4807,7 @@
                     <option>Handover in progress</option>
                     <option>Live ops (Support PM)</option>
                   </select>
+                  <small class="muted">Required every week. Defaults by role: Live PM to In delivery; Support PM to Live ops; UI/UX to In delivery. Non-factory products still pick a stage.</small>
                 </label>
                 <label>
                   Version / cycle label
@@ -4690,6 +4816,7 @@
                 <label>
                   V0 received date
                   <input name="v0_received_date" type="date" />
+                  <small class="muted">Starts the 6-week factory clock. Leave empty if not on a runway. Changing it after week 1 needs confirmation.</small>
                 </label>
                 <label>
                   Factory week
@@ -4699,8 +4826,22 @@
                     <option>4</option><option>5</option><option>6</option>
                   </select>
                 </label>
+                <label>
+                  Validation status <span class="muted">(optional)</span>
+                  <select name="validation_status">
+                    <option value="">Not set</option>
+                    <option>Not started</option>
+                    <option>In progress</option>
+                    <option>Passed</option>
+                    <option>Blocked</option>
+                  </select>
+                </label>
+                <label>
+                  Test environment <span class="muted">(optional)</span>
+                  <input name="test_environment" type="text" placeholder="e.g. UAT / Staging" />
+                </label>
               </div>
-              <p class="muted small">Ownership stage is required every week. Leave V0 empty if this update is not on a factory runway.</p>
+              <p class="muted small">Ownership stage is required every week. Validation signals are optional and surface on Incidents/Executive only when Blocked.</p>
             </div>
             <div class="form-section form-step" data-status-step="2" hidden>
               <div class="form-section-title">
@@ -4858,7 +4999,7 @@
                 </label>
                 <label data-status-conditional="risk" hidden>
                   Corrective action owner
-                  <div class="people-picker" data-people-picker data-name="action_owner" data-label="Corrective action owner" data-placeholder="Select owner"></div>
+                  <div class="people-picker" data-people-picker data-directory-only="true" data-name="action_owner" data-label="Corrective action owner" data-placeholder="Select owner"></div>
                 </label>
                 <label data-status-conditional="risk" hidden>
                   Action target date
@@ -5047,8 +5188,11 @@
     const ACTION_STATUS_OPTIONS = ["Open", "In Progress", "Waiting on decision", "Blocked", "Closed"];
     const FUNCTIONAL_ROLE_OPTIONS = ["Live PM (Builder)", "Support PM", "UI/UX"];
     const LEGACY_FUNCTIONAL_ROLE_OPTIONS = ["Product Manager", "Training", "System Analyst"];
+    const VALIDATION_STATUS_OPTIONS = ["", "Not started", "In progress", "Passed", "Blocked"];
     const FACTORY_WEEK_OPTIONS = ["1", "2", "3", "4", "5", "6"];
     const OWNERSHIP_STAGE_OPTIONS = ["In delivery (pre-handover)", "Handover in progress", "Live ops (Support PM)"];
+    const MEETING_SESSION_KEY = "omena-meeting-session-v1";
+    const MEETING_SESSION_STEPS = ["agenda", "decisions", "actions", "send"];
     const GOVERNANCE_CLASSIFICATION_OPTIONS = [
       "Bug",
       "Gap",
@@ -5130,8 +5274,32 @@
       if (!value) return "Live PM (Builder)";
       if (value === "Product Manager" || value === "PM Builder" || value === "Live PM") return "Live PM (Builder)";
       if (value === "Training" || value === "Portfolio, Support & Sustaining" || value === "Support") return "Support PM";
+      if (value === "System Analyst" || value === "SA") return "System Analyst";
       if (FUNCTIONAL_ROLE_OPTIONS.includes(value) || LEGACY_FUNCTIONAL_ROLE_OPTIONS.includes(value)) return value;
       return value;
+    }
+
+    function isLegacySystemAnalyst(role = "") {
+      return cleanText(role) === "System Analyst" || cleanText(role) === "SA";
+    }
+
+    function analyticsRoleLabel(role = "") {
+      if (isLegacySystemAnalyst(role)) return "Live PM (Builder)";
+      return normalizeFunctionalRole(role);
+    }
+
+    function functionalRoleDisplay(role = "") {
+      const value = cleanText(role);
+      if (isLegacySystemAnalyst(value)) {
+        return `Live PM (Builder) <span class="chip amber legacy-role-chip" title="Legacy System Analyst rows map to Live PM analytics">Legacy SA</span>`;
+      }
+      if (value === "Training") {
+        return `Support PM <span class="chip amber legacy-role-chip" title="Training is not a peer owner; mapped to Support PM">Legacy Training</span>`;
+      }
+      if (value === "Product Manager") {
+        return `Live PM (Builder) <span class="chip amber legacy-role-chip">Legacy PM</span>`;
+      }
+      return escapeHtml(normalizeFunctionalRole(value));
     }
 
     const FACTORY_GATE_WEEKS = new Set(["1", "3", "5", "6"]);
@@ -5147,6 +5315,8 @@
       "ownership_stage",
       "v0_received_date",
       "version_label",
+      "validation_status",
+      "test_environment",
       "factory_week",
       "handover_accepted_at",
       "handover_accepted_by"
@@ -5512,8 +5682,8 @@
     };
     const DEFAULT_USERS = [
       { username: "admin", displayName: "Admin User", role: "admin", password: "admin2026", active: true },
-      { username: "roles", displayName: "Role Manager", role: "roles", password: "roles2026", active: true },
-      { username: "master", displayName: "Master Admin", role: "master", password: "master2026", active: true }
+      { username: "roles", displayName: "Ops Manager", role: "roles", password: "roles2026", active: true },
+      { username: "master", displayName: "Reporting Editor", role: "master", password: "master2026", active: true }
     ];
     const ROLE_LABELS = {
       admin: "Portfolio Viewer",
@@ -5749,25 +5919,139 @@
       fillSelect("globalWeekFilter", [...new Set(reports.map(report => cleanText(report.week)).filter(Boolean))].sort().reverse(), "All weeks", globalScope.week || "all");
       fillSelect("globalProductFilter", uniqueProducts(reports.map(report => report.product)), "All products", globalScope.product || "all");
       fillSelect("globalOwnerFilter", uniqueOwners(), "All owners", globalScope.owner || "all");
-      const active = [
-        globalScope.week !== "all" ? `Week: ${reportingFieldLabel(globalScope.week)}` : "",
-        globalScope.product !== "all" ? `Product: ${globalScope.product}` : "",
-        globalScope.owner !== "all" ? `Owner: ${globalScope.owner}` : ""
+      const chips = [
+        globalScope.week !== "all" ? { key: "week", label: `Week: ${reportingFieldLabel(globalScope.week)}` } : null,
+        globalScope.product !== "all" ? { key: "product", label: `Product: ${globalScope.product}` } : null,
+        globalScope.owner !== "all" ? { key: "owner", label: `Owner: ${globalScope.owner}` } : null
       ].filter(Boolean);
-      document.getElementById("activeFilterSummary").innerHTML = active.length
-        ? `<span class="muted small">Active filters:</span>${active.map(value => `<span class="chip blue" title="Global scope persists across workspaces until cleared">Global · ${escapeHtml(value)}</span>`).join("")}<span class="muted small">Local filters refine the current screen only.</span>`
+      const summary = document.getElementById("activeFilterSummary");
+      summary.innerHTML = chips.length
+        ? `<span class="muted small">Active filters:</span>${chips.map(chip => `<button class="chip blue scope-chip" type="button" data-clear-scope="${escapeHtml(chip.key)}" title="Clear this global filter">Global · ${escapeHtml(chip.label)} <span class="chip-clear" aria-hidden="true">x</span></button>`).join("")}<span class="muted small">Clear a chip to remove that filter. Local filters refine the current screen only.</span>`
         : `<span class="muted small">No global filters active. Local filters only refine the current screen.</span>`;
+      summary.querySelectorAll("[data-clear-scope]").forEach(button => {
+        button.addEventListener("click", () => {
+          globalScope[button.dataset.clearScope] = "all";
+          applyGlobalScope();
+          renderAllSafely(`clear global ${button.dataset.clearScope}`);
+        });
+      });
+      syncLocalFiltersWithGlobalScope();
       renderMobileNavigation();
     }
 
+    function syncLocalFiltersWithGlobalScope() {
+      [
+        ["dashboardProductFilter", "product", globalScope.product],
+        ["dashboardOwnerFilter", "owner", globalScope.owner],
+        ["incidentProductFilter", "product", globalScope.product],
+        ["incidentOwnerFilter", "owner", globalScope.owner],
+        ["managementProductFilter", "product", globalScope.product],
+        ["managementOwnerFilter", "owner", globalScope.owner],
+        ["analysisProductFilter", "product", globalScope.product],
+        ["analysisOwnerFilter", "owner", globalScope.owner],
+        ["weeklyReviewProductFilter", "product", globalScope.product],
+        ["weeklyReviewOwnerFilter", "owner", globalScope.owner]
+      ].forEach(([id, key, value]) => {
+        const select = document.getElementById(id);
+        if (!select) return;
+        const label = select.closest("label");
+        const locked = value && value !== "all";
+        if (label) label.classList.toggle("global-synced-filter", locked);
+        if (locked) select.title = `Locked to global ${key}. Clear the global chip to unlock.`;
+        else select.removeAttribute("title");
+      });
+    }
+
     function renderMobileNavigation() {
-      const select = document.getElementById("mobileMoreNav");
-      if (!select) return;
+      const selects = [document.getElementById("mobileMoreNav"), document.getElementById("mobileBottomMoreNav")].filter(Boolean);
+      if (!selects.length) return;
       const active = getActiveView();
-      const options = [...document.querySelectorAll(".tab[data-view]")]
-        .filter(tab => !tab.hidden && !tab.hasAttribute("data-mobile-primary"))
+      const options = [...document.querySelectorAll(".tabs .tab[data-view]")]
+        .filter(tab => !tab.hidden && !tab.hasAttribute("data-mobile-primary") && !tab.hasAttribute("data-admin-hub-item"))
         .map(tab => `<option value="${escapeHtml(tab.dataset.view)}" ${tab.dataset.view === active ? "selected" : ""}>${escapeHtml(tab.textContent.trim())}</option>`);
-      select.innerHTML = `<option value="">More...</option>${options.join("")}`;
+      const markup = `<option value="">More</option>${options.join("")}`;
+      selects.forEach(select => { select.innerHTML = markup; });
+      document.querySelectorAll(".mobile-bottom-nav [data-mobile-nav]").forEach(button => {
+        button.classList.toggle("active", button.dataset.mobileNav === active);
+      });
+    }
+
+    function loadMeetingSessionState() {
+      try {
+        const parsed = JSON.parse(sessionStorage.getItem(MEETING_SESSION_KEY) || "{}");
+        return MEETING_SESSION_STEPS.reduce((acc, step) => {
+          acc[step] = Boolean(parsed[step]);
+          return acc;
+        }, {});
+      } catch {
+        return MEETING_SESSION_STEPS.reduce((acc, step) => {
+          acc[step] = false;
+          return acc;
+        }, {});
+      }
+    }
+
+    function saveMeetingSessionState(state) {
+      sessionStorage.setItem(MEETING_SESSION_KEY, JSON.stringify(state));
+    }
+
+    function markMeetingSessionStep(step) {
+      if (!MEETING_SESSION_STEPS.includes(step)) return;
+      const state = loadMeetingSessionState();
+      state[step] = true;
+      saveMeetingSessionState(state);
+      renderMeetingSessionStrip();
+    }
+
+    function renderMeetingSessionStrip() {
+      const strip = document.getElementById("meetingSessionStrip");
+      const status = document.getElementById("meetingSessionStatus");
+      if (!strip) return;
+      const state = loadMeetingSessionState();
+      const done = MEETING_SESSION_STEPS.filter(step => state[step]).length;
+      strip.querySelectorAll("[data-meeting-step]").forEach(button => {
+        button.classList.toggle("session-done", Boolean(state[button.dataset.meetingStep]));
+      });
+      if (status) {
+        status.textContent = done === MEETING_SESSION_STEPS.length
+          ? "Meeting session complete for this browser tab."
+          : `Session progress ${done}/${MEETING_SESSION_STEPS.length}: Agenda → Decisions → Actions → Send (saved in this browser).`;
+      }
+    }
+
+    function renderAdministrationHub() {
+      const grid = document.getElementById("administrationHubGrid");
+      if (!grid) return;
+      const cards = [
+        { view: "users", title: "User Access", note: "Create users, assign access profiles, reset codes." },
+        { view: "userLog", title: "User Log", note: "Audit sign-ins, saves, exports, and access changes." },
+        { view: "sourceProjects", title: "Product Source List", note: "Import source workbook and compare coverage." },
+        { view: "reportAnalysis", title: "Report Quality", note: "Rank gaps, unresolved identities, and coaching signals." },
+        { view: "ownerFeedback", title: "Coaching Feedback", note: "Owner feedback drafts and send history." },
+        { view: "actionItems", title: "Action Items", note: "Follow-up queue with owners and due dates." },
+        { view: "weeklyReview", title: "Send Weekly Feedback", note: "Generate and email personalized owner reviews." },
+        { view: "workload", title: "Capacity & Support", note: "Operational load signals by owner." }
+      ].filter(card => canAccessView(card.view));
+      grid.innerHTML = cards.map(card => `
+        <button class="admin-hub-card" type="button" data-jump="${escapeHtml(card.view)}">
+          <span class="chip blue">Admin</span>
+          <h3>${escapeHtml(card.title)}</h3>
+          <p class="muted small">${escapeHtml(card.note)}</p>
+        </button>
+      `).join("") || `<div class="empty"><strong>No administration tools</strong>Your profile cannot open admin destinations.</div>`;
+      grid.querySelectorAll("[data-jump]").forEach(button => {
+        button.addEventListener("click", () => navigateToView(button.dataset.jump));
+      });
+    }
+
+    function isValidationBlocked(report) {
+      return cleanText(report?.validation_status).toLowerCase() === "blocked";
+    }
+
+    function validationBlockedMarkup(report) {
+      if (!isValidationBlocked(report)) return "";
+      const env = cleanText(report.test_environment);
+      return `<span class="chip red">Validation blocked${env ? `: ${escapeHtml(env)}` : ""}</span>`;
     }
 
     function pageStateFor(key, total, pageSize = DEFAULT_PAGE_SIZE) {
@@ -6012,6 +6296,8 @@
         factory_week: normalizeFactoryWeek(report.factory_week) || "",
         handover_accepted_at: report.handover_accepted_at || "",
         handover_accepted_by: report.handover_accepted_by || "",
+        validation_status: cleanText(report.validation_status) || "",
+        test_environment: cleanText(report.test_environment) || "",
         history: Array.isArray(report.history) ? report.history.slice(-50) : []
       };
       return btoa(unescape(encodeURIComponent(JSON.stringify(meta))));
@@ -6087,6 +6373,8 @@
         factory_week: normalizeFactoryWeek(firstValue(row.factory_week, row.factoryWeek, legacyMeta.factory_week)),
         handover_accepted_at: firstValue(row.handover_accepted_at, row.handoverAcceptedAt, legacyMeta.handover_accepted_at),
         handover_accepted_by: firstValue(row.handover_accepted_by, row.handoverAcceptedBy, legacyMeta.handover_accepted_by),
+        validation_status: firstValue(row.validation_status, row.validationStatus, legacyMeta.validation_status),
+        test_environment: firstValue(row.test_environment, row.testEnvironment, legacyMeta.test_environment),
         health: row.health || "amber",
         progress: Number(row.progress || 0),
         stage: normalized.stage,
@@ -6149,6 +6437,8 @@
         factory_week: normalizeFactoryWeek(report.factory_week) || null,
         handover_accepted_at: report.handover_accepted_at || null,
         handover_accepted_by: report.handover_accepted_by || null,
+        validation_status: report.validation_status || null,
+        test_environment: report.test_environment || null,
         history: Array.isArray(report.history) ? report.history.slice(-50) : [],
       };
     }
@@ -6735,8 +7025,8 @@
       return !PEOPLE_DIRECTORY_PLACEHOLDERS.has(compactKey(display));
     }
 
-    function peopleDirectory() {
-      const managedPeople = directoryUsers()
+    function managedPeopleDirectory() {
+      return uniquePeople(directoryUsers()
         .filter(user => user.active !== false && user.deleted !== true && !isDefaultUser(user.username))
         .map(user => {
           const display = cleanText(user.displayName || "");
@@ -6744,13 +7034,27 @@
           const username = cleanText(user.username || "");
           return username.includes("@") ? username.split("@")[0] : username;
         })
-        .filter(Boolean);
+        .filter(Boolean)).filter(isDirectoryPerson);
+    }
+
+    function isManagedDirectoryPerson(value = "") {
+      const key = canonicalText(value);
+      if (!key) return false;
+      return managedPeopleDirectory().some(person => canonicalText(person) === key);
+    }
+
+    function unresolvedOwnerIdentities(source = reports) {
+      return uniqueOwners(source).filter(Boolean).filter(owner => !isManagedDirectoryPerson(owner));
+    }
+
+    function peopleDirectory({ directoryOnly = false } = {}) {
+      if (directoryOnly) return managedPeopleDirectory();
       const reportPeople = reports.flatMap(report => [
         ...splitPeople(report.owner),
         ...splitPeople(report.participants),
         ...splitPeople(report.action_owner)
       ]);
-      return uniquePeople([...managedPeople, ...reportPeople, ...loadCustomPeople()]).filter(isDirectoryPerson);
+      return uniquePeople([...managedPeopleDirectory(), ...reportPeople, ...loadCustomPeople()]).filter(isDirectoryPerson);
     }
 
     function refreshPeoplePickers(root = document) {
@@ -6784,11 +7088,12 @@
       return person;
     }
 
-    function peoplePickerMarkup(name, value = "", { multiple = false, label = "Person", placeholder = "Select person" } = {}) {
+    function peoplePickerMarkup(name, value = "", { multiple = false, label = "Person", placeholder = "Select person", directoryOnly = false } = {}) {
       const selected = multiple ? splitPeople(value) : splitPeople(value).slice(0, 1);
       const hiddenValue = multiple ? selected.join(" / ") : (selected[0] || "");
+      const ownerOnly = directoryOnly || name === "owner" || name === "action_owner";
       return `
-        <div class="people-picker" data-people-picker data-name="${escapeHtml(name)}" data-label="${escapeHtml(label)}" data-placeholder="${escapeHtml(placeholder)}" ${multiple ? 'data-multiple="true"' : ""} data-selected="${escapeHtml(selected.join("|"))}">
+        <div class="people-picker" data-people-picker data-name="${escapeHtml(name)}" data-label="${escapeHtml(label)}" data-placeholder="${escapeHtml(placeholder)}" ${multiple ? 'data-multiple="true"' : ""} ${ownerOnly ? 'data-directory-only="true"' : ""} data-selected="${escapeHtml(selected.join("|"))}">
           <input type="hidden" name="${escapeHtml(name)}" value="${escapeHtml(hiddenValue)}" />
         </div>
       `;
@@ -6813,7 +7118,8 @@
         .filter(Boolean);
       const hidden = picker.querySelector(`input[name="${CSS.escape(name)}"]`);
       if (hidden) hidden.value = multiple ? selected.join(" / ") : (selected[0] || "");
-      const people = peopleDirectory();
+      const directoryOnly = picker.dataset.directoryOnly === "true";
+      const people = uniquePeople([...peopleDirectory({ directoryOnly }), ...selected]);
       const selectedText = peoplePickerDisplay(selected, placeholder, multiple);
       const selectedTitle = selected.length ? selected.join(" / ") : placeholder;
       picker.innerHTML = `
@@ -6826,18 +7132,20 @@
           <div class="people-options" role="listbox" aria-label="${escapeHtml(picker.dataset.label || "People")}">
             ${people.map(person => {
               const checked = selected.some(value => canonicalText(value) === canonicalText(person));
+              const unresolved = directoryOnly && !isManagedDirectoryPerson(person);
               return `
                 <label class="people-option" data-search-text="${escapeHtml(canonicalText(person))}">
                   <input type="${multiple ? "checkbox" : "radio"}" name="${escapeHtml(name)}_choice" value="${escapeHtml(person)}" ${checked ? "checked" : ""}>
-                  <span>${escapeHtml(person)}</span>
+                  <span>${escapeHtml(person)}${unresolved ? " (unresolved)" : ""}</span>
                 </label>
               `;
-            }).join("") || `<div class="empty"><strong>No people yet</strong>Add the first person below.</div>`}
+            }).join("") || `<div class="empty"><strong>No directory people yet</strong>${directoryOnly ? "Add users in Administration then User Access." : "Add the first person below."}</div>`}
           </div>
+          ${directoryOnly ? `<p class="muted small" style="padding:8px 10px">New owners must come from the user directory.</p>` : `
           <div class="people-add">
             <input type="text" data-new-person placeholder="Add person" />
             <button class="btn" type="button" data-add-person>Add</button>
-          </div>
+          </div>`}
         </div>
       `;
     }
@@ -7981,7 +8289,7 @@
     }
 
     function canAccessView(id) {
-      if (canManageRoles()) return ["home", "dashboard", "executive", "myDashboard", "workflow", "incidents", "timeline", "intake", "reports", "sourceProjects", "governanceBoard", "governance", "managementReview", "projectTalkTrack", "weeklyProjectBrief", "reportAnalysis", "ownerFeedback", "actionItems", "weeklyReview", "workload", "users", "userLog"].includes(id);
+      if (canManageRoles()) return ["home", "dashboard", "executive", "myDashboard", "workflow", "incidents", "timeline", "intake", "reports", "administration", "sourceProjects", "governanceBoard", "governance", "managementReview", "projectTalkTrack", "weeklyProjectBrief", "reportAnalysis", "ownerFeedback", "actionItems", "weeklyReview", "workload", "users", "userLog"].includes(id);
       if (isMasterAdmin()) return ["home", "dashboard", "executive", "myDashboard", "incidents", "timeline", "intake", "reports", "governanceBoard", "governance"].includes(id);
       return ["home", "dashboard", "executive", "incidents", "governanceBoard", "governance"].includes(id);
     }
@@ -8003,16 +8311,27 @@
       });
     }
 
+    function showPermissionBanner(message, tone = "danger") {
+      const banner = document.getElementById("permissionBanner");
+      if (!banner) return;
+      banner.className = `inline-message ${tone} permission-banner`;
+      banner.textContent = message;
+      banner.hidden = false;
+      window.setTimeout(() => {
+        if (banner.textContent === message) banner.hidden = true;
+      }, 6000);
+    }
+
     function requireMasterAdmin(action = "manage reports") {
       if (canManageReports()) return true;
-      alert(`${ROLE_LABELS[currentProfile] || "Portfolio Viewer"} cannot ${action}. Reporting Editor or Operations & Access Manager permission is required.`);
+      showPermissionBanner(`${ROLE_LABELS[currentProfile] || "Portfolio Viewer"} cannot ${action}. Reporting Editor or Operations & Access Manager permission is required.`);
       switchView("home");
       return false;
     }
 
     function requireRoleManager(action = "manage roles") {
       if (canManageRoles()) return true;
-      alert(`${ROLE_LABELS[currentProfile] || "Portfolio Viewer"} cannot ${action}. Operations & Access Manager permission is required.`);
+      showPermissionBanner(`${ROLE_LABELS[currentProfile] || "Portfolio Viewer"} cannot ${action}. Operations & Access Manager permission is required.`);
       switchView("home");
       return false;
     }
@@ -8029,6 +8348,9 @@
       });
       document.querySelectorAll("[data-role-manager-only]").forEach(element => {
         element.hidden = !canManageRoles();
+      });
+      document.querySelectorAll("[data-admin-hub-item]").forEach(element => {
+        element.hidden = true;
       });
       document.querySelectorAll("[data-role-manager-view]").forEach(element => {
         element.hidden = !canManageRoles();
@@ -8588,9 +8910,11 @@
 
     function renderArtifactChecklist(product = "", role = document.getElementById("governanceArtifactRole")?.value || "Live PM (Builder)") {
       const container = document.getElementById("governanceArtifactChecklist");
+      const readiness = document.getElementById("governanceReadinessBar");
       if (!container) return;
       const selectedRole = normalizeFunctionalRole(role);
       if (!product) {
+        if (readiness) readiness.hidden = true;
         container.innerHTML = emptyStateMarkup({
           kind: "initial",
           title: "Select a product",
@@ -8601,19 +8925,49 @@
         return;
       }
       const byType = new Map(productArtifacts.filter(item => canonicalText(item.product) === canonicalText(product)).map(item => [item.artifact_type, item]));
+      const required = REQUIRED_ARTIFACTS_BY_ROLE[selectedRole] || [];
+      const missing = missingRequiredArtifacts(product, selectedRole);
+      const readyCount = Math.max(0, required.length - missing.length);
       const groupNote = selectedRole === "Support PM"
         ? "Factory handover kits first: Launch Kit, Run Kit, Live Product Kit — then sustaining / training evidence."
         : selectedRole === "Live PM (Builder)"
           ? "Delivery evidence through MSP, backlog, and readiness before Support PM handover."
           : "Design path evidence through research, Figma, review, and developer handoff.";
+      if (readiness) {
+        readiness.hidden = false;
+        readiness.innerHTML = `
+          <div class="panel-title" style="margin:0">
+            <div>
+              <strong>Governance readiness</strong>
+              <p class="muted small">${escapeHtml(product)} · ${escapeHtml(selectedRole)} · <a href="#governance" data-deep-link-product="${escapeHtml(product)}" data-deep-link-role="${escapeHtml(selectedRole)}">Deep-link context</a></p>
+            </div>
+            <span class="chip ${missing.length ? "amber" : "green"}">${readyCount}/${required.length || 0} required</span>
+          </div>
+          <div class="readiness-bar-track" aria-hidden="true"><div class="readiness-bar-fill" style="width:${required.length ? Math.round((readyCount / required.length) * 100) : 0}%"></div></div>
+          <p class="muted small">${missing.length ? `Missing required: ${escapeHtml(missing.join(", "))}` : "All required artifacts for this role are marked present."}</p>
+        `;
+      }
       container.innerHTML = `
         <div class="artifact-group-title">${escapeHtml(selectedRole)} artifacts</div>
         <p class="muted small">${escapeHtml(groupNote)}</p>
         ${governanceArtifactTypesForRole(selectedRole).map(type => {
           const artifact = byType.get(type);
           const checked = artifact && artifact.validation_status !== "Missing";
+          const requiredMark = required.includes(type) ? " · required" : " · optional";
           const kitHint = ["Launch Kit", "Run Kit", "Live Product Kit"].includes(type) ? " · handover kit" : "";
-          return `<label class="artifact-check"><input type="checkbox" data-artifact-type="${escapeHtml(type)}" ${checked ? "checked" : ""}><span><strong>${escapeHtml(type)}</strong><small>${escapeHtml(artifact?.validation_status || "Missing")}${escapeHtml(kitHint)}</small></span></label>`;
+          const link = cleanText(artifact?.link || "");
+          return `
+            <div class="artifact-check">
+              <label style="display:flex;gap:8px;align-items:flex-start;width:100%">
+                <input type="checkbox" data-artifact-type="${escapeHtml(type)}" ${checked ? "checked" : ""}>
+                <span><strong>${escapeHtml(type)}</strong><small>${escapeHtml(artifact?.validation_status || "Missing")}${escapeHtml(requiredMark)}${escapeHtml(kitHint)}</small></span>
+              </label>
+              <div class="artifact-link-row">
+                <label class="muted small" for="artifact-link-${escapeHtml(canonicalText(type))}">Optional link</label>
+                <input id="artifact-link-${escapeHtml(canonicalText(type))}" type="url" data-artifact-link="${escapeHtml(type)}" value="${escapeHtml(link)}" placeholder="https://..." />
+              </div>
+            </div>
+          `;
         }).join("")}
       `;
     }
@@ -8625,13 +8979,18 @@
         return;
       }
       const existingByType = new Map(productArtifacts.filter(item => canonicalText(item.product) === canonicalText(product)).map(item => [item.artifact_type, item]));
-      const entries = [...document.querySelectorAll("#governanceArtifactChecklist [data-artifact-type]")].map(input => ({
-        id: existingByType.get(input.dataset.artifactType)?.id || crypto.randomUUID(),
-        product,
-        artifact_type: input.dataset.artifactType,
-        validation_status: input.checked ? "Validated" : "Missing",
-        updated_at: new Date().toISOString()
-      }));
+      const entries = [...document.querySelectorAll("#governanceArtifactChecklist [data-artifact-type]")].map(input => {
+        const type = input.dataset.artifactType;
+        const linkInput = document.querySelector(`#governanceArtifactChecklist [data-artifact-link="${CSS.escape(type)}"]`);
+        return {
+          id: existingByType.get(type)?.id || crypto.randomUUID(),
+          product,
+          artifact_type: type,
+          link: cleanText(linkInput?.value || existingByType.get(type)?.link || ""),
+          validation_status: input.checked ? "Validated" : "Missing",
+          updated_at: new Date().toISOString()
+        };
+      });
       try {
         let saved = entries;
         if (governanceCloudAvailable) {
@@ -10775,12 +11134,14 @@
       const topItem = items[0];
       renderWeeklyMetricsNarrative(items);
       renderOwnerFeedback(items);
+      const unresolvedOwners = unresolvedOwnerIdentities(items.map(item => item.report));
       const cardData = [
         ["reviewed", "Review queue", items.length, "blue", "Filtered reports"],
         ["topPriority", "Start here", topItem ? `#${topItem.rank}` : "None", topItem ? topItem.analysis.tone : "green", topItem ? reportTitle(topItem.report) : "No ranked reports"],
         ["needsAction", "Needs action", needsAction, needsAction ? "red" : "green", "High gap or risk score"],
         ["needsRefinement", "Improve", needsRefinement, needsRefinement ? "amber" : "green", "Needs clearer signals"],
-        ["totalGaps", "Missing info", gapCount, gapCount ? "amber" : "green", "Fields or actions to clarify"]
+        ["totalGaps", "Missing info", gapCount, gapCount ? "amber" : "green", "Fields or actions to clarify"],
+        ["unresolved", "Unresolved identities", unresolvedOwners.length, unresolvedOwners.length ? "amber" : "green", unresolvedOwners.length ? unresolvedOwners.slice(0, 3).join(", ") : "All owners match directory"]
       ];
       cards.innerHTML = cardData.map(([key, label, value, tone, note]) => `
         <button class="panel metric metric-button ${selectedAnalysisMetric === key ? "selected" : ""}" type="button" data-analysis-metric="${escapeHtml(key)}" onclick="event.stopPropagation(); openAnalysisMetric('${escapeHtml(key)}')" aria-pressed="${selectedAnalysisMetric === key ? "true" : "false"}">
@@ -12378,6 +12739,7 @@
           title: "Week Close",
           view: chooseView(["reports", "myDashboard", "dashboard"]),
           owner: "Report owners",
+          accountable: "Reporting Editor",
           due: "End of reporting week",
           metric: weekRows.length ? `${weekCloseGaps} open of ${weekRows.length}` : "No updates yet",
           tone: weekCloseGaps || !weekRows.length ? "amber" : "green",
@@ -12391,6 +12753,7 @@
           title: "Prepare",
           view: chooseView(["reports", "myDashboard", "dashboard"]),
           owner: "Report owners",
+          accountable: "Reporting Editor",
           due: "By weekly cutoff",
           metric: weekRows.length ? `${incomplete} incomplete of ${weekRows.length}` : "No updates yet",
           tone: incomplete || !weekRows.length ? "amber" : "green",
@@ -12402,6 +12765,7 @@
           title: "Factory gate",
           view: chooseView(["reports", "governance", "dashboard"]),
           owner: "Live PM / Support PM",
+          accountable: "Support PM",
           due: "Gate weeks 1 · 3 · 5 · 6",
           metric: `${factoryGateDue} due`,
           tone: factoryGateDue ? "amber" : "green",
@@ -12414,7 +12778,8 @@
           number: "02",
           title: "Validate",
           view: chooseView(["reportAnalysis", "reports", "dashboard"]),
-          owner: "Role Manager",
+          owner: "Ops Manager",
+          accountable: "Ops Manager",
           due: "Before review",
           metric: `${qualityGaps} need fixes`,
           tone: qualityGaps ? "amber" : "green",
@@ -12425,7 +12790,8 @@
           number: "03",
           title: "Review",
           view: chooseView(["managementReview", "incidents", "executive"]),
-          owner: "Manager",
+          owner: "Ops Manager",
+          accountable: "Ops Manager",
           due: "Manager meeting",
           metric: `${risks} risk signals`,
           tone: risks ? "red" : "green",
@@ -12436,7 +12802,8 @@
           number: "04",
           title: "Decide",
           view: chooseView(["governance", "executive"]),
-          owner: "Approver",
+          owner: "Support PM / Live PM",
+          accountable: "Ops Manager",
           due: "During review",
           metric: `${openGovernance} decisions open`,
           tone: openGovernance ? "amber" : "green",
@@ -12447,7 +12814,8 @@
           number: "05",
           title: "Communicate",
           view: chooseView(["weeklyReview", "projectTalkTrack", "executive"]),
-          owner: "Role Manager",
+          owner: "Ops Manager",
+          accountable: "Ops Manager",
           due: "After review",
           metric: `${feedbackSent} sends recorded`,
           tone: feedbackSent ? "green" : "amber",
@@ -12459,6 +12827,7 @@
           title: "Follow up",
           view: chooseView(["actionItems", "myDashboard", "incidents"]),
           owner: "Action owners",
+          accountable: "Ops Manager",
           due: "Before next cycle",
           metric: `${openActions} actions open`,
           tone: openActions ? "amber" : "green",
@@ -12553,6 +12922,7 @@
             <strong>${escapeHtml(stage.title)}</strong>
             <span class="home-flow-meta muted small">
               <span><strong>Responsible:</strong> ${escapeHtml(stage.owner)}</span>
+              <span><strong>Accountable:</strong> ${escapeHtml(stage.accountable || stage.owner)}</span>
               <span><strong>Due:</strong> ${escapeHtml(stage.due)}</span>
               <span>${escapeHtml(stage.period)}</span>
             </span>
@@ -12620,7 +12990,7 @@
           number: "01",
           view: "sourceProjects",
           title: "Project Source List",
-          audience: "Role Manager",
+          audience: "Ops Manager",
           metric: `${sourceCount} imported`,
           purpose: "Import or paste the source project workbook so missing status coverage is visible before weekly reporting.",
           outcome: "A clean project source list connected to dashboard follow-up.",
@@ -12630,7 +13000,7 @@
           number: "02",
           view: "reports",
           title: "Update Reports",
-          audience: "Master Admin / Role Manager",
+          audience: "Reporting Editor / Ops Manager",
           metric: `${reports.length} saved reports`,
           purpose: "Create new weekly updates, edit saved reports, review history, and export report data.",
           outcome: "Current status, owner, dates, risks, wins, blockers, and next action are saved in one place.",
@@ -12650,7 +13020,7 @@
           number: "04",
           view: "managementReview",
           title: "Manager Meeting",
-          audience: "Role Manager",
+          audience: "Ops Manager",
           metric: `${managementCount} in review`,
           purpose: "Prepare a meeting-ready view of team progress, schedule risk, blockers, owner performance, and decisions needed.",
           outcome: "A clear management talking track before detailed report analysis.",
@@ -12660,7 +13030,7 @@
           number: "05",
           view: "reportAnalysis",
           title: "Report Quality Review",
-          audience: "Role Manager",
+          audience: "Ops Manager",
           metric: `${analysisCount} analyzed`,
           purpose: "Review report gaps, fix suggestions, faster delivery options, lessons learned, and weekly metrics narrative.",
           outcome: "A practical quality review before the portfolio and executive dashboards are discussed.",
@@ -12700,7 +13070,7 @@
           number: "09",
           view: "governance",
           title: "Product Governance",
-          audience: "Admin / Master admin / Role Manager",
+          audience: "Portfolio Viewer / Reporting Editor / Ops Manager",
           metric: `${typeof governanceItems !== "undefined" ? governanceItems.length : 0} items`,
           purpose: "Classify gaps, bugs, and changes; track evidence packs; and manage gate decisions for each product.",
           outcome: "A decision-ready governance register connected to weekly status evidence.",
@@ -12710,9 +13080,9 @@
           number: "10",
           view: "workload",
           title: "Work Balance",
-          audience: "Role Manager",
+          audience: "Ops Manager",
           metric: `${workloadOwners} owners`,
-          purpose: "Understand how many products and workstreams each PM or UI/UX owner has.",
+          purpose: "Understand how many products and workstreams each Live PM, Support PM, or UI/UX owner has.",
           outcome: "Capacity signals for rebalancing ownership before risks build up.",
           action: "Open Work Balance"
         },
@@ -12720,7 +13090,7 @@
           number: "11",
           view: "users",
           title: "User Access",
-          audience: "Role Manager",
+          audience: "Ops Manager",
           metric: `${managedUsers.length} managed users`,
           purpose: "Create users, assign roles, reset codes, resend access, activate or deactivate access, and delete users.",
           outcome: "People can sign in with the correct role and only see the areas they should use.",
@@ -12730,7 +13100,7 @@
           number: "12",
           view: "userLog",
           title: "User Log",
-          audience: "Role Manager",
+          audience: "Ops Manager",
           metric: `${userActionLogs.length || 0} events`,
           purpose: "Audit sign-ins, report saves, deletes, exports, filter changes, and user-access actions.",
           outcome: "A traceable activity record for coaching, troubleshooting, and access review.",
@@ -12751,7 +13121,7 @@
         ["Available modules", steps.length, "blue", "Based on your current profile"],
         ["Reports saved", reports.length, "green", "Used by dashboards and exports"],
         ["Incident signals", incidentCount, incidentCount ? "red" : "green", "Delay, blocked, at-risk, or critical"],
-        ["Managed users", canManageRoles() ? managedUsers.length : "Hidden", canManageRoles() ? "amber" : "gray", canManageRoles() ? "Role Manager access" : "Visible only to Role Manager"]
+        ["Managed users", canManageRoles() ? managedUsers.length : "Hidden", canManageRoles() ? "amber" : "gray", canManageRoles() ? "Ops Manager access" : "Visible only to Ops Manager"]
       ];
       metrics.innerHTML = metricCards.map(([label, value, tone, note]) => `
         <div class="panel metric">
@@ -12972,7 +13342,7 @@
       const targetUser = currentUsers.find(user => user.username === username);
       if (!targetUser) return;
       if (targetUser.role === "master" && targetUser.active !== false && !hasAnotherActiveMaster(currentUsers, username)) {
-        alert("Keep at least one active Master admin.");
+        alert("Keep at least one active Reporting Editor.");
         return;
       }
       const users = currentUsers.map(user => user.username === username ? { ...user, active: user.active === false } : user);
@@ -12995,7 +13365,7 @@
       const targetUser = currentUsers.find(user => user.username === username);
       if (!targetUser) return;
       if (targetUser.role === "master" && nextRole !== "master" && !hasAnotherActiveMaster(currentUsers, username)) {
-        alert("Keep at least one active Master admin.");
+        alert("Keep at least one active Reporting Editor.");
         renderUserManagement();
         return;
       }
@@ -13048,7 +13418,7 @@
         return;
       }
       if (existing.role === "master" && (edited.role !== "master" || edited.active === false) && !hasAnotherActiveMaster(users, username)) {
-        alert("Keep at least one active Master admin.");
+        alert("Keep at least one active Reporting Editor.");
         return;
       }
       const updatedUsers = users.map(user => user.username === username ? {
@@ -13086,7 +13456,7 @@
       const targetUser = users.find(user => user.username === username);
       if (!targetUser) return;
       if (targetUser.role === "master" && !hasAnotherActiveMaster(users, username)) {
-        alert("Keep at least one active Master admin.");
+        alert("Keep at least one active Reporting Editor.");
         return;
       }
       saveUsers(users.map(user => user.username === username ? {
@@ -13198,8 +13568,14 @@
         id = "home";
       }
       document.querySelectorAll(".view").forEach(view => view.classList.toggle("active", view.id === id));
-      const activeTab = id === "intake" ? "reports" : id;
+      const adminHubViews = new Set(["users", "userLog", "sourceProjects", "reportAnalysis", "actionItems", "ownerFeedback"]);
+      const activeTab = id === "intake" ? "reports" : adminHubViews.has(id) ? "administration" : id;
       document.querySelectorAll(".tab").forEach(tab => tab.classList.toggle("active", tab.dataset.view === activeTab));
+      if (id === "managementReview" || id === "weeklyProjectBrief" || id === "actionItems" || id === "weeklyReview") {
+        const stepMap = { weeklyProjectBrief: "agenda", managementReview: "decisions", actionItems: "actions", weeklyReview: "send" };
+        if (stepMap[id]) markMeetingSessionStep(stepMap[id]);
+      }
+      renderMeetingSessionStrip();
       renderMobileNavigation();
       logUserAction("view_opened", { view: id }, { target_type: "view", target_id: id });
       renderActiveViewDeferred(`switch to ${id}`);
@@ -13575,7 +13951,7 @@
     }
 
     function hasBlockerSignal(report) {
-      return Boolean(cleanText(report?.blocker)) || report?.health === "red" || report?.priority === "Critical";
+      return Boolean(cleanText(report?.blocker)) || report?.health === "red" || report?.priority === "Critical" || isValidationBlocked(report);
     }
 
     function incidentFlags(report) {
@@ -14025,12 +14401,15 @@
             <div class="card-chip-stack">
               <span class="chip ${tone}">${escapeHtml(incidentLabel(report))}</span>
               ${stageChip(report)}
+              ${validationBlockedMarkup(report)}
+              ${isLegacySystemAnalyst(report.role) ? `<span class="chip amber legacy-role-chip">Legacy SA</span>` : ""}
             </div>
           </div>
           <p>${escapeHtml(report.summary || "No summary captured.")}</p>
           <div class="report-card-detail">
             ${scheduleReason ? `<div><strong>Schedule reason</strong><p class="muted small"><span class="chip ${status.tone}">${escapeHtml(status.label)}</span> ${escapeHtml(scheduleReason)}</p></div>` : ""}
             <div><strong>Blocker or risk</strong><p class="muted small">${escapeHtml(report.blocker || "No blocker captured.")}</p></div>
+            ${isValidationBlocked(report) ? `<div><strong>Validation</strong><p class="muted small">Blocked${cleanText(report.test_environment) ? ` in ${escapeHtml(report.test_environment)}` : ""}</p></div>` : ""}
             <div><strong>Next action</strong><p class="muted small">${escapeHtml(report.next || "No next action captured.")}</p></div>
             <div><strong>Priority</strong><p class="muted small">${escapeHtml(report.priority || "Normal")} - ${escapeHtml(labels[report.health] || report.health || "No health")}</p></div>
           </div>
@@ -14376,14 +14755,17 @@
         `;
       }).join("") : `<div class="empty"><strong>No incident indicators</strong>No major delay, minor delay, blocked, At Risk, or Critical items match the current filters.</div>`;
 
-      detailsTarget.innerHTML = source.length
-        ? source.map(incidentDetailCard).join("")
-        : `<div class="empty"><strong>No details available</strong>Change the filters to review incident and delay details.</div>`;
+      const blockerRows = source.filter(report => hasBlockerSignal(report) || isValidationBlocked(report));
+      detailsTarget.innerHTML = blockerRows.length
+        ? blockerRows.map(incidentDetailCard).join("")
+        : source.length
+          ? `<div class="empty"><strong>No blockers in this filter</strong>Schedule delays may still appear in the Schedule column.</div>`
+          : `<div class="empty"><strong>No details available</strong>Change the filters to review incident and delay details.</div>`;
     }
 
     function roleStats(role, source) {
-      const target = normalizeFunctionalRole(role);
-      const scoped = source.filter(report => normalizeFunctionalRole(report.role) === target);
+      const target = analyticsRoleLabel(role);
+      const scoped = source.filter(report => analyticsRoleLabel(report.role) === target);
       const total = scoped.length;
       const atRisk = scoped.filter(report => isRiskReport(report)).length;
       const products = uniqueCount(scoped, "product");
@@ -14839,42 +15221,49 @@
       `).join("");
       renderExecutiveHealthProjects(source);
 
-      document.getElementById("executiveAttention").innerHTML = critical.length ? critical.slice(0, 6).map(report => `
+      const decisionQueue = [...critical, ...source.filter(isValidationBlocked)]
+        .filter((report, index, arr) => arr.findIndex(item => item.id === report.id) === index)
+        .slice(0, 6);
+      document.getElementById("executiveAttention").innerHTML = decisionQueue.length ? decisionQueue.map(report => `
         <div class="exec-row featured">
           <div>
             <span class="product-label">${escapeHtml(report.product || "No product")}</span>
             <strong>${escapeHtml(reportTitle(report))}</strong>
-            <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.blocker || report.summary)}</p>
+            <p class="muted small">${escapeHtml(report.owner || "Unassigned")} - ${escapeHtml(report.blocker || report.summary || "Needs a decision")}</p>
+            ${validationBlockedMarkup(report)}
           </div>
           ${statusStageChips(report, "Status")}
         </div>
       `).join("") : `<div class="empty"><strong>No executive risks</strong>No critical risks need executive attention for the current filters.</div>`;
 
-      const owners = [...source.reduce((acc, report) => {
-        const owner = ownerDisplay(report.owner);
-        const key = ownerKey(owner);
-        if (!acc.has(key)) acc.set(key, { owner, reports: [] });
-        acc.get(key).reports.push(report);
+      const topProducts = [...source.reduce((acc, report) => {
+        const product = cleanText(report.product) || "No product";
+        const key = canonicalText(product) || "no product";
+        if (!acc.has(key)) acc.set(key, { product, rows: [] });
+        acc.get(key).rows.push(report);
         return acc;
-      }, new Map()).values()].sort((a, b) => a.owner.localeCompare(b.owner));
-      document.getElementById("executiveOwners").innerHTML = owners.length ? owners.slice(0, 6).map(({ owner, reports: ownerReports }) => {
-        const ownerAvg = Math.round(ownerReports.reduce((sum, report) => sum + Number(report.progress || 0), 0) / ownerReports.length);
-        const ownerRisk = ownerReports.filter(report => report.health === "red" || report.priority === "Critical").length;
-        const tone = ownerRisk ? "red" : ownerAvg < 75 ? "amber" : "green";
+      }, new Map()).values()].map(item => {
+        const avg = item.rows.length ? Math.round(item.rows.reduce((sum, report) => sum + Number(report.progress || 0), 0) / item.rows.length) : 0;
+        const risk = item.rows.filter(report => isRiskReport(report) || isValidationBlocked(report) || hasBlockerSignal(report)).length;
+        return { ...item, avg, risk };
+      }).sort((a, b) => b.risk - a.risk || a.avg - b.avg).slice(0, 5);
+      document.getElementById("executiveOwners").innerHTML = topProducts.length ? topProducts.map(item => {
+        const tone = item.risk ? "red" : item.avg < 75 ? "amber" : "green";
         return `
           <div class="exec-row">
             <div>
-              <strong>${escapeHtml(owner)}</strong>
-              <p class="muted small">${ownerReports.length} reports - ${ownerRisk} need attention</p>
+              <strong>${escapeHtml(item.product)}</strong>
+              <p class="muted small">${item.rows.length} workstreams - ${item.risk} need attention</p>
             </div>
-            <span class="chip ${tone}">${ownerAvg}%</span>
+            <span class="chip ${tone}">${item.avg}%</span>
           </div>
         `;
-      }).join("") : `<div class="empty"><strong>No owner data</strong>No owner performance data is available for the current filters.</div>`;
+      }).join("") : `<div class="empty"><strong>No top products</strong>No attention products are visible for the current filters.</div>`;
 
       const actions = source
-        .filter(report => report.next)
+        .filter(report => report.next || isValidationBlocked(report))
         .sort((a, b) =>
+          Number(isValidationBlocked(b)) - Number(isValidationBlocked(a)) ||
           (b.priority === "Critical") - (a.priority === "Critical") ||
           Number(b.impact || 0) - Number(a.impact || 0)
         )
@@ -14884,7 +15273,8 @@
           <div>
             <span class="product-label">${escapeHtml(report.product || "No product")}</span>
             <strong>${escapeHtml(reportTitle(report))}</strong>
-            <p class="muted small">${escapeHtml(report.next)}</p>
+            <p class="muted small">${escapeHtml(report.next || "Resolve blocked validation")}</p>
+            ${validationBlockedMarkup(report)}
           </div>
           <span class="chip ${healthClass(report)}">${escapeHtml(report.priority || "Normal")}</span>
         </div>
@@ -15632,13 +16022,15 @@
                 <label>Owner${peoplePickerMarkup("owner", report.owner, { label: "Owner", placeholder: "Select owner" })}</label>
                 <label>Participants (optional)${peoplePickerMarkup("participants", report.participants || "", { multiple: true, label: "Participants", placeholder: "Select participants" })}</label>
                 <label>Type of product<select name="product_type"><option ${report.product_type === "Legacy" ? "selected" : ""}>Legacy</option><option ${report.product_type === "New product" ? "selected" : ""}>New product</option></select></label>
-                <label>Role<select name="role">${optionListMarkup(FUNCTIONAL_ROLE_OPTIONS, normalizeFunctionalRole(report.role) || "Live PM (Builder)")}</select></label>
-                <label>Ownership stage<select name="ownership_stage" required>${optionListMarkup(OWNERSHIP_STAGE_OPTIONS, normalizeOwnershipStage(report.ownership_stage, report.role))}</select></label>
+                <label>Role<select name="role">${optionListMarkup(FUNCTIONAL_ROLE_OPTIONS, isLegacySystemAnalyst(report.role) ? "Live PM (Builder)" : (normalizeFunctionalRole(report.role) || "Live PM (Builder)"))}</select>${isLegacySystemAnalyst(report.role) ? '<small class="muted">Legacy System Analyst row — analytics map to Live PM. Saving stores Live PM (Builder).</small>' : ""}</label>
+                <label>Ownership stage<select name="ownership_stage" required>${optionListMarkup(OWNERSHIP_STAGE_OPTIONS, normalizeOwnershipStage(report.ownership_stage, report.role))}</select><small class="muted">Required every week. Defaults by role: Live PM to In delivery; Support PM to Live ops; UI/UX to In delivery.</small></label>
                 <label>Version / cycle label<input name="version_label" type="text" value="${escapeHtml(report.version_label || "")}" placeholder="e.g. v1.2 · Factory Oct" /></label>
-                <label>V0 received date<input name="v0_received_date" type="date" value="${escapeHtml(report.v0_received_date || "")}" /></label>
+                <label>V0 received date<input name="v0_received_date" type="date" value="${escapeHtml(report.v0_received_date || "")}" data-original-v0="${escapeHtml(report.v0_received_date || "")}" /><small class="muted">Changing after factory week 1 asks for confirmation.</small></label>
                 <label>Factory week<select name="factory_week"><option value="">Auto from V0 date</option>${optionListMarkup(FACTORY_WEEK_OPTIONS, normalizeFactoryWeek(report.factory_week))}</select></label>
+                <label>Validation status <span class="muted">(optional)</span><select name="validation_status"><option value="">Not set</option>${optionListMarkup(["Not started", "In progress", "Passed", "Blocked"], report.validation_status || "")}</select></label>
+                <label>Test environment <span class="muted">(optional)</span><input name="test_environment" type="text" value="${escapeHtml(report.test_environment || "")}" placeholder="e.g. UAT / Staging" /></label>
               </div>
-              <p class="muted small">Ownership stage is required on every update. V0 received date starts the 6-week clock. Use version labels when live and next factory cycle run in parallel.</p>
+              <p class="muted small">Ownership stage is required on every update. Validation signals surface on Incidents/Executive only when Blocked.</p>
             </section>
             ${factoryRunwayMarkup(report)}
             <section class="edit-form-section">
@@ -15706,7 +16098,7 @@
             <button class="btn" type="button" id="reportHistoryBtn">${reportHistoryOpen ? "Hide History" : "History"}</button>
             <button class="btn" type="button" id="cancelEditReport">Cancel</button>
             <button class="btn danger" type="button" id="deleteReport" ${canDeleteReport(report) ? "" : `disabled title="${escapeHtml(deletePermissionMessage(report))}"`}>Delete Report</button>
-            <button class="btn primary" type="submit" id="updateReportBtn" ${canEditReport(report) ? "" : "disabled title=\"Only the report owner, Master admin, or Role Manager can edit this status.\""}>Save Changes</button>
+            <button class="btn primary" type="submit" id="updateReportBtn" ${canEditReport(report) ? "" : "disabled title=\"Only the report owner, Reporting Editor, or Ops Manager can edit this status.\""}>Save Changes</button>
           </div>
           <div id="reportHistoryPanel" ${reportHistoryOpen ? "" : "hidden"}>${renderReportHistory(report)}</div>
         </form>
@@ -15773,15 +16165,24 @@
       editForm.addEventListener("submit", async event => {
         event.preventDefault();
         if (!canEditReport(report)) {
-          showReportMessage("Only the report owner, Master admin, or Role Manager can edit this status.", "danger");
+          showReportMessage("Only the report owner, Reporting Editor, or Ops Manager can edit this status.", "danger");
           return;
+        }
+        const form = event.currentTarget;
+        const nextV0 = cleanText(form.elements.v0_received_date?.value);
+        const originalV0 = cleanText(form.elements.v0_received_date?.dataset?.originalV0 || report.v0_received_date);
+        const currentWeek = Number(resolveFactoryWeek(report) || 0);
+        if (nextV0 && originalV0 && nextV0 !== originalV0 && currentWeek > 1) {
+          if (!confirm(`This product is already on factory week ${currentWeek}. Changing V0 received date will shift the runway and gate dates. Continue?`)) {
+            return;
+          }
         }
         const btn = document.getElementById("updateReportBtn");
         btn.disabled = true;
         btn.textContent = "Saving...";
         hideReportMessage();
         try {
-          await updateReport(readReportForm(event.currentTarget, report.id, { requireProduct: false }));
+          await updateReport(readReportForm(form, report.id, { requireProduct: false }));
           btn.textContent = "Save Changes";
           showReportMessage("Your report has been successfully updated.");
         } catch (error) {
@@ -16011,12 +16412,15 @@
         factory_week: normalizeFactoryWeek(data.factory_week),
         handover_accepted_at: cleanText(data.handover_accepted_at),
         handover_accepted_by: cleanText(data.handover_accepted_by),
+        validation_status: cleanText(data.validation_status),
+        test_environment: cleanText(data.test_environment),
         stage: cleanText(data.stage),
         action_status: normalizeActionStatus(data.action_status),
         progress: Number.isFinite(rawProgress) ? Math.max(0, Math.min(100, rawProgress)) : rawProgress,
         impact: Number(data.impact || 1),
         time: Number(data.time || 1)
       });
+      if (isLegacySystemAnalyst(data.role)) report.role = "Live PM (Builder)";
       if (validateRequired && !cleanText(report.ownership_stage)) {
         throw new Error("Select an ownership stage before saving.");
       }
@@ -16062,6 +16466,7 @@
         incidents: renderIncidentReport,
         timeline: renderDeliveryTimeline,
         sourceProjects: renderSourceProjects,
+        administration: renderAdministrationHub,
         governanceBoard: renderGovernanceBoard,
         governance: renderProductGovernance,
         managementReview: renderManagementReview,
@@ -16639,6 +17044,13 @@
       event.preventDefault();
       if (!requireMasterAdmin("add status reports")) return;
       const form = event.currentTarget;
+      const draftV0 = cleanText(form.elements.v0_received_date?.value);
+      const draftWeek = Number(normalizeFactoryWeek(form.elements.factory_week?.value) || factoryWeekFromV0(draftV0) || 0);
+      if (draftV0 && draftWeek > 1) {
+        if (!confirm(`Factory week is already ${draftWeek} based on this V0 received date (or override). Confirm the date is correct before saving.`)) {
+          return;
+        }
+      }
       const saveBtn = document.getElementById("saveReportBtn");
       saveBtn.disabled = true;
       saveBtn.textContent = "Saving...";
@@ -17726,8 +18138,37 @@
       navigateToView(event.target.value);
       event.target.value = "";
     });
+    document.getElementById("mobileBottomMoreNav")?.addEventListener("change", event => {
+      if (!event.target.value) return;
+      navigateToView(event.target.value);
+      event.target.value = "";
+    });
+    document.querySelectorAll(".mobile-bottom-nav [data-mobile-nav]").forEach(button => {
+      button.addEventListener("click", () => navigateToView(button.dataset.mobileNav));
+    });
+    document.getElementById("meetingSessionStrip")?.addEventListener("click", event => {
+      const stepBtn = event.target.closest("[data-meeting-step]");
+      if (!stepBtn) return;
+      markMeetingSessionStep(stepBtn.dataset.meetingStep);
+    });
+    document.addEventListener("click", event => {
+      const deep = event.target.closest("[data-deep-link-product]");
+      if (!deep) return;
+      event.preventDefault();
+      const productSelect = document.getElementById("governanceArtifactProduct");
+      const roleSelect = document.getElementById("governanceArtifactRole");
+      if (productSelect && deep.dataset.deepLinkProduct) {
+        productSelect.value = deep.dataset.deepLinkProduct;
+      }
+      if (roleSelect && deep.dataset.deepLinkRole) {
+        roleSelect.value = deep.dataset.deepLinkRole;
+      }
+      navigateToView("governance");
+      renderArtifactChecklist(productSelect?.value || "", roleSelect?.value || "Live PM (Builder)");
+    });
     applyGlobalScope();
     renderGlobalScope();
+    renderMeetingSessionStrip();
     (async () => {
       await syncUsersWithCloud();
       restoreSession();
